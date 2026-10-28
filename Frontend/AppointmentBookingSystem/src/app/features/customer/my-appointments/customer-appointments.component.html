@@ -1,0 +1,398 @@
+<div class="appointments-container">
+
+  <!-- Page Header (Matches System Standard) -->
+  <div class="page-header">
+    <div class="header-titles">
+      <h2>My Appointments</h2>
+      <p>View confirmed bookings, access digital entry passes, reschedule, or review history.</p>
+    </div>
+
+    <div class="header-actions">
+      <button type="button" class="btn btn-primary" (click)="openBookingModal()">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="12" y1="5" x2="12" y2="19" />
+          <line x1="5" y1="12" x2="19" y2="12" />
+        </svg>
+        <span>Book Appointment</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Notification Alerts -->
+  <div *ngIf="successMessage()" class="alert alert-success animate-fade-in">
+    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+      <polyline points="22 4 12 14.01 9 11.01" />
+    </svg>
+    <span>{{ successMessage() }}</span>
+  </div>
+
+  <div *ngIf="errorMessage()" class="alert alert-error animate-fade-in">
+    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="10" />
+      <line x1="12" y1="8" x2="12" y2="12" />
+      <line x1="12" y1="16" x2="12.01" y2="16" />
+    </svg>
+    <span>{{ errorMessage() }}</span>
+  </div>
+
+
+
+  <!-- Filters & View Switcher Toolbar -->
+  <div class="toolbar-section glass-card">
+    <!-- Search Box -->
+    <div class="search-input-wrap">
+      <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="8" />
+        <line x1="21" y1="21" x2="16.65" y2="16.65" />
+      </svg>
+      <input type="text" [ngModel]="searchQuery()" (ngModelChange)="onSearchChange($event)"
+        placeholder="Search by ID, provider, specialty, or notes..." class="search-input" />
+    </div>
+
+    <!-- Status Filter Dropdown with Integrated Reset Button Inside -->
+    <div class="status-dropdown-wrapper" [class.is-open]="isStatusDropdownOpen()">
+      <div class="status-dropdown-trigger" (click)="toggleStatusDropdown($event)"
+        [class.has-filter]="selectedStatusFilter() !== 'ALL'" role="button" tabindex="0" aria-haspopup="true"
+        [attr.aria-expanded]="isStatusDropdownOpen()">
+        <svg class="status-funnel-icon" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+          fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+        </svg>
+        <span class="status-trigger-text">
+          <ng-container [ngSwitch]="selectedStatusFilter()">
+            <span *ngSwitchCase="'UPCOMING'">Upcoming ({{ upcomingCount() }})</span>
+            <span *ngSwitchCase="'COMPLETED'">Completed ({{ completedCount() }})</span>
+            <span *ngSwitchCase="'CANCELLED'">Cancelled ({{ cancelledCount() }})</span>
+            <span *ngSwitchDefault>All ({{ totalBookingsCount() }})</span>
+          </ng-container>
+        </span>
+
+        <!-- Integrated Cross / Cancel Button INSIDE the dropdown -->
+        <button *ngIf="selectedStatusFilter() !== 'ALL'" type="button" class="btn-inline-clear"
+          (click)="resetStatusFilter($event)" title="Reset filter to All" aria-label="Clear filter">
+          <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+        </button>
+
+        <svg class="dropdown-chevron" [class.rotated]="isStatusDropdownOpen()" xmlns="http://www.w3.org/2000/svg"
+          width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+          stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="6 9 12 15 18 9" />
+        </svg>
+      </div>
+
+      <!-- Dropdown Menu List -->
+      <div *ngIf="isStatusDropdownOpen()" class="status-dropdown-menu" (click)="$event.stopPropagation()">
+        <button type="button" class="status-menu-item" [class.active]="selectedStatusFilter() === 'ALL'"
+          (click)="selectStatusFilter('ALL')">
+          <div class="status-item-left">
+            <span class="status-dot dot-all"></span>
+            <span class="status-item-name">All (Reset)</span>
+          </div>
+          <span class="status-item-badge">{{ totalBookingsCount() }}</span>
+        </button>
+
+        <button type="button" class="status-menu-item" [class.active]="selectedStatusFilter() === 'UPCOMING'"
+          (click)="selectStatusFilter('UPCOMING')">
+          <div class="status-item-left">
+            <span class="status-dot dot-upcoming"></span>
+            <span class="status-item-name">Upcoming</span>
+          </div>
+          <span class="status-item-badge">{{ upcomingCount() }}</span>
+        </button>
+
+        <button type="button" class="status-menu-item" [class.active]="selectedStatusFilter() === 'COMPLETED'"
+          (click)="selectStatusFilter('COMPLETED')">
+          <div class="status-item-left">
+            <span class="status-dot dot-completed"></span>
+            <span class="status-item-name">Completed</span>
+          </div>
+          <span class="status-item-badge">{{ completedCount() }}</span>
+        </button>
+
+        <button type="button" class="status-menu-item" [class.active]="selectedStatusFilter() === 'CANCELLED'"
+          (click)="selectStatusFilter('CANCELLED')">
+          <div class="status-item-left">
+            <span class="status-dot dot-cancelled"></span>
+            <span class="status-item-name">Cancelled</span>
+          </div>
+          <span class="status-item-badge">{{ cancelledCount() }}</span>
+        </button>
+      </div>
+    </div>
+
+
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="isLoading()" class="loading-state">
+    <div class="spinner"></div>
+    <p>Loading your appointments...</p>
+  </div>
+
+  <!-- ================= APPOINTMENTS CARDS GRID ================= -->
+  <div *ngIf="!isLoading() && filteredAppointments().length > 0" class="cards-grid-view animate-fade-in">
+    <div *ngFor="let apt of filteredAppointments()" class="customer-card glass-card">
+      <!-- Top Row: Status Badge & Appointment ID -->
+      <div class="card-top-bar">
+        <span *ngIf="apt.status === AppointmentStatus.Booked && isAppointmentPast(apt)" class="badge badge-overdue">
+          <span class="dot dot-overdue"></span>
+          <span>Booked (Past)</span>
+        </span>
+        <span *ngIf="!(apt.status === AppointmentStatus.Booked && isAppointmentPast(apt))" class="badge"
+          [ngClass]="apt.status | appStatusBadge">
+          <span class="dot"></span>
+          <span *ngIf="apt.status === AppointmentStatus.Approved">Confirmed</span>
+          <span *ngIf="apt.status !== AppointmentStatus.Approved">{{ apt.statusText }}</span>
+        </span>
+
+        <span class="card-ref" [appCopy]="apt.appointmentNumber" (copied)="onCopied($event)" title="Click to copy ID">
+          #{{ apt.appointmentNumber }}
+        </span>
+      </div>
+
+      <!-- Main Body: Provider Info -->
+      <div class="card-provider-box">
+        <div class="provider-avatar-circle"
+          [style.background]="apt.serviceProviderProfilePictureUrl ? 'transparent' : getGradient(apt.serviceProviderName)">
+          <img *ngIf="apt.serviceProviderProfilePictureUrl" [src]="apt.serviceProviderProfilePictureUrl"
+            [alt]="apt.serviceProviderName" class="avatar-photo-circle"
+            (error)="apt.serviceProviderProfilePictureUrl = undefined" />
+          <span *ngIf="!apt.serviceProviderProfilePictureUrl">{{ apt.serviceProviderName | appInitials }}</span>
+        </div>
+        <div class="provider-text-wrap">
+          <h3 class="card-provider-name">{{ apt.serviceProviderName }}</h3>
+          <span class="card-specialty-chip">{{ apt.serviceProviderType }}</span>
+        </div>
+      </div>
+
+      <!-- Schedule Strip: Date & Time in compact row -->
+      <div *ngIf="apt.status !== AppointmentStatus.RescheduleProposed" class="card-schedule-strip">
+        <div class="schedule-item">
+          <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect width="18" height="18" x="3" y="4" rx="2" ry="2" />
+            <line x1="16" x2="16" y1="2" y2="6" />
+            <line x1="8" y1="8" y1="2" y2="6" />
+            <line x1="3" x2="21" y1="10" y2="10" />
+          </svg>
+          <span>{{ apt.appointmentDate | appDate }}</span>
+        </div>
+        <span class="schedule-divider">•</span>
+        <div class="schedule-item">
+          <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10" />
+            <polyline points="12 6 12 12 16 14" />
+          </svg>
+          <span>{{ apt.startTime | appTime }} – {{ apt.endTime | appTime }}</span>
+        </div>
+      </div>
+
+      <!-- Creative Time-Shift Visualizer (For Reschedule Proposed - Keeps Card Compact & Small) -->
+      <div *ngIf="apt.status === AppointmentStatus.RescheduleProposed" class="shift-schedule-container animate-fade-in">
+        <!-- Date Header Line -->
+        <div class="shift-top-row">
+          <div class="shift-date-cell">
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <rect width="18" height="18" x="3" y="4" rx="2" ry="2" />
+              <line x1="16" y1="2" x2="16" y2="6" />
+              <line x1="8" y1="8" y1="2" y2="6" />
+              <line x1="3" y1="10" x2="21" y2="10" />
+            </svg>
+            <span *ngIf="!apt.proposedDate || apt.proposedDate === apt.appointmentDate">{{ apt.appointmentDate | appDate }}</span>
+            <span *ngIf="apt.proposedDate && apt.proposedDate !== apt.appointmentDate" class="shift-date-transition">
+              <del class="date-old">{{ apt.appointmentDate | appDate }}</del>
+              <span class="shift-arrow-mini">➜</span>
+              <strong class="date-new">{{ apt.proposedDate | appDate }}</strong>
+            </span>
+          </div>
+          <span class="shift-label-badge">Proposed Slot</span>
+        </div>
+
+        <!-- Time Shift Row: Original Slot -> Proposed Slot with Amber Glow -->
+        <div class="shift-time-row">
+          <del class="time-original" title="Original Scheduled Time">{{ apt.startTime | appTime }}</del>
+          <svg class="shift-arrow-icon" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="5" y1="12" x2="19" y2="12" />
+            <polyline points="12 5 19 12 12 19" />
+          </svg>
+          <span class="time-proposed-badge" title="Provider's Proposed New Slot">
+            <span class="pulse-dot-amber"></span>
+            <strong>{{ apt.proposedStartTime | appTime }} – {{ apt.proposedEndTime | appTime }}</strong>
+          </span>
+        </div>
+
+        <!-- Compact Decision Bar: Provider Note + Instant Accept/Decline Buttons -->
+        <div class="shift-decision-bar">
+          <div *ngIf="apt.rescheduleNotes" class="shift-note-chip" [title]="'Provider reason: ' + apt.rescheduleNotes">
+            <span class="quote-sym">“</span>
+            <span class="note-str">{{ apt.rescheduleNotes }}</span>
+            <span class="quote-sym">”</span>
+          </div>
+          <div *ngIf="!apt.rescheduleNotes" class="shift-note-chip shift-note-placeholder">
+            <span>Awaiting your decision</span>
+          </div>
+          <div class="shift-action-btns">
+            <button type="button" class="btn-shift-accept" (click)="acceptProposal(apt)"
+              [disabled]="isRespondingProposal()" title="Accept proposed slot">
+              <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+              <span>Accept</span>
+            </button>
+            <button type="button" class="btn-shift-decline" (click)="declineProposal(apt)"
+              [disabled]="isRespondingProposal()" title="Decline proposal">
+              <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+              <span>Decline</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card Footer: Clean Note & Contextual Action Buttons -->
+      <div class="card-footer-row">
+        <!-- Clean Booking Notes / Status Summary (No 'Cancelled by' on card) -->
+        <div class="card-note-cell"
+          [title]="apt.reason || (apt.status === AppointmentStatus.Cancelled ? 'Cancelled appointment' : (apt.status === AppointmentStatus.Rejected ? 'Declined by provider' : 'No notes'))">
+          <svg class="note-icon" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24"
+            fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+            <polyline points="14 2 14 8 20 8" />
+            <line x1="16" y1="13" x2="8" y2="13" />
+            <line x1="16" y1="17" x2="8" y2="17" />
+          </svg>
+          <span class="note-text-snippet">{{ apt.reason || (apt.status === AppointmentStatus.Cancelled ? 'Cancelled' :
+            (apt.status === AppointmentStatus.Rejected ? 'Declined' : 'No notes')) }}</span>
+        </div>
+
+        <!-- Modern Icon-Only Action Buttons -->
+        <div class="card-actions-icons">
+          <!-- View Pass Button (ONLY for Confirmed / Approved appointments) -->
+          <button *ngIf="apt.status === AppointmentStatus.Approved" type="button" class="card-icon-btn btn-view-pass"
+            (click)="viewTicket(apt)" title="View Digital Entry Pass" aria-label="View Entry Pass">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path
+                d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z" />
+              <path d="M13 5v2" />
+              <path d="M13 17v2" />
+              <path d="M13 11v2" />
+            </svg>
+          </button>
+
+          <!-- View Details Button (For Cancelled, Rejected, Completed, or Pending Bookings) -->
+          <button *ngIf="apt.status !== AppointmentStatus.Approved" type="button" class="card-icon-btn btn-view-details"
+            (click)="viewTicket(apt)" title="View Appointment Details" aria-label="View Details">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+              <circle cx="12" cy="12" r="3" />
+            </svg>
+          </button>
+
+          <!-- Reschedule Button (Icon only) -->
+          <button *ngIf="canModify(apt)" type="button" class="card-icon-btn btn-reschedule"
+            (click)="openReschedule(apt)" title="Reschedule Appointment" aria-label="Reschedule">
+            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
+              <path d="M21 3v5h-5" />
+              <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
+              <path d="M8 16H3v5" />
+            </svg>
+          </button>
+
+          <!-- Cancel Button (Icon only) -->
+          <button *ngIf="canCancel(apt) && apt.status !== AppointmentStatus.RescheduleProposed" type="button" class="card-icon-btn btn-cancel" (click)="openCancel(apt)"
+            title="Cancel Appointment" aria-label="Cancel">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+
+          <!-- Time Passed Lock Indicator (Icon only) -->
+          <span *ngIf="apt.status === AppointmentStatus.Booked && isAppointmentPast(apt)"
+            class="card-icon-btn btn-locked"
+            title="Scheduled time has passed. Cancellation is locked. You can still reschedule to a new slot.">
+            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+            </svg>
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Proper Full-Width Centered Empty State (No Book Button) -->
+  <div *ngIf="!isLoading() && filteredAppointments().length === 0" class="empty-state-container animate-fade-in">
+    <div class="empty-state-card glass-card">
+      <div class="empty-icon-wrap">
+        <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <rect width="18" height="18" x="3" y="4" rx="2" ry="2" />
+          <line x1="16" y1="2" x2="16" y2="6" />
+          <line x1="8" y1="2" x2="8" y2="6" />
+          <line x1="3" y1="10" x2="21" y2="10" />
+          <line x1="10" y1="14" x2="14" y2="18" />
+          <line x1="14" y1="14" x2="10" y2="18" />
+        </svg>
+      </div>
+      <h3 class="empty-state-title">No Appointments Found</h3>
+      <p class="empty-state-desc">No appointments match your search or filter criteria.</p>
+    </div>
+  </div>
+
+  <!-- MODAL 1: Digital Ticket Pass Modal -->
+  <div *ngIf="selectedTicket()" class="modal-backdrop animate-fade-in" (click)="closeTicket()">
+    <div class="modal-card modal-ticket-compact" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3 class="modal-title">{{ selectedTicket()?.status === AppointmentStatus.Approved ? 'Digital Appointment Pass'
+          : 'Appointment Details' }}</h3>
+        <button type="button" class="btn-close" (click)="closeTicket()" aria-label="Close pass">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body custom-scrollbar">
+        <app-booking-ticket [appointment]="selectedTicket()" [showActions]="true" [allowReschedule]="false"
+          [allowCancel]="false"></app-booking-ticket>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 2: Shared Reschedule Modal Component -->
+  <app-reschedule-modal *ngIf="activeRescheduleAppt()" [appointment]="activeRescheduleAppt()!"
+    (close)="activeRescheduleAppt.set(null)" (rescheduled)="onRescheduled($event)"></app-reschedule-modal>
+
+  <!-- MODAL 3: Shared Cancel Modal Component -->
+  <app-cancel-modal *ngIf="activeCancelAppt()" [appointment]="activeCancelAppt()!" (close)="activeCancelAppt.set(null)"
+    (cancelled)="onCancelled($event)"></app-cancel-modal>
+
+  <!-- Global Modals -->
+  <app-booking-modal *ngIf="isBookingModalOpen()" (close)="isBookingModalOpen.set(false)"
+    (booked)="onAppointmentBooked($event)"></app-booking-modal>
+
+</div>

@@ -1,0 +1,66 @@
+<div class="slot-picker-container">
+
+  <!-- Header with Legend -->
+  <div class="slot-picker-header" *ngIf="!hideHeader && !isLoading && slots.length > 0">
+    <div class="header-info">
+      <span class="slot-count-badge" *ngIf="!isLoading && slots.length > 0">
+        <strong>{{ availableCount() }}</strong> Available Slots
+      </span>
+    </div>
+
+    <!-- Status Legend (Hidden when hiding unavailable slots for clean customer booking) -->
+    <div class="slots-legend" *ngIf="!hideUnavailable">
+      <span class="legend-item"><span class="legend-dot dot-available"></span> Available</span>
+      <span class="legend-item"><span class="legend-dot dot-booked"></span> Booked</span>
+      <span class="legend-item"><span class="legend-dot dot-break"></span> Break</span>
+      <span class="legend-item"><span class="legend-dot dot-past"></span> Past</span>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="isLoading" class="slots-loading-state">
+    <div class="slot-skeleton-grid">
+      <div class="skeleton-slot" *ngFor="let i of [1,2,3,4,5,6,7,8]"></div>
+    </div>
+    <p class="loading-label">Checking specialist live schedule...</p>
+  </div>
+
+  <!-- Empty / Closed State (When no available slots) -->
+  <div *ngIf="!isLoading && groupedSlots().length === 0" class="slots-empty-state">
+    <div class="empty-icon">📅</div>
+    <h5>No Slots Available</h5>
+    <p>{{ emptyMessage }}</p>
+  </div>
+
+  <!-- Grouped Slots (Morning / Afternoon / Evening) -->
+  <div *ngIf="!isLoading && groupedSlots().length > 0" class="slot-groups-wrapper">
+    <div *ngFor="let group of groupedSlots()" class="slot-group-section">
+      <div class="group-header">
+        <span class="group-icon">{{ group.icon }}</span>
+        <span class="group-title">{{ group.title }}</span>
+      </div>
+
+      <div class="slots-grid">
+        <button type="button" *ngFor="let slot of group.slots" class="slot-chip"
+          [class.slot-available]="slot.isAvailable" [class.slot-booked]="slot.status === 'Booked'"
+          [class.slot-break]="slot.status === 'Break'" [class.slot-past]="slot.status === 'Past'"
+          [class.slot-selected]="isSelected(slot)" [disabled]="!slot.isAvailable" [title]="slot.reason || slot.status"
+          (click)="onSelect(slot)">
+          <span class="slot-time">{{ formatSlotTime(slot.startTime) }}</span>
+
+          <span *ngIf="slot.status === 'Booked'" class="slot-mini-badge badge-booked">Booked</span>
+          <span *ngIf="slot.status === 'Break'" class="slot-mini-badge badge-break">Break</span>
+          <span *ngIf="slot.status === 'Past'" class="slot-mini-badge badge-past">Passed</span>
+
+          <span *ngIf="isSelected(slot)" class="selected-check">
+            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+          </span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div>

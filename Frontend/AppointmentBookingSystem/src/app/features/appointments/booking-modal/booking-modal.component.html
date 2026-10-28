@@ -1,0 +1,934 @@
+<div class="modal-backdrop animate-fade-in" (click)="onModalClose()">
+  <div class="modal-dialog modal-card glass-card animate-scale-up" [class.modal-step-5]="currentStep === 5"
+    role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
+
+    <!-- Modal Header: Aligned with standard modals -->
+    <div class="modal-header">
+      <div class="header-left">
+        <!-- Back Arrow Button (Visible after Step 1) -->
+        <button *ngIf="currentStep > 1 && currentStep < 5" type="button" class="btn-back-header" (click)="goBack()"
+          aria-label="Go to previous step" title="Back">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="19" y1="12" x2="5" y2="12"></line>
+            <polyline points="12 19 5 12 12 5"></polyline>
+          </svg>
+        </button>
+
+        <div class="modal-title-wrap">
+          <h3 class="modal-title">
+            <ng-container [ngSwitch]="currentStep">
+              <span *ngSwitchCase="1">Select Service Provider</span>
+              <span *ngSwitchCase="2">Select Date & Available Time</span>
+              <span *ngSwitchCase="3">{{ isStaffOrAdmin() ? 'Customer Details' : 'Your Information' }}</span>
+              <span *ngSwitchCase="4">Review & Confirm</span>
+              <span *ngSwitchCase="5" class="confirmed-title-row">
+                <span class="confirmed-check-icon">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                </span>
+                Appointment Confirmed
+              </span>
+            </ng-container>
+          </h3>
+          <p class="modal-subtitle">
+            <ng-container [ngSwitch]="currentStep">
+              <span *ngSwitchCase="1">Choose an active provider for your appointment</span>
+              <span *ngSwitchCase="2">Choose an appointment date and available time slot</span>
+              <span *ngSwitchCase="3">{{ isStaffOrAdmin() ? 'Search existing customer to auto-fill or enter walk-in details' : 'Provide contact details for booking confirmation' }}</span>
+              <span *ngSwitchCase="4">Please review your appointment summary before booking</span>
+              <span *ngSwitchCase="5">Your reservation has been confirmed. Save or print your official booking pass
+                below.</span>
+            </ng-container>
+          </p>
+        </div>
+      </div>
+
+      <button type="button" class="btn-close" (click)="onModalClose()" aria-label="Close dialog">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18" />
+          <line x1="6" y1="6" x2="18" y2="18" />
+        </svg>
+      </button>
+    </div>
+
+    <!-- Error Banner -->
+    <div *ngIf="errorMessage()" class="alert alert-error animate-shake">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10" />
+        <line x1="12" y1="8" x2="12" y2="12" />
+        <line x1="12" y1="16" x2="12.01" y2="16" />
+      </svg>
+      <span>{{ errorMessage() }}</span>
+    </div>
+
+    <!-- Modal Body -->
+    <div class="modal-body custom-scrollbar">
+
+      <!-- ======================================================== -->
+      <!-- STEP 1: Select a Service Provider                        -->
+      <!-- ======================================================== -->
+      <div *ngIf="currentStep === 1" class="step-pane animate-fade-in">
+
+        <!-- Search & Service Type Dropdown Filter Bar -->
+        <div class="provider-filters-row">
+          <!-- Text Search Box -->
+          <div class="provider-search-box">
+            <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+              fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+            <input type="text" [ngModel]="providerSearchQuery()" (ngModelChange)="providerSearchQuery.set($event)"
+              placeholder="Search by name, service, location..." class="provider-search-input" />
+            <button *ngIf="providerSearchQuery()" type="button" class="btn-clear-mini-search"
+              (click)="providerSearchQuery.set('')" title="Clear search">✕</button>
+          </div>
+
+          <!-- Service Type Dropdown Filter -->
+          <div class="service-type-dropdown-wrap">
+            <select [ngModel]="selectedServiceType()" (ngModelChange)="selectedServiceType.set($event)"
+              class="service-type-select">
+              <option value="ALL">All Services</option>
+              <option *ngFor="let st of serviceTypes()" [value]="st">{{ st }}</option>
+            </select>
+            <svg class="dropdown-chevron-icon" xmlns="http://www.w3.org/2000/svg" width="14" height="14"
+              viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"
+              stroke-linejoin="round">
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
+          </div>
+
+          <span class="providers-count-pill" *ngIf="!isLoadingProviders()">
+            {{ filteredProviders().length }} {{ filteredProviders().length === 1 ? 'provider' : 'providers' }}
+          </span>
+        </div>
+
+        <!-- Loading State -->
+        <div *ngIf="isLoadingProviders()" class="providers-loading-pane">
+          <div class="spinner-small"></div>
+          <span>Loading available providers...</span>
+        </div>
+
+        <!-- Empty State -->
+        <div *ngIf="!isLoadingProviders() && filteredProviders().length === 0" class="providers-empty-pane">
+          <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8" />
+            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+          </svg>
+          <p>No active providers found matching your search or service filter.</p>
+          <button type="button" class="btn-reset-search" (click)="clearProviderSearch()">Clear Filters</button>
+        </div>
+
+        <!-- Provider Cards Grid: Comprehensive Info & Clean Selection -->
+        <div *ngIf="!isLoadingProviders() && filteredProviders().length > 0" class="provider-cards-grid">
+          <div *ngFor="let p of filteredProviders()" class="provider-select-card"
+            [class.selected]="selectedProviderId === p.id" (click)="selectProviderCard(p)">
+            <!-- Card Top: Avatar + Identity + Action Button -->
+            <div class="provider-card-top">
+              <div class="provider-card-identity">
+                <div class="card-avatar"
+                  [style.background]="p.profilePictureUrl ? 'transparent' : getAvatarGradient(p.name)">
+                  <img *ngIf="p.profilePictureUrl" [src]="p.profilePictureUrl" [alt]="p.name" class="avatar-img"
+                    (error)="p.profilePictureUrl = undefined" />
+                  <span *ngIf="!p.profilePictureUrl">{{ getInitials(p.name) }}</span>
+                </div>
+                <div class="identity-text">
+                  <h4 class="card-provider-name">{{ p.name }}</h4>
+                  <div class="card-badges-row">
+                    <span class="card-service-type-badge">{{ p.serviceType || 'Provider' }}</span>
+                    <span *ngIf="p.chargesAmount" class="card-charges-badge">₹{{ p.chargesAmount | number }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Action Button: [ Select ] or [ Selected ] (No check icon) -->
+              <button type="button" class="btn-select-provider" [class.is-selected]="selectedProviderId === p.id"
+                (click)="selectProviderCard(p); $event.stopPropagation()">
+                <span>{{ selectedProviderId === p.id ? 'Selected' : 'Select' }}</span>
+              </button>
+            </div>
+
+            <!-- Provider Bio (if available) -->
+            <p *ngIf="p.bio" class="provider-card-bio">
+              {{ p.bio }}
+            </p>
+
+            <!-- Complete Contact Info Details -->
+            <div class="provider-details-list">
+              <div *ngIf="p.phoneNumber" class="provider-detail-item" title="Phone">
+                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path
+                    d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+                </svg>
+                <span>{{ p.phoneNumber }}</span>
+              </div>
+
+              <div *ngIf="p.email" class="provider-detail-item" title="Email">
+                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                  <polyline points="22,6 12,13 2,6" />
+                </svg>
+                <span>{{ p.email }}</span>
+              </div>
+
+              <div *ngIf="p.address" class="provider-detail-item" title="Address">
+                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                  <circle cx="12" cy="10" r="3" />
+                </svg>
+                <span>{{ p.address }}</span>
+              </div>
+            </div>
+
+            <!-- Card Bottom Meta: Status & Appointments Count -->
+            <div class="provider-card-footer-meta">
+              <span class="status-verified-tag">
+                <span class="status-dot-pulse"></span>
+                Active Provider
+              </span>
+              <span class="appointments-count-tag" *ngIf="p.totalAppointmentsCount !== undefined">
+                {{ p.totalAppointmentsCount }} bookings served
+              </span>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ======================================================== -->
+      <!-- STEP 2: SIDE-BY-SIDE: CALENDAR (LEFT) + TIME SLOTS (RIGHT)-->
+      <!-- Exactly matching user's reference mockup                 -->
+      <!-- ======================================================== -->
+      <div *ngIf="currentStep === 2" class="step-pane animate-fade-in">
+
+        <!-- Selected Provider Bar with Change Option -->
+        <div class="selection-summary-card">
+          <div class="summary-left">
+            <div class="summary-avatar"
+              [style.background]="selectedProvider?.profilePictureUrl ? 'transparent' : getAvatarGradient(selectedProvider?.name || '')">
+              <img *ngIf="selectedProvider?.profilePictureUrl" [src]="selectedProvider?.profilePictureUrl"
+                (error)="selectedProvider!.profilePictureUrl = undefined" [alt]="selectedProvider?.name"
+                class="avatar-img" />
+              <span *ngIf="!selectedProvider?.profilePictureUrl">{{ getInitials(selectedProvider?.name || '') }}</span>
+            </div>
+            <div class="summary-details">
+              <span class="summary-role">{{ selectedProvider?.serviceType || 'Provider' }}</span>
+              <div class="summary-name-row">
+                <h4 class="summary-name">{{ selectedProvider?.name }}</h4>
+                <span *ngIf="selectedProvider?.chargesAmount" class="card-charges-badge">₹{{ selectedProvider?.chargesAmount | number }}</span>
+              </div>
+            </div>
+          </div>
+
+          <button type="button" class="btn-change-selection" (click)="backToStep1()" title="Change provider">
+            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+            </svg>
+            <span>Change</span>
+          </button>
+        </div>
+
+        <!-- SIDE-BY-SIDE CONTAINER: Calendar (Left) + Available Slots (Right) -->
+        <div class="booking-split-container">
+
+          <!-- LEFT COLUMN: Month Calendar Grid -->
+          <div class="calendar-panel">
+
+            <!-- Month Nav Header -->
+            <div class="calendar-nav-bar">
+              <h4 class="calendar-month-title">{{ currentMonthLabel }}</h4>
+
+              <div class="calendar-nav-buttons">
+                <button type="button" class="btn-cal-nav" [disabled]="!canGoPrevMonth" (click)="prevMonth()"
+                  title="Previous month">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="15 18 9 12 15 6" />
+                  </svg>
+                </button>
+
+                <button type="button" class="btn-cal-nav" (click)="nextMonth()" title="Next month">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="9 18 15 12 9 6" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <!-- Weekday Headers (Mon Tue Wed Thu Fri Sat Sun) -->
+            <div class="calendar-weekdays-grid">
+              <span *ngFor="let dayName of weekdays" class="cal-weekday-label">{{ dayName }}</span>
+            </div>
+
+            <!-- Days Grid -->
+            <div class="calendar-days-grid">
+              <button *ngFor="let day of calendarDays" type="button" class="calendar-day-btn"
+                [class.not-current-month]="!day.isCurrentMonth" [class.past-day]="day.isPast"
+                [class.today-day]="day.isToday" [class.selected-day]="day.isSelected"
+                [disabled]="day.isPast || !day.isCurrentMonth" (click)="selectCalendarDay(day)">
+                <span class="day-num">{{ day.dayNumber }}</span>
+              </button>
+            </div>
+
+          </div>
+
+          <!-- RIGHT COLUMN: Available Time Slots + Next Action -->
+          <div class="slots-panel">
+
+            <div class="slots-panel-header">
+              <span class="slots-date-label">{{ formatDate(selectedDate) }}</span>
+              <span *ngIf="!isLoadingSlots() && availableSlots.length > 0" class="slots-count-tag">
+                {{ availableSlots.length }} available
+              </span>
+            </div>
+
+            <!-- Slots Loading State -->
+            <div *ngIf="isLoadingSlots()" class="slots-loading-box">
+              <div class="spinner-small"></div>
+              <span>Checking live slots...</span>
+            </div>
+
+            <!-- No Slots Available Message -->
+            <div *ngIf="!isLoadingSlots() && availableSlots.length === 0" class="slots-empty-box">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <polyline points="12 6 12 12 16 14" />
+              </svg>
+              <p>No available time slots on this date.</p>
+              <span class="empty-hint">Please choose another day on the calendar.</span>
+            </div>
+
+            <!-- 2-Column Available Time Slots Grid (Matching Mockup) -->
+            <div *ngIf="!isLoadingSlots() && availableSlots.length > 0" class="slots-two-col-grid custom-scrollbar">
+              <button *ngFor="let slot of availableSlots" type="button" class="slot-checkbox-card"
+                [class.checked]="selectedSlot?.startTime === slot.startTime" [title]="formatSlotRange(slot)"
+                (click)="selectSlot(slot)">
+                <!-- Checkbox / Clock Icon Indicator -->
+                <div class="slot-check-icon">
+                  <svg *ngIf="selectedSlot?.startTime === slot.startTime" xmlns="http://www.w3.org/2000/svg" width="10"
+                    height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                  <svg *ngIf="selectedSlot?.startTime !== slot.startTime" class="slot-clock-icon"
+                    xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10" />
+                    <polyline points="12 6 12 12 16 14" />
+                  </svg>
+                </div>
+                <span class="slot-time-text">{{ formatSlotRange(slot) }}</span>
+              </button>
+            </div>
+
+            <!-- Prominent Next Button (Bottom Right) -->
+            <div class="slots-action-wrap">
+              <button type="button" class="btn-next-action" [disabled]="!selectedSlot" (click)="goToStep3()">
+                <span>Next: Customer Details</span>
+                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                  <polyline points="12 5 19 12 12 19"></polyline>
+                </svg>
+              </button>
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- ======================================================== -->
+      <!-- STEP 3: Customer Information (Required Address & Reason) -->
+      <!-- ======================================================== -->
+      <div *ngIf="currentStep === 3" class="step-pane animate-fade-in">
+
+        <!-- Selected Appointment Context Strip -->
+        <div class="booking-context-strip" *ngIf="selectedProvider">
+          <div class="context-item">
+            <span class="context-label">Provider</span>
+            <div class="context-val-with-avatar">
+              <div class="mini-avatar"
+                [style.background]="selectedProvider.profilePictureUrl ? 'transparent' : getAvatarGradient(selectedProvider.name)">
+                <img *ngIf="selectedProvider.profilePictureUrl" [src]="selectedProvider.profilePictureUrl"
+                  (error)="selectedProvider.profilePictureUrl = undefined" [alt]="selectedProvider.name" />
+                <span *ngIf="!selectedProvider.profilePictureUrl">{{ getInitials(selectedProvider.name) }}</span>
+              </div>
+              <span class="context-text font-bold">{{ selectedProvider.name }}</span>
+              <span class="context-tag">{{ selectedProvider.serviceType || 'Provider' }}</span>
+              <span *ngIf="selectedProvider.chargesAmount" class="card-charges-badge">₹{{ selectedProvider.chargesAmount | number }}</span>
+            </div>
+          </div>
+
+          <div class="context-item">
+            <span class="context-label">Reserved Slot</span>
+            <div class="context-slot-pill">
+              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                <line x1="16" y1="2" x2="16" y2="6" />
+                <line x1="8" y1="2" x2="8" y2="6" />
+                <line x1="3" y1="10" x2="21" y2="10" />
+              </svg>
+              <span>{{ formatDate(selectedDate) }}</span>
+              <span class="context-dot">•</span>
+              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <polyline points="12 6 12 12 16 14" />
+              </svg>
+              <span>{{ formatTime(selectedSlot?.startTime || '') }} – {{ formatTime(selectedSlot?.endTime || '')
+                }}</span>
+            </div>
+          </div>
+
+          <button type="button" class="btn-change-slot" (click)="goBack()" title="Change slot">
+            Change
+          </button>
+        </div>
+
+        <!-- Customer Details Form Card -->
+        <div class="customer-info-card">
+          <div class="card-heading-row">
+            <div class="heading-left-part">
+              <div class="heading-icon-badge">
+                <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+                  <circle cx="12" cy="7" r="4" />
+                </svg>
+              </div>
+              <div>
+                <h4 class="card-title">{{ isStaffOrAdmin() ? 'Customer Contact Details' : 'Your Contact Details' }}</h4>
+                <p class="card-subtitle">{{ isStaffOrAdmin() ? 'Search registered customer to auto-fill, or enter new walk-in details below.' : 'Booking notifications and official appointment ticket will be issued to this customer.' }}</p>
+              </div>
+            </div>
+            <button *ngIf="isStaffOrAdmin() && (customerName || customerPhone || customerEmail)" type="button" class="btn-clear-fields" (click)="clearLinkedCustomer()" title="Reset customer fields">
+              ✕ Clear Fields
+            </button>
+          </div>
+
+          <!-- Staff / Admin: Sleek Integrated Customer Search Bar -->
+          <div *ngIf="isStaffOrAdmin()" class="customer-quick-search-box">
+            <div class="quick-search-input-wrap">
+              <svg class="search-lead-ico" xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"/>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              </svg>
+
+              <input
+                type="text"
+                [ngModel]="customerSearchQuery()"
+                (input)="onCustomerSearchInput($any($event.target).value)"
+                (focus)="showSearchDropdown.set(customerSearchResults().length > 0)"
+                placeholder="Search customer by Name, Mobile (+91), or Email to auto-fill..."
+                class="quick-search-field"
+                autocomplete="off"
+              />
+
+              <div *ngIf="isSearchingCustomers()" class="search-spinner-inline">
+                <div class="spinner-small"></div>
+              </div>
+
+              <button
+                *ngIf="customerSearchQuery()"
+                type="button"
+                class="btn-clear-search-pill"
+                (click)="customerSearchQuery.set(''); customerSearchResults.set([]); showSearchDropdown.set(false)"
+                title="Clear search"
+              >✕</button>
+            </div>
+
+            <!-- Autocomplete Dropdown List -->
+            <div
+              *ngIf="showSearchDropdown() && (customerSearchResults().length > 0 || (!isSearchingCustomers() && customerSearchQuery().length >= 2))"
+              class="customer-dropdown-menu custom-scrollbar animate-scale-up"
+            >
+              <div *ngIf="customerSearchResults().length > 0" class="dropdown-results-list">
+                <div class="dropdown-header">
+                  <span>Found {{ customerSearchResults().length }} customer{{ customerSearchResults().length > 1 ? 's' : '' }}</span>
+                  <span class="dropdown-tip">Click to 1-click auto-fill</span>
+                </div>
+                <button
+                  *ngFor="let cust of customerSearchResults()"
+                  type="button"
+                  class="dropdown-customer-item"
+                  (click)="selectCustomerFromSearch(cust)"
+                >
+                  <div class="cust-avatar-badge" [style.background]="getAvatarGradient(cust.fullName || cust.firstName || '')">
+                    {{ getInitials(cust.fullName || cust.firstName || 'C') }}
+                  </div>
+                  <div class="cust-item-details">
+                    <div class="cust-name-row">
+                      <span class="cust-item-name">{{ cust.fullName || (cust.firstName + ' ' + (cust.lastName || '')) }}</span>
+                      <span class="cust-role-tag" *ngIf="cust.phoneNumber">+91 {{ cust.phoneNumber }}</span>
+                    </div>
+                    <div class="cust-contact-row">
+                      <span class="cust-meta-item" *ngIf="cust.email">{{ cust.email }}</span>
+                      <span class="cust-meta-item" *ngIf="cust.address || cust.city">• {{ cust.address || cust.city }}</span>
+                    </div>
+                  </div>
+                  <div class="cust-select-badge">Select</div>
+                </button>
+              </div>
+
+              <div *ngIf="!isSearchingCustomers() && customerSearchResults().length === 0 && customerSearchQuery().length >= 2" class="dropdown-no-results">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10"/>
+                  <line x1="12" y1="8" x2="12" y2="12"/>
+                  <line x1="12" y1="16" x2="12.01" y2="16"/>
+                </svg>
+                <span>No registered customer found. Fill below for new walk-in.</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- New Customer Notice (when phone typed but not found) -->
+          <div *ngIf="isStaffOrAdmin() && !linkedCustomer && isCustomerNotFound() && customerPhone.length === 10"
+            class="customer-link-alert info animate-fade-in">
+            <span class="link-badge-dot dot-cyan"></span>
+            <span>New customer profile will be created with mobile number as initial password.</span>
+          </div>
+
+          <!-- Row 1: Full Name & Email Address -->
+          <div class="form-row two-cols">
+            <div class="form-group">
+              <label class="form-label">{{ isStaffOrAdmin() ? 'Customer Full Name' : 'Full Name' }} <span
+                  class="required">*</span></label>
+              <div class="field-icon-wrap">
+                <svg class="field-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                  fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+                  <circle cx="12" cy="7" r="4" />
+                </svg>
+                <input type="text" [(ngModel)]="customerName" placeholder="e.g. Sita Sharma"
+                  class="form-control with-icon" autocomplete="off" />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">{{ isStaffOrAdmin() ? 'Customer Email Address' : 'Email Address' }} <span
+                  class="required">*</span></label>
+              <div class="field-icon-wrap">
+                <svg class="field-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                  fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect width="20" height="16" x="2" y="4" rx="2" />
+                  <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+                </svg>
+                <input type="email" [(ngModel)]="customerEmail" (blur)="onEmailBlur()" (keyup.enter)="onEmailBlur()"
+                  placeholder="e.g. sita@example.com" class="form-control with-icon" autocomplete="off" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Row 2: Phone Number & Address (Address is REQUIRED) -->
+          <div class="form-row two-cols">
+            <div class="form-group">
+              <label class="form-label">{{ isStaffOrAdmin() ? 'Customer Mobile Number' : 'Mobile Number' }} <span
+                  class="required">*</span></label>
+              <div class="phone-input-group">
+                <span class="phone-prefix">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path
+                      d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+                  </svg>
+                  +91
+                </span>
+                <input type="tel" appOnlyDigits inputmode="numeric" maxlength="10" [(ngModel)]="customerPhone"
+                  (input)="onPhoneInput($event)"
+                  (keyup.enter)="isStaffOrAdmin() && customerPhone.length === 10 && lookupCustomerByQuery(customerPhone)"
+                  placeholder="98765 43210" class="form-control phone-control" autocomplete="off" />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">{{ isStaffOrAdmin() ? 'Customer Address' : 'Address' }} <span
+                  class="required">*</span></label>
+              <div class="field-icon-wrap">
+                <svg class="field-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                  fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
+                  <circle cx="12" cy="10" r="3" />
+                </svg>
+                <input type="text" [(ngModel)]="customerAddress" placeholder="Street, Area, City, State"
+                  class="form-control with-icon" autocomplete="off" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Row 3: Reason for Visit / Appointment Purpose (REQUIRED) -->
+          <div class="form-group form-group-full">
+            <label class="form-label">Reason for Visit / Appointment Purpose <span class="required">*</span></label>
+            <div class="field-icon-wrap textarea-icon-wrap">
+              <svg class="field-icon textarea-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                <polyline points="14 2 14 8 20 8" />
+                <line x1="16" y1="13" x2="8" y2="13" />
+                <line x1="16" y1="17" x2="8" y2="17" />
+                <polyline points="10 9 9 9 8 9" />
+              </svg>
+              <textarea [(ngModel)]="bookingNotes" rows="2"
+                placeholder="Briefly describe the purpose of appointment (e.g. Consultation for toothache, regular checkup, general inquiry)..."
+                class="form-control with-icon textarea-purpose"></textarea>
+            </div>
+          </div>
+
+
+
+        </div>
+
+      </div>
+
+      <!-- ======================================================== -->
+      <!-- STEP 4: Review & Confirmation Summary                    -->
+      <!-- ======================================================== -->
+      <div *ngIf="currentStep === 4" class="step-pane animate-fade-in step-review-pane">
+
+        <div class="review-grid">
+
+          <!-- 1. Specialist & Schedule Hero Card -->
+          <div class="review-card review-hero-card">
+            <div class="review-provider-header">
+              <div class="review-avatar"
+                [style.background]="selectedProvider?.profilePictureUrl ? 'transparent' : getAvatarGradient(selectedProvider?.name || '')">
+                <img *ngIf="selectedProvider?.profilePictureUrl" [src]="selectedProvider?.profilePictureUrl"
+                  (error)="selectedProvider!.profilePictureUrl = undefined" [alt]="selectedProvider?.name"
+                  class="avatar-img" />
+                <span *ngIf="!selectedProvider?.profilePictureUrl">{{ getInitials(selectedProvider?.name || '')
+                  }}</span>
+              </div>
+              <div class="review-provider-info">
+                <span class="review-caption">Selected Specialist</span>
+                <h4 class="review-provider-name">{{ selectedProvider?.name }}</h4>
+                <span class="review-service-badge">{{ selectedProvider?.serviceType || 'Specialist' }}</span>
+              </div>
+            </div>
+
+            <div class="review-schedule-strip">
+              <div class="schedule-pill-item">
+                <div class="schedule-pill-icon">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect width="18" height="18" x="3" y="4" rx="2" />
+                    <line x1="16" y1="2" x2="16" y2="6" />
+                    <line x1="8" y1="2" x2="8" y2="6" />
+                    <line x1="3" y1="10" x2="21" y2="10" />
+                  </svg>
+                </div>
+                <div class="schedule-pill-text">
+                  <span class="pill-label">Appointment Date</span>
+                  <span class="pill-value">{{ formatDate(selectedDate) }}</span>
+                </div>
+              </div>
+
+              <div class="schedule-pill-divider"></div>
+
+              <div class="schedule-pill-item">
+                <div class="schedule-pill-icon">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10" />
+                    <polyline points="12 6 12 12 16 14" />
+                  </svg>
+                </div>
+                <div class="schedule-pill-text">
+                  <span class="pill-label">Time Slot</span>
+                  <span class="pill-value">
+                    {{ formatTime(selectedSlot?.startTime || '') }} – {{ formatTime(selectedSlot?.endTime || '') }}
+                    <span class="slot-duration-tag">30 Mins</span>
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 2. Customer Information Card -->
+          <div class="review-card review-customer-card">
+            <div class="review-card-heading">
+              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                <circle cx="12" cy="7" r="4" />
+              </svg>
+              <span>Customer Details</span>
+            </div>
+
+            <div class="customer-info-tiles">
+              <div class="info-tile">
+                <span class="tile-label">Full Name</span>
+                <span class="tile-val">{{ customerName }}</span>
+              </div>
+              <div class="info-tile">
+                <span class="tile-label">Email Address</span>
+                <span class="tile-val">{{ customerEmail }}</span>
+              </div>
+              <div class="info-tile">
+                <span class="tile-label">Mobile Number</span>
+                <span class="tile-val">+91 {{ customerPhone }}</span>
+              </div>
+              <div class="info-tile" *ngIf="customerAddress">
+                <span class="tile-label">Address</span>
+                <span class="tile-val">{{ customerAddress }}</span>
+              </div>
+            </div>
+
+            <div *ngIf="bookingNotes" class="review-purpose-box">
+              <div class="purpose-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                  <polyline points="14 2 14 8 20 8" />
+                  <line x1="16" y1="13" x2="8" y2="13" />
+                  <line x1="16" y1="17" x2="8" y2="17" />
+                  <polyline points="10 9 9 9 8 9" />
+                </svg>
+              </div>
+              <div class="purpose-content">
+                <span class="purpose-label">Reason for Visit</span>
+                <span class="purpose-text">"{{ bookingNotes }}"</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- ======================================================== -->
+      <!-- STEP 5: Success / Confirmed Ticket                       -->
+      <!-- ======================================================== -->
+      <div *ngIf="currentStep === 5" class="step-pane animate-fade-in step-success-pane">
+
+        <div *ngIf="confirmedAppointment() as app" class="success-pass-card" id="printable-ticket">
+
+          <!-- Glowing Top Accent Line -->
+          <div class="pass-top-accent"></div>
+
+          <!-- Reference & Status Header Bar -->
+          <div class="pass-ref-bar">
+            <div class="pass-ref-left">
+              <span class="pass-ref-label">Appointment Reference</span>
+              <div class="pass-ref-row">
+                <span class="pass-ref-code">{{ app.appointmentNumber }}</span>
+                <button type="button" class="btn-copy-ref" [appCopy]="app.appointmentNumber" (copied)="copiedRef = true"
+                  title="Copy Appointment ID">
+                  <svg *ngIf="!copiedRef" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+                    fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
+                    <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
+                  </svg>
+                  <span *ngIf="copiedRef" class="copy-success-text">✓ Copied</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="pass-status-pill">
+              <span class="status-dot-pulse"></span>
+              <span>Confirmed</span>
+            </div>
+          </div>
+
+          <!-- Perforated Tear Line -->
+          <div class="pass-perforation">
+            <span class="tear-notch notch-l"></span>
+            <span class="tear-line"></span>
+            <span class="tear-notch notch-r"></span>
+          </div>
+
+          <!-- Pass Details Grid -->
+          <div class="pass-body-grid">
+
+            <!-- Specialist -->
+            <div class="pass-info-block">
+              <span class="pass-block-label">Service Provider</span>
+              <div class="pass-provider-row">
+                <div class="pass-avatar"
+                  [style.background]="app.serviceProviderProfilePictureUrl ? 'transparent' : getAvatarGradient(app.serviceProviderName)">
+                  <img *ngIf="app.serviceProviderProfilePictureUrl" [src]="app.serviceProviderProfilePictureUrl" alt=""
+                    class="avatar-img" (error)="app.serviceProviderProfilePictureUrl = undefined" />
+                  <span *ngIf="!app.serviceProviderProfilePictureUrl">{{ getInitials(app.serviceProviderName) }}</span>
+                </div>
+                <div class="pass-provider-meta">
+                  <h5 class="pass-provider-name">{{ app.serviceProviderName }}</h5>
+                  <span class="pass-provider-type">{{ app.serviceProviderType }}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Schedule -->
+            <div class="pass-info-block">
+              <span class="pass-block-label">Date & Time Slot</span>
+              <div class="pass-schedule-meta">
+                <div class="pass-date-row">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect width="18" height="18" x="3" y="4" rx="2" />
+                    <line x1="16" y1="2" x2="16" y2="6" />
+                    <line x1="8" y1="2" x2="8" y2="6" />
+                    <line x1="3" y1="10" x2="21" y2="10" />
+                  </svg>
+                  <span class="pass-date-text">{{ formatDate(app.appointmentDate) }}</span>
+                </div>
+                <div class="pass-time-badge">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10" />
+                    <polyline points="12 6 12 12 16 14" />
+                  </svg>
+                  <span>{{ formatTime(app.startTime) }} – {{ formatTime(app.endTime) }}</span>
+                  <span class="pass-duration">30 Mins</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Customer -->
+            <div class="pass-info-block pass-customer-block">
+              <span class="pass-block-label">Customer Details</span>
+              <div class="pass-customer-row">
+                <div class="customer-item">
+                  <span class="c-meta-label">Name:</span>
+                  <strong class="c-meta-val">{{ app.customerName }}</strong>
+                </div>
+                <div class="customer-item">
+                  <span class="c-meta-label">Phone:</span>
+                  <strong class="c-meta-val">+91 {{ app.customerPhone }}</strong>
+                </div>
+                <div class="customer-item">
+                  <span class="c-meta-label">Email:</span>
+                  <strong class="c-meta-val">{{ app.customerEmail }}</strong>
+                </div>
+              </div>
+            </div>
+
+            <!-- Purpose/Reason if provided -->
+            <div *ngIf="app.reason" class="pass-info-block pass-reason-block">
+              <span class="pass-block-label">Service Notes / Reason</span>
+              <p class="pass-reason-text">"{{ app.reason }}"</p>
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- Modal Footer Actions (Per Step) -->
+    <div class="modal-footer" *ngIf="currentStep !== 2">
+
+      <!-- Step 1 Actions (Select Provider) -->
+      <div *ngIf="currentStep === 1" class="footer-actions-row flex-end">
+        <button type="button" class="btn btn-primary" [disabled]="!selectedProviderId || isLoadingProviders()"
+          (click)="goToStep2()">
+          <span>Choose Date & Time</span>
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+            <polyline points="12 5 19 12 12 19"></polyline>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Step 3 Actions (Customer Info) -->
+      <div *ngIf="currentStep === 3" class="footer-actions-row flex-end">
+        <button type="button" class="btn btn-primary" (click)="goToStep4()">
+          <span>Review Booking</span>
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+            <polyline points="12 5 19 12 12 19"></polyline>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Step 4 Actions (Review & Confirm) -->
+      <div *ngIf="currentStep === 4" class="footer-actions-row flex-end">
+        <button type="button" class="btn btn-primary btn-confirm" [disabled]="isSubmitting()"
+          (click)="confirmBooking()">
+          <div *ngIf="isSubmitting()" class="spinner-small"></div>
+          <span *ngIf="!isSubmitting()">Confirm Booking</span>
+          <span *ngIf="isSubmitting()">Securing Slot...</span>
+          <svg *ngIf="!isSubmitting()" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+            fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12" />
+          </svg>
+        </button>
+      </div>
+
+      <!-- Step 5 Actions (Success Ticket) -->
+      <div *ngIf="currentStep === 5" class="footer-actions-row justify-center">
+        <button type="button" class="btn btn-secondary" (click)="printTicket()">
+          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="6 9 6 2 18 2 18 9" />
+            <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+            <rect width="12" height="8" x="6" y="14" />
+          </svg>
+          <span>Print / Save Pass</span>
+        </button>
+      </div>
+
+    </div>
+
+    <!-- ======================================================== -->
+    <!-- AUTH REQUIRED PROMPT OVERLAY (Mandatory Account Gate)   -->
+    <!-- ======================================================== -->
+    <div *ngIf="showAuthPrompt()" class="auth-prompt-overlay animate-fade-in" (click)="showAuthPrompt.set(false)">
+      <div class="auth-prompt-card animate-scale-up" (click)="$event.stopPropagation()">
+        <button type="button" class="btn-prompt-close" (click)="showAuthPrompt.set(false)" title="Close"
+          aria-label="Close">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+        <h3 class="prompt-heading">Account Required to Book</h3>
+        <p class="prompt-subtext">
+          To confirm your appointment and manage bookings online, please register or sign in to your account.
+        </p>
+
+        <div class="prompt-cta-buttons">
+          <button type="button" class="btn btn-primary btn-prompt-main" (click)="redirectToAuth('register')">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+              <circle cx="9" cy="7" r="4" />
+              <line x1="19" y1="8" x2="19" y2="14" />
+              <line x1="22" y1="11" x2="16" y2="11" />
+            </svg>
+            <span>Create Free Account</span>
+          </button>
+
+          <p class="prompt-signin-footer">
+            Already have an account?
+            <button type="button" class="btn-prompt-signin-link" (click)="redirectToAuth('login')">
+              Sign In
+            </button>
+          </p>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</div>

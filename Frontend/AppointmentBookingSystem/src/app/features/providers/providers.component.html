@@ -1,0 +1,337 @@
+<div class="providers-container">
+  <!-- Page Header -->
+  <div class="page-header">
+    <div class="header-titles">
+      <h2>Service Providers</h2>
+      <p>Manage your specialists and service professionals roster.</p>
+    </div>
+    <button type="button" class="btn btn-primary btn-add-provider" (click)="openCreateModal()">
+      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="12" y1="5" x2="12" y2="19"/>
+        <line x1="5" y1="12" x2="19" y2="12"/>
+      </svg>
+      <span>Add Service Provider</span>
+    </button>
+  </div>
+
+  <!-- Success Notification Alert -->
+  <div *ngIf="successMessage()" class="alert alert-success animate-fade-in">
+    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+      <polyline points="22 4 12 14.01 9 11.01"/>
+    </svg>
+    <span>{{ successMessage() }}</span>
+  </div>
+
+  <!-- Search & Filter Controls -->
+  <div class="filter-bar glass-card" [class.menu-open]="isStatusFilterDropdownOpen()">
+    <div class="search-box">
+      <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="8"/>
+        <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      </svg>
+      <input
+        type="text"
+        [(ngModel)]="searchQuery"
+        (ngModelChange)="onSearchChange()"
+        class="search-input"
+        placeholder="Search by provider name, specialty, or email..."
+      />
+    </div>
+
+    <div class="filter-controls">
+      <!-- Custom Glassmorphism Status Filter Dropdown -->
+      <div class="custom-select-anchor status-filter-anchor" [class.menu-open]="isStatusFilterDropdownOpen()" [class.has-selection]="statusFilter !== 'all'">
+        <button
+          type="button"
+          class="custom-select-trigger filter-dropdown-trigger"
+          (click)="toggleStatusFilterDropdown($event)"
+          [title]="'Filter by status: ' + statusFilterLabel"
+          aria-haspopup="listbox"
+          [attr.aria-expanded]="isStatusFilterDropdownOpen()"
+        >
+          <!-- Left Dynamic Status Indicator -->
+          <div class="trigger-icon-wrap">
+            <span *ngIf="statusFilter === 'all'" class="trigger-default-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+              </svg>
+            </span>
+            <span *ngIf="statusFilter === '1'" class="status-dot dot-active"></span>
+            <span *ngIf="statusFilter === '2'" class="status-dot dot-inactive"></span>
+          </div>
+
+          <!-- Label Display -->
+          <div class="trigger-label-group">
+            <span class="trigger-main-text">{{ statusFilterLabel }}</span>
+          </div>
+
+          <!-- Chevron Indicator -->
+          <svg class="trigger-chevron" [class.rotated]="isStatusFilterDropdownOpen()" xmlns="http://www.w3.org/2000/svg"
+            width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+            stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="6 9 12 15 18 9" />
+          </svg>
+        </button>
+
+        <!-- Glassmorphism Dropdown Popover Menu -->
+        <div *ngIf="isStatusFilterDropdownOpen()" class="custom-dropdown-popover animate-scale-up"
+          (click)="$event.stopPropagation()">
+          <div class="popover-header">
+            <span class="popover-header-title">Filter by Status</span>
+            <span class="popover-count-pill">3 Options</span>
+          </div>
+
+          <div class="popover-items-list">
+            <!-- All Status Option -->
+            <button type="button" class="popover-option-item" [class.option-selected]="statusFilter === 'all'"
+              (click)="selectStatusFilter('all', $event)">
+              <div class="option-icon-box">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+                </svg>
+              </div>
+              <div class="option-info">
+                <span class="option-title">All Status</span>
+                <span class="option-desc">Show all providers</span>
+              </div>
+              <svg *ngIf="statusFilter === 'all'" class="option-check-icon" xmlns="http://www.w3.org/2000/svg"
+                width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+            </button>
+
+            <!-- Active Only Option -->
+            <button type="button" class="popover-option-item" [class.option-selected]="statusFilter === '1'"
+              (click)="selectStatusFilter('1', $event)">
+              <div class="option-dot-box">
+                <span class="status-dot dot-active"></span>
+              </div>
+              <div class="option-info">
+                <span class="option-title">Active Only</span>
+                <span class="option-desc">Show currently active providers</span>
+              </div>
+              <svg *ngIf="statusFilter === '1'" class="option-check-icon" xmlns="http://www.w3.org/2000/svg"
+                width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5"
+                stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+            </button>
+
+            <!-- Inactive Only Option -->
+            <button type="button" class="popover-option-item" [class.option-selected]="statusFilter === '2'"
+              (click)="selectStatusFilter('2', $event)">
+              <div class="option-dot-box">
+                <span class="status-dot dot-inactive"></span>
+              </div>
+              <div class="option-info">
+                <span class="option-title">Inactive Only</span>
+                <span class="option-desc">Show paused / inactive providers</span>
+              </div>
+              <svg *ngIf="statusFilter === '2'" class="option-check-icon" xmlns="http://www.w3.org/2000/svg"
+                width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f43f5e" stroke-width="2.5"
+                stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="providers-count">
+        <span>Total: <strong>{{ totalCount() }}</strong> Providers</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="isLoading()" class="loading-state glass-card">
+    <div class="spinner"></div>
+    <p>Loading service providers...</p>
+  </div>
+
+  <!-- Error State -->
+  <div *ngIf="errorMessage() && !isLoading()" class="error-banner">
+    <span>{{ errorMessage() }}</span>
+    <button type="button" class="btn btn-sm btn-outline" (click)="loadProviders()">Retry</button>
+  </div>
+
+  <!-- Providers Data Table -->
+  <div *ngIf="!isLoading()" class="table-card glass-card">
+    <div class="table-responsive">
+      <table class="custom-table">
+        <thead>
+          <tr>
+            <th class="col-provider">Provider Name</th>
+            <th class="col-specialty">Specialization & Fee</th>
+            <th class="col-contact">Contact Details</th>
+            <th class="col-address">Cabin / Address</th>
+            <th class="col-status">Status</th>
+            <th class="col-appointments">Appointments</th>
+            <th class="col-actions text-right">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let provider of providers()" class="table-row">
+            <td class="col-provider">
+              <div class="provider-cell">
+                <div class="provider-avatar" [style.background]="provider.profilePictureUrl ? 'transparent' : getAvatarGradient(provider.name)">
+                  <img 
+                    *ngIf="provider.profilePictureUrl" 
+                    [src]="provider.profilePictureUrl" 
+                    [alt]="provider.name" 
+                    class="avatar-img"
+                    (error)="provider.profilePictureUrl = undefined"
+                  />
+                  <span *ngIf="!provider.profilePictureUrl">{{ provider.name | appInitials }}</span>
+                </div>
+                <div class="provider-info">
+                  <span class="provider-name" [title]="provider.name">{{ provider.name }}</span>
+                </div>
+              </div>
+            </td>
+            <td class="col-specialty">
+              <div class="specialty-wrap">
+                <span class="specialty-chip" [title]="provider.serviceType">{{ provider.serviceType }}</span>
+                <span class="charges-chip" *ngIf="provider.chargesAmount">₹{{ provider.chargesAmount | number }}</span>
+              </div>
+            </td>
+            <td class="col-contact">
+              <div class="contact-cell">
+                <span class="contact-email" [title]="provider.email">{{ provider.email }}</span>
+                <span class="contact-phone">{{ provider.phoneNumber | appPhone }}</span>
+              </div>
+            </td>
+            <td class="col-address">
+              <span class="address-text" [title]="provider.address || 'Cabin not assigned'">{{ provider.address || 'Cabin not assigned' }}</span>
+            </td>
+            <td class="col-status">
+              <div class="custom-status-dropdown" (click)="$event.stopPropagation()">
+                <button
+                  type="button"
+                  class="status-pill-btn"
+                  [ngClass]="provider.status === 1 ? 'pill-active' : 'pill-inactive'"
+                  (click)="toggleStatusDropdown(provider.id, $event)"
+                  [attr.aria-expanded]="openStatusDropdownId() === provider.id"
+                  title="Click to change status"
+                >
+                  <span class="status-dot" [ngClass]="provider.status === 1 ? 'dot-active' : 'dot-inactive'"></span>
+                  <span class="status-label">{{ provider.status === 1 ? 'Active' : 'Inactive' }}</span>
+                  <svg class="chevron-icon" [class.rotate]="openStatusDropdownId() === provider.id" xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="6 9 12 15 18 9"/>
+                  </svg>
+                </button>
+
+                <!-- Custom Dropdown Menu -->
+                <div class="status-menu animate-fade-in" *ngIf="openStatusDropdownId() === provider.id">
+                  <button
+                    type="button"
+                    class="status-menu-item"
+                    [class.selected]="provider.status === 1"
+                    (click)="selectStatus(provider, 1, $event)"
+                  >
+                    <span class="status-dot dot-active"></span>
+                    <span class="menu-item-text">Active</span>
+                    <svg *ngIf="provider.status === 1" class="check-icon" xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                  </button>
+
+                  <button
+                    type="button"
+                    class="status-menu-item"
+                    [class.selected]="provider.status === 2"
+                    (click)="selectStatus(provider, 2, $event)"
+                  >
+                    <span class="status-dot dot-inactive"></span>
+                    <span class="menu-item-text">Inactive</span>
+                    <svg *ngIf="provider.status === 2" class="check-icon" xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#f43f5e" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </td>
+            <td class="col-appointments">
+              <span class="booking-badge-pill">
+                <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                  <line x1="16" y1="2" x2="16" y2="6"/>
+                  <line x1="8" y1="2" x2="8" y2="6"/>
+                  <line x1="3" y1="10" x2="21" y2="10"/>
+                </svg>
+                <span [title]="provider.totalAppointmentsCount + ' active bookings'">{{ provider.totalAppointmentsCount }} {{ provider.totalAppointmentsCount === 1 ? 'Active Booking' : 'Active Bookings' }}</span>
+              </span>
+            </td>
+            <td class="col-actions text-right">
+              <div class="actions-group">
+                <button
+                  type="button"
+                  class="btn-action-icon btn-edit-icon"
+                  (click)="openEditModal(provider)"
+                  title="Edit Provider"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
+                    <path d="m15 5 4 4"/>
+                  </svg>
+                </button>
+
+                <button
+                  type="button"
+                  class="btn-action-icon btn-delete-icon"
+                  (click)="deleteProvider(provider)"
+                  title="Remove Provider"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 6h18"/>
+                    <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
+                    <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+                  </svg>
+                </button>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Empty State -->
+          <tr *ngIf="providers().length === 0">
+            <td colspan="7" class="empty-cell">
+              <div class="empty-state">
+                <div class="empty-icon-wrap">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+                    <circle cx="9" cy="7" r="4"/>
+                    <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                  </svg>
+                </div>
+                <h4>No Service Providers Added Yet</h4>
+                <p>Click "Add Service Provider" above to add your first team member or specialist.</p>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <app-pagination 
+      [pageNumber]="currentPage()" 
+      [pageSize]="pageSize()" 
+      [totalCount]="totalCount()" 
+      [totalPages]="totalPages()" 
+      (pageChange)="onPageChange($event)" 
+      (pageSizeChange)="onPageSizeChange($event)">
+    </app-pagination>
+  </div>
+
+  <!-- Dedicated Provider Add/Edit Modal -->
+  <app-provider-modal
+    [isOpen]="isModalOpen()"
+    [mode]="modalMode()"
+    [providerToEdit]="selectedProvider()"
+    (close)="onModalClose()"
+    (saved)="onProviderSaved($event)"
+  ></app-provider-modal>
+</div>

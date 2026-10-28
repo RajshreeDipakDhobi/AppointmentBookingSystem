@@ -1,0 +1,588 @@
+.login-page {
+  height: 100vh;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 1.25rem 1.5rem;
+  position: relative;
+  overflow: hidden;
+  box-sizing: border-box;
+  background: radial-gradient(circle at 50% 20%, rgba(99, 102, 241, 0.12) 0%, transparent 60%),
+    radial-gradient(circle at 80% 80%, rgba(168, 85, 247, 0.08) 0%, transparent 50%),
+    #070b14;
+}
+
+/* --- Top Navigation Header --- */
+.auth-navbar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 2rem;
+  z-index: 10;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(7, 11, 20, 0.7);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-sizing: border-box;
+}
+
+.brand-link {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  text-decoration: none;
+  color: #ffffff;
+  transition: opacity 0.2s ease;
+}
+
+.brand-link:hover {
+  opacity: 0.9;
+}
+
+.nav-logo-icon {
+  width: 32px;
+  height: 32px;
+  background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.35);
+}
+
+.brand-text {
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  background: linear-gradient(180deg, #ffffff 0%, #cbd5e1 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Top-Right CTA: Book Appointment */
+.nav-book-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 1rem;
+  background: rgba(99, 102, 241, 0.12);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  border-radius: 9999px;
+  color: #c7d2fe;
+  font-size: 0.84rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.nav-book-cta:hover {
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  border-color: transparent;
+  color: #ffffff;
+  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.45);
+  transform: translateY(-1px);
+}
+
+.cta-arrow {
+  transition: transform 0.2s ease;
+}
+
+.nav-book-cta:hover .cta-arrow {
+  transform: translateX(2px);
+}
+
+/* --- Ambient Glow --- */
+.auth-ambient-glow {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, rgba(99, 102, 241, 0.15) 0%, rgba(168, 85, 247, 0.06) 45%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* --- Compact Main Login Card (No Scrolling) --- */
+.login-card {
+  width: 100%;
+  max-width: 420px;
+  padding: 1.75rem 2rem;
+  background: rgba(15, 23, 42, 0.82);
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 18px;
+  box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.75), 0 0 30px rgba(99, 102, 241, 0.12);
+  position: relative;
+  z-index: 1;
+  box-sizing: border-box;
+  transition: max-width 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.login-card.register-card {
+  max-width: 480px;
+}
+
+/* Drawer View Overrides (When rendered in split mode on Booking Portal) */
+.login-page.is-drawer-view {
+  height: auto;
+  min-height: auto;
+  padding: 0;
+  background: transparent;
+  overflow: visible;
+  display: block;
+}
+
+.login-card.drawer-card {
+  max-width: 480px;
+  width: 100%;
+  margin: 0;
+  padding: 1.35rem 1.85rem;
+  background: rgba(13, 20, 36, 0.94);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(99, 102, 241, 0.28);
+  border-radius: 20px;
+  box-shadow: 0 20px 50px -10px rgba(0, 0, 0, 0.8), 0 0 25px rgba(99, 102, 241, 0.18);
+}
+
+.drawer-close-btn {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  z-index: 10;
+}
+
+.drawer-close-btn:hover {
+  background: rgba(244, 63, 94, 0.16);
+  border-color: rgba(244, 63, 94, 0.35);
+  color: #fda4af;
+  transform: rotate(90deg);
+}
+
+.brand-header {
+  text-align: center;
+  margin-bottom: 1.15rem;
+}
+
+.brand-header.compact-header {
+  margin-bottom: 0.7rem;
+}
+
+.brand-header.compact-header .brand-icon {
+  width: 36px;
+  height: 36px;
+  margin: 0 auto 0.25rem;
+  border-radius: 10px;
+}
+
+.brand-header.compact-header h2 {
+  font-size: 1.25rem;
+  margin-bottom: 0.1rem;
+}
+
+.brand-header.compact-header .subtitle {
+  font-size: 0.77rem;
+}
+
+.brand-icon {
+  width: 44px;
+  height: 44px;
+  margin: 0 auto 0.55rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+  border-radius: 13px;
+  color: #ffffff;
+  box-shadow: 0 6px 20px rgba(99, 102, 241, 0.35);
+}
+
+.brand-header h2 {
+  font-size: 1.45rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  background: linear-gradient(180deg, #ffffff 0%, #cbd5e1 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 0.25rem;
+}
+
+.subtitle {
+  color: #94a3b8;
+  font-size: 0.83rem;
+  line-height: 1.35;
+  margin: 0;
+}
+
+/* --- Error Alert Banner --- */
+.error-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(244, 63, 94, 0.12);
+  border: 1px solid rgba(244, 63, 94, 0.35);
+  color: #fda4af;
+  padding: 0.55rem 0.85rem;
+  border-radius: 9px;
+  margin-bottom: 0.85rem;
+  font-size: 0.82rem;
+}
+
+/* --- Form Fields & Inputs --- */
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  margin-bottom: 0.65rem;
+}
+
+.form-row .form-group {
+  margin-bottom: 0;
+}
+
+.form-group {
+  margin-bottom: 0.65rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.form-label {
+  display: block;
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: #cbd5e1;
+  margin-bottom: 0.2rem;
+  letter-spacing: 0.01em;
+}
+
+.required-star {
+  color: #f43f5e;
+  font-weight: 700;
+  margin-left: 2px;
+}
+
+.input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.input-icon {
+  position: absolute;
+  left: 0.85rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #64748b;
+  pointer-events: none;
+  transition: color 0.2s ease;
+  z-index: 2;
+}
+
+.input-wrapper:focus-within .input-icon {
+  color: #818cf8;
+}
+
+.form-input {
+  width: 100%;
+  height: 38px;
+  background: rgba(10, 15, 29, 0.75);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 9px;
+  padding: 0.45rem 0.8rem;
+  font-size: 0.86rem;
+  font-weight: 500;
+  outline: none;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-sizing: border-box;
+}
+
+.form-input:focus {
+  border-color: #6366f1;
+  background: rgba(15, 23, 42, 0.95);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.25);
+}
+
+.form-input.with-icon {
+  padding-left: 2.5rem !important;
+}
+
+.form-input.with-action {
+  padding-right: 2.5rem !important;
+}
+
+/* --- Dark Glass Textarea --- */
+.textarea-wrapper {
+  position: relative;
+  display: flex;
+  width: 100%;
+  align-items: flex-start;
+}
+
+.textarea-icon {
+  position: absolute;
+  left: 0.85rem;
+  top: 0.65rem;
+  transform: none !important;
+}
+
+.form-textarea {
+  height: auto !important;
+  min-height: 52px;
+  max-height: 90px;
+  resize: vertical;
+  line-height: 1.45;
+  padding: 0.48rem 0.8rem 0.48rem 2.5rem !important;
+  font-family: inherit;
+}
+
+/* --- Dark Glass Phone Input Group --- */
+.phone-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 38px;
+  background: rgba(10, 15, 29, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 9px;
+  overflow: hidden;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-sizing: border-box;
+}
+
+.phone-input-wrapper:focus-within {
+  border-color: #6366f1;
+  background: rgba(15, 23, 42, 0.95);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.25);
+}
+
+.phone-prefix {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 0.55rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #818cf8;
+  background: rgba(99, 102, 241, 0.12);
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  height: 100%;
+  user-select: none;
+}
+
+.phone-input-clean {
+  flex: 1;
+  background: transparent !important;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  color: #ffffff !important;
+  padding: 0.45rem 0.65rem !important;
+  font-size: 0.85rem !important;
+  font-weight: 500;
+  width: 100%;
+  min-width: 0;
+  height: 100% !important;
+}
+
+.phone-input-clean:focus,
+.phone-input-clean:-webkit-autofill,
+.phone-input-clean:-webkit-autofill:hover,
+.phone-input-clean:-webkit-autofill:focus {
+  background: transparent !important;
+  background-color: transparent !important;
+  -webkit-text-fill-color: #ffffff !important;
+  -webkit-box-shadow: 0 0 0 1000px rgba(10, 15, 29, 0.95) inset !important;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+.phone-input-clean::placeholder {
+  color: #64748b;
+  font-weight: 400;
+}
+
+.btn-toggle-visibility {
+  position: absolute;
+  right: 0.65rem;
+  background: transparent;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+  padding: 0.25rem;
+  display: flex;
+  align-items: center;
+  transition: color 0.2s;
+}
+
+.btn-toggle-visibility:hover {
+  color: #f1f5f9;
+}
+
+.form-error {
+  margin-top: 0.25rem;
+  font-size: 0.74rem;
+  color: #f43f5e;
+  font-weight: 500;
+}
+
+/* --- Submit Button --- */
+.btn-auth-submit {
+  width: 100%;
+  margin-top: 0.75rem;
+  padding: 0.72rem 1rem;
+  background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+  border: none;
+  border-radius: 10px;
+  color: #ffffff;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 6px 20px -3px rgba(99, 102, 241, 0.45);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn-auth-submit:hover:not(:disabled) {
+  box-shadow: 0 8px 24px -3px rgba(99, 102, 241, 0.65);
+  transform: translateY(-1px);
+}
+
+.btn-auth-submit:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.spinner-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.spinner {
+  width: 15px;
+  height: 15px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* --- Switch Mode Prompt Under Button --- */
+.auth-switch-prompt {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  margin-top: 0.85rem;
+  font-size: 0.82rem;
+  color: #94a3b8;
+}
+
+.btn-switch-link {
+  background: transparent;
+  border: none;
+  color: #818cf8;
+  font-weight: 600;
+  font-size: 0.82rem;
+  cursor: pointer;
+  padding: 0;
+  transition: all 0.2s;
+}
+
+.btn-switch-link:hover {
+  color: #c7d2fe;
+  text-decoration: underline;
+}
+
+@media (max-height: 700px) {
+  .login-page {
+    padding: 3.5rem 1rem 1rem;
+    overflow-y: auto;
+  }
+
+  .brand-icon {
+    display: none;
+  }
+}
+
+/* --- Resume Booking Notice Banner --- */
+.resume-booking-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: rgba(99, 102, 241, 0.12);
+  border: 1px solid rgba(129, 140, 248, 0.35);
+  border-radius: 10px;
+  padding: 0.75rem 0.95rem;
+  margin-bottom: 1.1rem;
+  box-shadow: 0 4px 15px rgba(99, 102, 241, 0.15);
+}
+
+.resume-banner-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: rgba(99, 102, 241, 0.25);
+  color: #a5b4fc;
+  flex-shrink: 0;
+}
+
+.resume-banner-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  text-align: left;
+}
+
+.resume-banner-title {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #e0e7ff;
+}
+
+.resume-banner-text {
+  font-size: 0.75rem;
+  color: #c7d2fe;
+  line-height: 1.3;
+}
+
+@media (max-width: 440px) {
+  .form-row {
+    grid-template-columns: 1fr;
+    gap: 0.65rem;
+  }
+}

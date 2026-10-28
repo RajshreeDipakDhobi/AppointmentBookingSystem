@@ -1,0 +1,3228 @@
+/* ==========================================================================
+   RESOURCE SCHEDULE CALENDAR COMPONENT
+   Luxury Dark Glassmorphism Theme (100% Harmonized with AppointEase Design System)
+   Indian Standard Time (IST - 12-Hour AM/PM) & Multi-Provider Timetable
+   ========================================================================== */
+
+:host {
+  display: block;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+.schedule-app-container {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-height: calc(100vh - 110px);
+  background: radial-gradient(circle at 50% 0%, #0d1527 0%, #060a14 65%, #03060c 100%) !important;
+  border-radius: var(--radius-xl, 16px);
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+  box-shadow: var(--shadow-lg, 0 25px 50px -12px rgba(0, 0, 0, 0.6));
+  overflow: hidden;
+  position: relative;
+  font-family: var(--font-sans, 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif);
+  box-sizing: border-box;
+}
+
+/* --------------------------------------------------------------------------
+   ALERT TOASTS
+   -------------------------------------------------------------------------- */
+.alert-toast {
+  position: fixed;
+  top: 24px;
+  right: 24px;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px;
+  border-radius: var(--radius-md, 8px);
+  font-size: 0.88rem;
+  font-weight: 500;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(12px);
+}
+
+.alert-success {
+  background: rgba(16, 185, 129, 0.16);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.38);
+}
+
+.alert-error {
+  background: rgba(239, 68, 68, 0.16);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.38);
+}
+
+/* --------------------------------------------------------------------------
+   HEADER BAR (Matching Reference Screenshot & AppointEase Glassmorphism)
+   -------------------------------------------------------------------------- */
+.schedule-header-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 18px;
+  background: rgba(11, 16, 29, 0.96);
+  border-bottom: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+  gap: 12px;
+  flex-shrink: 0;
+  z-index: 40;
+  position: relative;
+}
+
+.header-left-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* Navigation Group: [ < ] [ 📅 Oct 27, 2026 ▾ ] [ > ] [ Today ] [ Day | Week | Month ] */
+.btn-nav-arrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  color: #cbd5e1;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+.btn-nav-arrow:hover {
+  background: rgba(99, 102, 241, 0.18);
+  border-color: rgba(99, 102, 241, 0.45);
+  color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25);
+}
+
+.btn-nav-arrow:active {
+  transform: translateY(0) scale(0.96);
+}
+
+.date-picker-anchor {
+  position: relative;
+  display: inline-flex;
+}
+
+.datepicker-anchor-input {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  pointer-events: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  z-index: -1;
+}
+
+.btn-date-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 12px;
+  height: 34px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #f1f5f9;
+  font-size: 0.84rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+.btn-date-pill:hover,
+.btn-date-pill.active {
+  background: rgba(99, 102, 241, 0.18);
+  border-color: rgba(99, 102, 241, 0.5);
+  color: #ffffff;
+  box-shadow: 0 4px 14px rgba(99, 102, 241, 0.25);
+}
+
+.date-pill-text {
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: #f8fafc;
+  white-space: nowrap;
+}
+
+.calendar-icon {
+  color: #818cf8;
+  flex-shrink: 0;
+}
+
+.chevron-mini {
+  color: #94a3b8;
+  transition: transform 0.2s ease;
+}
+
+.chevron-mini.rotated {
+  transform: rotate(180deg);
+}
+
+.btn-today-pill {
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 6px;
+  background: rgba(30, 41, 59, 0.65);
+  color: #94a3b8;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 0.74rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.btn-today-pill:hover {
+  background: rgba(51, 65, 85, 0.9);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.btn-today-pill.is-today {
+  border-color: rgba(124, 58, 237, 0.6);
+  color: #c4b5fd;
+  background: rgba(124, 58, 237, 0.2);
+}
+
+/* Accessible visually-hidden helper for the Angular Material datepicker input */
+.visually-hidden {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+/* Segmented View Switcher: [ Day | Week | Month ] */
+.view-segmented-tabs {
+  display: inline-flex;
+  align-items: center;
+  background: rgba(15, 23, 42, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 2px;
+  gap: 2px;
+}
+
+.tab-item {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 12px;
+  height: 28px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: #94a3b8;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.tab-item:hover {
+  color: #ffffff;
+}
+
+.tab-item.active {
+  background: linear-gradient(135deg, #7c3aed 0%, #6366f1 100%);
+  color: #ffffff;
+  font-weight: 600;
+  box-shadow: 0 2px 10px rgba(124, 58, 237, 0.45);
+}
+
+/* Center Date Title with Subtitle (Week 44) - Prevents line breaks */
+.header-center-title {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  text-align: center;
+  padding: 0 8px;
+  flex-shrink: 0;
+  min-width: max-content;
+}
+
+.date-title-heading {
+  margin: 0;
+  font-size: 1.02rem;
+  font-weight: 700;
+  color: #f8fafc;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+  white-space: nowrap !important;
+}
+
+.date-subtitle-week {
+  font-size: 0.76rem;
+  color: #94a3b8;
+  margin-top: 1px;
+  font-weight: 500;
+  white-space: nowrap !important;
+}
+
+/* Right Controls */
+.header-right-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* Service Provider Glassmorphism Dropdown Filter (Matching Appointments Component) */
+.provider-select-anchor {
+  position: relative;
+  display: inline-flex;
+  min-width: 190px;
+  max-width: 260px;
+}
+
+.provider-select-anchor .custom-select-trigger {
+  width: 100%;
+  height: 36px;
+  padding: 0 0.75rem !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: var(--radius-sm, 8px) !important;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: #f8fafc;
+  font-size: 0.83rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  outline: none;
+  white-space: nowrap;
+}
+
+.provider-select-anchor .custom-select-trigger:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+.provider-select-anchor.menu-open .custom-select-trigger {
+  background: rgba(255, 255, 255, 0.09) !important;
+  border-color: var(--primary, #6366f1) !important;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+}
+
+.provider-select-anchor.has-selection .custom-select-trigger {
+  background: rgba(99, 102, 241, 0.12) !important;
+  border-color: rgba(99, 102, 241, 0.45) !important;
+}
+
+.provider-select-anchor .trigger-label-group {
+  flex: 1;
+  text-align: left;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.provider-select-anchor .trigger-main-text {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 600;
+}
+
+.provider-select-anchor .custom-dropdown-popover {
+  right: 0;
+  left: auto;
+  width: 320px;
+  min-width: 320px;
+  max-width: 340px;
+  padding: 0;
+  overflow: hidden;
+  border-radius: 14px;
+}
+
+.provider-popover-header {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding: 0.65rem 0.85rem !important;
+  background: #090d16 !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  margin-bottom: 0 !important;
+}
+
+.popover-header-title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #94a3b8 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  white-space: nowrap !important;
+  flex-shrink: 0;
+}
+
+.popover-header-right {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-shrink: 0;
+}
+
+.popover-count-pill {
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #cbd5e1;
+  white-space: nowrap !important;
+  letter-spacing: 0.02em;
+}
+
+.popover-selected-pill {
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  background: rgba(99, 102, 241, 0.18);
+  border: 1px solid rgba(99, 102, 241, 0.35);
+  color: #a5b4fc;
+  white-space: nowrap !important;
+  letter-spacing: 0.02em;
+}
+
+.btn-popover-reset {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.15rem 0.5rem;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: #818cf8;
+  background: rgba(99, 102, 241, 0.1);
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  border-radius: 5px;
+  cursor: pointer;
+  white-space: nowrap !important;
+  transition: all 0.18s ease;
+  line-height: 1.2;
+}
+
+.btn-popover-reset:hover {
+  background: rgba(99, 102, 241, 0.25);
+  border-color: rgba(99, 102, 241, 0.5);
+  color: #ffffff;
+}
+
+/* Specialist Search Container inside Dropdown Popover */
+.popover-search-container {
+  padding: 8px 10px;
+  background: #090d16;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.popover-search-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 0 10px;
+  height: 32px;
+  transition: all 0.2s ease;
+}
+
+.popover-search-box:focus-within {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(99, 102, 241, 0.55);
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.18);
+}
+
+.popover-search-icon {
+  color: #64748b;
+  flex-shrink: 0;
+  transition: color 0.18s ease;
+}
+
+.popover-search-box:focus-within .popover-search-icon {
+  color: #818cf8;
+}
+
+.popover-search-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #f1f5f9;
+  font-size: 0.78rem;
+  font-weight: 500;
+  width: 100%;
+}
+
+.popover-search-input::placeholder {
+  color: #64748b;
+  font-size: 0.76rem;
+}
+
+.popover-search-clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.12);
+  color: #94a3b8;
+  font-size: 0.6rem;
+  cursor: pointer;
+  padding: 0;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.popover-search-clear:hover {
+  background: rgba(244, 63, 94, 0.3);
+  color: #ffffff;
+}
+
+.popover-no-results {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 24px 14px;
+  color: #64748b;
+  font-size: 0.76rem;
+  text-align: center;
+}
+
+/* Luxury Multi-select Checkbox Indicator */
+.option-checkbox-indicator {
+  width: 19px;
+  height: 19px;
+  border-radius: 5px;
+  border: 1.5px solid rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.04);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-left: auto;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.popover-option-item:hover .option-checkbox-indicator:not(.is-checked) {
+  border-color: rgba(99, 102, 241, 0.6);
+  background: rgba(99, 102, 241, 0.12);
+}
+
+.option-checkbox-indicator.is-checked {
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  border-color: #818cf8;
+  color: #ffffff;
+  box-shadow: 0 0 10px rgba(99, 102, 241, 0.45);
+}
+
+.checkbox-check-svg {
+  stroke: #ffffff;
+  stroke-width: 3;
+}
+
+/* Trigger Count Badge */
+.trigger-count-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: #ffffff;
+  font-size: 0.68rem;
+  font-weight: 700;
+  box-shadow: 0 2px 6px rgba(99, 102, 241, 0.45);
+  margin-left: 0.25rem;
+}
+
+.trigger-clear-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.14);
+  color: #cbd5e1;
+  font-size: 0.62rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  flex-shrink: 0;
+  margin-left: 0.15rem;
+}
+
+.trigger-clear-btn:hover {
+  background: rgba(244, 63, 94, 0.35);
+  color: #ffffff;
+}
+
+/* New Booking Button: [ 📅 New Booking ] (Matching Screenshot Purple Style) */
+.btn-new-booking {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 16px;
+  height: 36px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+  color: #ffffff;
+  border: none;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 14px rgba(124, 58, 237, 0.4);
+}
+
+.btn-new-booking:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(124, 58, 237, 0.55);
+  filter: brightness(1.08);
+}
+
+.btn-icon-sync {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-muted, #94a3b8);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-icon-sync:hover {
+  border-color: var(--primary, #6366f1);
+  color: #818cf8;
+  background: rgba(99, 102, 241, 0.1);
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   MOBILE SPECIALIST QUICK SWITCHER
+   -------------------------------------------------------------------------- */
+.mobile-specialist-bar {
+  display: none;
+  padding: 10px 16px;
+  background: rgba(11, 17, 32, 0.95);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.specialist-chips-row {
+  display: flex;
+  gap: 8px;
+}
+
+.specialist-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: var(--radius-full, 9999px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-muted, #94a3b8);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.specialist-chip.active {
+  background: var(--primary, #6366f1);
+  border-color: var(--primary, #6366f1);
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.4);
+}
+
+.chip-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.chip-avatar-circle {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.chip-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+  display: block;
+}
+
+/* --------------------------------------------------------------------------
+   SCHEDULE MAIN VIEWPORT & GRID (RESOURCE TIMETABLE)
+   -------------------------------------------------------------------------- */
+.schedule-main-viewport {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+  background: transparent !important;
+}
+
+.schedule-board-card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  position: relative;
+  background: transparent !important;
+}
+
+/* Ambient Animated Aurora Glowing Highlights */
+.ambient-aurora-glow {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  filter: blur(85px);
+  opacity: 0.55;
+  z-index: 1;
+  will-change: transform, opacity;
+}
+
+.glow-orb-1 {
+  width: 550px;
+  height: 550px;
+  top: -120px;
+  left: 15%;
+  background: radial-gradient(circle, rgba(99, 102, 241, 0.24) 0%, rgba(124, 58, 237, 0.12) 50%, transparent 75%);
+  animation: floatAurora1 18s ease-in-out infinite alternate;
+}
+
+.glow-orb-2 {
+  width: 500px;
+  height: 500px;
+  bottom: 5%;
+  right: 10%;
+  background: radial-gradient(circle, rgba(16, 185, 129, 0.16) 0%, rgba(6, 182, 212, 0.10) 45%, transparent 75%);
+  animation: floatAurora2 22s ease-in-out infinite alternate;
+}
+
+.glow-orb-3 {
+  width: 420px;
+  height: 420px;
+  top: 35%;
+  right: 32%;
+  background: radial-gradient(circle, rgba(244, 63, 94, 0.12) 0%, rgba(168, 85, 247, 0.08) 50%, transparent 75%);
+  animation: floatAurora3 20s ease-in-out infinite alternate;
+}
+
+@keyframes floatAurora1 {
+  0% {
+    transform: translate(0, 0) scale(1);
+    opacity: 0.45;
+  }
+
+  50% {
+    transform: translate(60px, 45px) scale(1.18);
+    opacity: 0.7;
+  }
+
+  100% {
+    transform: translate(-40px, 80px) scale(0.92);
+    opacity: 0.4;
+  }
+}
+
+@keyframes floatAurora2 {
+  0% {
+    transform: translate(0, 0) scale(1);
+    opacity: 0.4;
+  }
+
+  50% {
+    transform: translate(-70px, -50px) scale(1.22);
+    opacity: 0.65;
+  }
+
+  100% {
+    transform: translate(40px, -30px) scale(0.95);
+    opacity: 0.35;
+  }
+}
+
+@keyframes floatAurora3 {
+  0% {
+    transform: translate(0, 0) scale(0.9);
+    opacity: 0.3;
+  }
+
+  50% {
+    transform: translate(50px, -60px) scale(1.15);
+    opacity: 0.55;
+  }
+
+  100% {
+    transform: translate(-50px, 40px) scale(1);
+    opacity: 0.3;
+  }
+}
+
+/* Column Header Row: Sticky Provider Headers */
+.schedule-header-row {
+  display: flex;
+  min-width: 100%;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: #080d1a;
+  flex-shrink: 0;
+  z-index: 30;
+  position: sticky;
+  top: 0;
+}
+
+.time-header-spacer {
+  width: 82px;
+  min-width: 82px;
+  flex-shrink: 0;
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
+  background: #080d1a;
+  position: sticky;
+  left: 0;
+  z-index: 35;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.time-header-clock-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  color: #94a3b8;
+}
+
+.time-header-clock-box .clock-icon {
+  color: #94a3b8;
+  opacity: 0.85;
+}
+
+.time-header-label {
+  font-size: 0.70rem;
+  font-weight: 600;
+  color: #94a3b8;
+  letter-spacing: 0.02em;
+}
+
+.provider-headers-container {
+  display: flex;
+  flex: 1;
+  overflow-x: hidden;
+  overflow-y: hidden;
+}
+
+.provider-col-header {
+  flex: 1 1 0px;
+  min-width: 220px;
+  padding: 10px 14px;
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
+  box-sizing: border-box;
+  background: #080d1a;
+  position: relative;
+}
+
+.provider-col-header.has-custom-width {
+  flex: 0 0 auto !important;
+}
+
+.provider-header-card {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.provider-avatar-circle {
+  width: 34px;
+  height: 34px;
+  min-width: 34px;
+  border-radius: 50%;
+  border: 1.5px solid;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.78rem;
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.provider-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+  display: block;
+}
+
+.provider-header-details {
+  display: flex;
+  flex-direction: column;
+  overflow: visible;
+  line-height: 1.25;
+  min-width: 0;
+  flex: 1;
+}
+
+.provider-col-name {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #f1f5f9;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.provider-status-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 2px;
+}
+
+.status-dot {
+  display: none !important;
+}
+
+.status-text {
+  font-size: 0.73rem;
+  font-weight: 500;
+}
+
+.status-text.is-available {
+  color: #10b981;
+}
+
+.status-text.is-off {
+  color: #f43f5e;
+}
+
+.provider-hours-text {
+  font-size: 0.72rem;
+  color: #94a3b8;
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: visible;
+  letter-spacing: -0.2px;
+}
+
+.empty-providers-header {
+  padding: 12px;
+  color: #94a3b8;
+  font-size: 0.86rem;
+  font-style: italic;
+  text-align: center;
+  width: 100%;
+}
+
+/* Scrollable Grid Container (Drag-to-Scroll Pan) */
+.schedule-grid-scroll-area {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: auto;
+  position: relative;
+  background: transparent !important;
+  -webkit-overflow-scrolling: touch;
+  cursor: grab;
+}
+
+.schedule-grid-scroll-area:active,
+body.is-panning-grid,
+body.is-panning-grid * {
+  cursor: grabbing !important;
+  user-select: none !important;
+}
+
+.schedule-grid-container {
+  display: flex;
+  position: relative;
+  min-width: 100%;
+}
+
+/* Time Axis (Left Only - Indian 12-Hour Format) */
+.time-axis-col {
+  width: 82px;
+  min-width: 82px;
+  flex-shrink: 0;
+  background: rgba(7, 11, 20, 0.95);
+  backdrop-filter: blur(12px);
+  position: sticky;
+  left: 0;
+  z-index: 25;
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.time-axis-cell {
+  position: relative;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  box-sizing: border-box;
+}
+
+.time-axis-cell.hour-boundary,
+.time-axis-cell.hour-mark-cell {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.time-label {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #94a3b8;
+  letter-spacing: -0.01em;
+  background: #070b14;
+  padding: 1px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+  z-index: 2;
+  box-shadow: 0 0 8px rgba(7, 11, 20, 0.95);
+}
+
+.time-label.time-label-first {
+  top: 4px;
+  transform: translate(-50%, 0);
+}
+
+.time-label.time-label-last {
+  top: auto;
+  bottom: 0;
+  transform: translate(-50%, 50%);
+}
+
+/* Floating Live Current Time Pill (matches screenshot 11:30 AM pill) */
+.time-current-floating-pill {
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  transform: translateY(-50%);
+  height: 22px;
+  background: #f43f5e;
+  border-radius: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.70rem;
+  font-weight: 700;
+  color: #ffffff;
+  box-shadow: 0 2px 10px rgba(244, 63, 94, 0.65);
+  z-index: 28;
+  pointer-events: none;
+  letter-spacing: 0.2px;
+}
+
+/* Specialist Columns Wrapper */
+.specialist-columns-wrapper {
+  display: flex;
+  flex: 1;
+  position: relative;
+  min-width: 0;
+}
+
+.specialist-time-column {
+  flex: 1 1 0px;
+  min-width: 220px;
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
+  position: relative;
+  box-sizing: border-box;
+}
+
+.specialist-time-column.has-custom-width {
+  flex: 0 0 auto !important;
+}
+
+/* Single Provider View: Centerize Column when only 1 Specialist is Selected */
+.provider-headers-container.single-provider-view,
+.specialist-columns-wrapper.single-provider-view {
+  justify-content: center;
+}
+
+.provider-headers-container.single-provider-view .provider-col-header,
+.specialist-columns-wrapper.single-provider-view .specialist-time-column {
+  flex: 0 0 460px !important;
+  width: 460px !important;
+  max-width: 460px !important;
+  min-width: 300px !important;
+  border-left: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-shadow: none !important;
+}
+
+/* Drag-to-Resize Column Edge Handle (Clean 1px Line - No Shadows or Glow) */
+.col-resize-handle {
+  position: absolute;
+  top: 0;
+  right: -5px;
+  width: 10px;
+  height: 100%;
+  cursor: col-resize;
+  z-index: 40;
+  user-select: none;
+  touch-action: none;
+  background: transparent !important;
+  box-shadow: none !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.resize-handle-bar {
+  width: 1px;
+  height: 100%;
+  background: transparent;
+  box-shadow: none !important;
+  transition: background 0.15s ease;
+}
+
+.col-resize-handle:hover .resize-handle-bar,
+.col-resize-handle:active .resize-handle-bar {
+  background: rgba(255, 255, 255, 0.2) !important;
+  box-shadow: none !important;
+}
+
+.col-body-resize-handle {
+  z-index: 15;
+  width: 8px;
+  right: -4px;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.col-body-resize-handle:hover,
+.col-body-resize-handle:active {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.col-body-resize-handle::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 3px;
+  width: 1px;
+  background: transparent;
+  box-shadow: none !important;
+  transition: background 0.15s ease;
+}
+
+.col-body-resize-handle:hover::after,
+.col-body-resize-handle:active::after {
+  background: rgba(255, 255, 255, 0.2) !important;
+  box-shadow: none !important;
+}
+
+/* Provider Day Off Overlay (Animated Luxury Shimmering Column) */
+@keyframes slowDiagonalDrift {
+  0% {
+    background-position: 0 0;
+  }
+
+  100% {
+    background-position: 56px 56px;
+  }
+}
+
+.provider-off-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(6, 10, 20, 0.65);
+  background-image: repeating-linear-gradient(-45deg,
+      transparent,
+      transparent 14px,
+      rgba(255, 255, 255, 0.018) 14px,
+      rgba(255, 255, 255, 0.018) 28px);
+  background-size: 56px 56px;
+  animation: slowDiagonalDrift 28s linear infinite;
+  pointer-events: none;
+  z-index: 12;
+  backdrop-filter: blur(2px);
+}
+
+/* Day Off Center Indicator (matches screenshot with circle icon & subtitle) */
+.provider-day-off-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 14;
+  background: rgba(6, 10, 20, 0.55);
+}
+
+.day-off-center-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 8px;
+  padding: 16px;
+}
+
+.day-off-icon-circle {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #94a3b8;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+}
+
+.day-off-title {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: -0.01em;
+}
+
+.day-off-subtitle {
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: #64748b;
+}
+
+/* 30-Minute Dynamic Slot Rows */
+.slot-hour-block {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  position: relative;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-sizing: border-box;
+}
+
+.slot-hour-block.hour-boundary {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.slot-hour-block:hover {
+  background: linear-gradient(90deg, rgba(99, 102, 241, 0.14) 0%, rgba(124, 58, 237, 0.04) 100%);
+  border-color: rgba(99, 102, 241, 0.35);
+}
+
+.slot-hover-hint {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  transform: translateY(-50%);
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: #a5b4fc;
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  background: rgba(15, 23, 42, 0.95);
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(99, 102, 241, 0.5);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.slot-hour-block:hover .slot-hover-hint {
+  opacity: 1;
+  transform: translateY(-50%) translateX(-4px);
+}
+
+/* Dynamic Lunch Break Slot */
+.lunch-break-slot {
+  background: repeating-linear-gradient(45deg,
+      rgba(255, 255, 255, 0.015),
+      rgba(255, 255, 255, 0.015) 10px,
+      rgba(255, 255, 255, 0.035) 10px,
+      rgba(255, 255, 255, 0.035) 20px) !important;
+}
+
+/* Slot outside regular working hours */
+.off-hours-slot {
+  background: rgba(0, 0, 0, 0.25);
+  opacity: 0.7;
+}
+
+/* Appointment Cards (Matches Screenshot Layout - Centered Floating Slot Alignment) */
+.schedule-appointment-card {
+  position: absolute;
+  border-radius: 8px;
+  border: 1px solid;
+  border-left-width: 4px;
+  padding: 6px 10px;
+  cursor: pointer;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  /* Vertically center internal content */
+  transition: transform 0.16s ease, box-shadow 0.16s ease, filter 0.16s ease;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.schedule-appointment-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.65), 0 0 16px rgba(99, 102, 241, 0.3);
+  z-index: 35 !important;
+  filter: brightness(1.15);
+}
+
+.card-top-layout {
+  display: flex;
+  align-items: center;
+  /* Avatar & text vertically centered together */
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+  padding-right: 70px;
+  /* Safe clearance for status badge so no overlap occurs */
+}
+
+.card-user-circle {
+  width: 22px;
+  height: 22px;
+  min-width: 22px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.card-details-stack {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1.5px;
+  min-width: 0;
+  flex: 1;
+}
+
+.card-client-name {
+  font-weight: 600;
+  font-size: 0.81rem;
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+}
+
+.card-service-name {
+  font-size: 0.71rem;
+  font-weight: 400;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+}
+
+.card-time-range {
+  font-size: 0.68rem;
+  font-weight: 400;
+  white-space: nowrap;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.card-status-badge {
+  position: absolute;
+  bottom: 6px;
+  right: 8px;
+  font-size: 0.64rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  padding: 2px 7px;
+  border-radius: 4px;
+  line-height: 1.3;
+  pointer-events: none;
+}
+
+.card-status-badge.status-confirmed {
+  color: #34d399;
+  background: rgba(16, 185, 129, 0.22);
+  border: 1px solid rgba(16, 185, 129, 0.38);
+}
+
+.card-status-badge.status-booked {
+  color: #60a5fa;
+  background: rgba(37, 99, 235, 0.25);
+  border: 1px solid rgba(59, 130, 246, 0.38);
+}
+
+.card-status-badge.status-pending {
+  color: #fbbf24;
+  background: rgba(245, 158, 11, 0.22);
+  border: 1px solid rgba(245, 158, 11, 0.38);
+}
+
+.card-status-badge.status-cancelled {
+  color: #f87171;
+  background: rgba(239, 68, 68, 0.22);
+  border: 1px solid rgba(239, 68, 68, 0.38);
+}
+
+/* Current Time Red Line Indicator (Live Horizontal Line across all columns) */
+@keyframes liveLineGlow {
+
+  0%,
+  100% {
+    box-shadow: 0 0 8px rgba(244, 63, 94, 0.8), 0 0 18px rgba(244, 63, 94, 0.4);
+  }
+
+  50% {
+    box-shadow: 0 0 14px rgba(244, 63, 94, 1), 0 0 28px rgba(244, 63, 94, 0.65);
+  }
+}
+
+.current-time-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: #f43f5e;
+  z-index: 22;
+  pointer-events: none;
+  transform: translateY(-50%);
+  animation: liveLineGlow 3s ease-in-out infinite;
+}
+
+.time-marker-dot {
+  position: absolute;
+  left: -4px;
+  top: -3px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #f43f5e;
+  box-shadow: 0 0 8px rgba(244, 63, 94, 0.9);
+}
+
+/* --------------------------------------------------------------------------
+   FULLCALENDAR VIEW (WEEK & MONTH) - SEAMLESS SINGLE LAYER MATCHING DAY VIEW
+   -------------------------------------------------------------------------- */
+.schedule-fullcalendar-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 0 0 90px 0;
+  margin: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-height: calc(100vh - 120px);
+  background: transparent !important;
+}
+
+.fullcalendar-glass-card {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: transparent;
+  border-radius: 0;
+  border: none;
+  padding: 0;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+full-calendar {
+  width: 100%;
+  display: block;
+  flex: 1;
+}
+
+/* FullCalendar styling overrides to blend with Luxury Dark Theme */
+::ng-deep .fc {
+  font-family: inherit !important;
+  --fc-border-color: rgba(255, 255, 255, 0.07);
+  --fc-today-bg-color: rgba(99, 102, 241, 0.08);
+  --fc-neutral-bg-color: rgba(15, 23, 42, 0.6);
+  --fc-list-event-hover-bg-color: rgba(255, 255, 255, 0.05);
+  --fc-page-bg-color: transparent;
+  width: 100% !important;
+}
+
+::ng-deep .fc .fc-toolbar,
+::ng-deep .fc .fc-header-toolbar {
+  display: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  height: 0 !important;
+}
+
+::ng-deep .fc .fc-button-primary {
+  background-color: #1e293b !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  color: #f8fafc !important;
+  border-radius: var(--radius-md, 8px) !important;
+  text-transform: capitalize !important;
+  font-weight: 600 !important;
+  font-size: 0.84rem !important;
+  padding: 6px 14px !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2) !important;
+  transition: all 0.2s ease !important;
+}
+
+::ng-deep .fc .fc-button-primary:hover:not(:disabled) {
+  background-color: #334155 !important;
+  border-color: rgba(255, 255, 255, 0.24) !important;
+  color: #ffffff !important;
+}
+
+::ng-deep .fc .fc-button-primary:disabled {
+  opacity: 0.4 !important;
+  cursor: not-allowed !important;
+}
+
+::ng-deep .fc .fc-button-primary:focus {
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.4) !important;
+}
+
+/* Day Header cells (Sun 10/25 ... Sat 10/31) matching Day View header */
+::ng-deep .fc .fc-col-header-cell {
+  background: #080d1a !important;
+  padding: 12px 6px !important;
+  border-top: none !important;
+  border-left: none !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.06) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+::ng-deep .fc .fc-col-header-cell:last-child {
+  border-right: none !important;
+}
+
+::ng-deep .fc .fc-col-header-cell-cushion {
+  color: var(--text-muted, #94a3b8) !important;
+  font-weight: 600 !important;
+  font-size: 0.82rem !important;
+  text-decoration: none !important;
+}
+
+::ng-deep .fc .fc-col-header-cell.fc-day-today {
+  background: rgba(99, 102, 241, 0.14) !important;
+  border-bottom: 2px solid #6366f1 !important;
+}
+
+::ng-deep .fc .fc-col-header-cell.fc-day-today .fc-col-header-cell-cushion {
+  color: #a5b4fc !important;
+  font-weight: 700 !important;
+}
+
+/* Borders */
+::ng-deep .fc td,
+::ng-deep .fc th {
+  border-color: rgba(255, 255, 255, 0.07) !important;
+}
+
+/* Scrollgrid - edge-to-edge single layer matching Day View */
+::ng-deep .fc .fc-scrollgrid {
+  border: none !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 0 !important;
+  overflow: hidden !important;
+  width: 100% !important;
+  background: transparent !important;
+}
+
+::ng-deep .fc .fc-scrollgrid-section-header>th,
+::ng-deep .fc .fc-scrollgrid-section-header>td {
+  border-top: none !important;
+  border-left: none !important;
+  border-right: none !important;
+}
+
+::ng-deep .fc .fc-scrollgrid-liquid {
+  height: 100% !important;
+}
+
+/* TIMEGRID WEEK VIEW STYLING */
+::ng-deep .fc .fc-timegrid-slots td {
+  height: 82px !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04) !important;
+}
+
+::ng-deep .fc .fc-timegrid-slot {
+  height: 82px !important;
+}
+
+::ng-deep .fc .fc-timegrid-slot-lane {
+  height: 82px !important;
+}
+
+::ng-deep .fc .fc-timegrid-slot-minor {
+  border-top-style: dotted !important;
+  border-top-color: rgba(255, 255, 255, 0.05) !important;
+}
+
+::ng-deep .fc .fc-timegrid-slot-label {
+  vertical-align: middle !important;
+  width: 82px !important;
+  min-width: 82px !important;
+  max-width: 82px !important;
+  padding: 0 4px !important;
+  background: rgba(7, 11, 20, 0.95) !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+::ng-deep .fc .fc-timegrid-slot-label-cushion {
+  color: #cbd5e1 !important;
+  font-size: 0.74rem !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.01em !important;
+  text-transform: uppercase !important;
+}
+
+::ng-deep .fc .fc-timegrid-axis {
+  width: 82px !important;
+  min-width: 82px !important;
+  max-width: 82px !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.06) !important;
+}
+
+::ng-deep .fc .fc-timegrid-axis-cushion {
+  color: #94a3b8 !important;
+  font-size: 0.72rem !important;
+  font-weight: 600 !important;
+}
+
+::ng-deep .fc .fc-col-header-cell.fc-timegrid-axis {
+  background: #080d1a !important;
+  width: 82px !important;
+  min-width: 82px !important;
+  max-width: 82px !important;
+  border-top: none !important;
+  border-left: none !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.06) !important;
+}
+
+::ng-deep .fc .fc-col-header-cell.fc-timegrid-axis .fc-timegrid-axis-cushion::before {
+  content: "🕒 Time";
+  color: #94a3b8;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+/* Today column highlight in TimeGrid */
+::ng-deep .fc .fc-timegrid-col.fc-day-today {
+  background: rgba(99, 102, 241, 0.04) !important;
+}
+
+/* TimeGrid Events */
+::ng-deep .fc .fc-timegrid-event-harness {
+  margin: 1px 2px !important;
+}
+
+::ng-deep .fc .fc-timegrid-event {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  cursor: pointer !important;
+  overflow: visible !important;
+}
+
+::ng-deep .fc .fc-timegrid-event .fc-event-main {
+  padding: 1px 2px !important;
+  height: 100% !important;
+  box-sizing: border-box !important;
+}
+
+/* Week View Vertical Stack Container (ek ke niche ek) */
+::ng-deep .fc-week-stack-container {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  width: 100%;
+  height: 100%;
+  min-height: 100%;
+  box-sizing: border-box;
+  position: relative;
+}
+
+/* Clean Week Appointment Card */
+::ng-deep .fc-week-clean-card {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  overflow: hidden;
+  box-sizing: border-box;
+  padding: 3px 6px;
+  background: rgba(19, 27, 46, 0.94);
+  border-radius: 7px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.35);
+  transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+::ng-deep .fc-week-clean-card:hover {
+  transform: translateY(-1px) scale(1.01);
+  background: rgba(28, 38, 60, 0.98);
+  border-color: rgba(255, 255, 255, 0.3);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.65), 0 0 12px rgba(99, 102, 241, 0.35);
+  z-index: 50 !important;
+}
+
+::ng-deep .fc-week-clean-card.is-stacked-card {
+  flex: 1 1 0px;
+  min-height: 30px;
+}
+
+/* Week View "+X more" Pill / Button (like Month view!) */
+::ng-deep .fc-week-more-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: 100%;
+  padding: 2px 6px;
+  border-radius: 5px;
+  background: rgba(99, 102, 241, 0.16);
+  border: 1px dashed rgba(129, 140, 248, 0.45);
+  color: #c7d2fe;
+  font-size: 0.68rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  user-select: none;
+  box-sizing: border-box;
+  margin-top: 1px;
+}
+
+::ng-deep .fc-week-more-btn:hover {
+  background: rgba(99, 102, 241, 0.32);
+  border-color: rgba(129, 140, 248, 0.75);
+  color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(99, 102, 241, 0.3);
+}
+
+::ng-deep .fc-week-overflow-drawer {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: -2px;
+  right: -2px;
+  min-width: 260px;
+  max-width: 310px;
+  z-index: 9999;
+  background: rgba(13, 20, 36, 0.98);
+  border: 1px solid rgba(129, 140, 248, 0.35);
+  border-radius: 12px;
+  box-shadow: 0 20px 48px -8px rgba(0, 0, 0, 0.85), 0 0 24px rgba(99, 102, 241, 0.3);
+  backdrop-filter: blur(20px);
+  overflow: hidden;
+  animation: popoverDropdownOpen 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  transform-origin: top center;
+}
+
+::ng-deep .fc-week-overflow-drawer.is-closing {
+  animation: popoverDropdownClose 0.22s cubic-bezier(0.4, 0, 0.2, 1) forwards !important;
+  pointer-events: none !important;
+}
+
+::ng-deep .fc-week-stack-container.drawer-open .fc-week-overflow-drawer {
+  display: flex;
+  flex-direction: column;
+}
+
+::ng-deep .fc-overflow-drawer-header {
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.98) 0%, rgba(15, 23, 42, 0.98) 100%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.80rem;
+  font-weight: 700;
+  color: #f8fafc;
+}
+
+::ng-deep .fc-overflow-drawer-close {
+  font-size: 0.92rem;
+  color: #94a3b8;
+  cursor: pointer;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.06);
+  transition: all 0.15s ease;
+}
+
+::ng-deep .fc-overflow-drawer-close:hover {
+  background: rgba(239, 68, 68, 0.25);
+  color: #f87171;
+  transform: scale(1.08);
+}
+
+::ng-deep .fc-overflow-drawer-body {
+  padding: 8px;
+  max-height: 280px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* Custom Scrollbar for week overflow drawer */
+::ng-deep .fc-overflow-drawer-body::-webkit-scrollbar {
+  width: 5px;
+}
+
+::ng-deep .fc-overflow-drawer-body::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.5);
+}
+
+::ng-deep .fc-overflow-drawer-body::-webkit-scrollbar-thumb {
+  background: rgba(99, 102, 241, 0.4);
+  border-radius: 4px;
+}
+
+::ng-deep .fc-clean-row {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  width: 100%;
+}
+
+::ng-deep .fc-customer-row {
+  gap: 6px;
+}
+
+::ng-deep .fc-cust-icon-badge {
+  width: 16px;
+  height: 16px;
+  min-width: 16px;
+  border-radius: 50%;
+  background: rgba(99, 102, 241, 0.22);
+  border: 1px solid rgba(129, 140, 248, 0.35);
+  color: #a5b4fc;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+::ng-deep .fc-clean-customer-name {
+  font-size: 0.80rem;
+  font-weight: 600;
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+  flex: 1;
+}
+
+/* Row 2: Service Provider with Provider Icon (thoda right shift) */
+::ng-deep .fc-provider-row {
+  gap: 5px;
+  padding-left: 9px;
+  /* Thoda right kar ke! */
+  box-sizing: border-box;
+}
+
+::ng-deep .fc-provider-avatar-box {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+::ng-deep .fc-clean-provider-name {
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: #cbd5e1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+  flex: 1;
+}
+
+/* Month View Event Styling */
+::ng-deep .fc-custom-month-event {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  width: 100%;
+  overflow: hidden;
+  padding: 2px 5px;
+  border-radius: 5px;
+  background: rgba(19, 27, 46, 0.92);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  box-sizing: border-box;
+  cursor: pointer;
+  transition: background-color 0.15s ease, transform 0.15s ease;
+}
+
+::ng-deep .fc-custom-month-event:hover {
+  background: rgba(30, 41, 65, 0.98);
+  transform: translateY(-1px);
+}
+
+::ng-deep .fc-month-cust-icon {
+  width: 14px;
+  height: 14px;
+  min-width: 14px;
+}
+
+::ng-deep .fc-month-customer {
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: #f8fafc;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+}
+
+
+
+::ng-deep .fc-month-provider-box {
+  margin-left: auto;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+}
+
+/* Now Indicator - Proper Continuous Line Across Week Grid */
+::ng-deep .fc .fc-timegrid-now-indicator-line {
+  left: 0 !important;
+  right: 0 !important;
+  width: 100% !important;
+  border-color: #f43f5e !important;
+  border-width: 2px !important;
+  border-top-style: solid !important;
+  box-shadow: 0 0 10px rgba(244, 63, 94, 0.85), 0 0 20px rgba(244, 63, 94, 0.45) !important;
+  z-index: 30 !important;
+  pointer-events: none !important;
+}
+
+::ng-deep .fc .fc-timegrid-now-indicator-line::before {
+  content: "";
+  position: absolute;
+  left: -4px;
+  top: -4px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #f43f5e;
+  box-shadow: 0 0 8px #f43f5e, 0 0 16px rgba(244, 63, 94, 0.9);
+  z-index: 31;
+}
+
+/* Remove the ugly disconnected rectangle stub on the time axis */
+::ng-deep .fc .fc-timegrid-now-indicator-arrow {
+  display: none !important;
+}
+
+/* ==========================================================================
+   DAYGRID MONTH VIEW STYLING (AUTHENTIC LUXURY CALENDAR MONTH LOOK)
+   ========================================================================== */
+
+/* Month View Scrollgrid & Outer Boundary (overflow visible allows floating popover to break free) */
+::ng-deep .fc-daygrid .fc-scrollgrid {
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 8px !important;
+  overflow: visible !important;
+  background: transparent !important;
+}
+
+::ng-deep .fc-dayGridMonth-view,
+::ng-deep .fc-daygrid .fc-scrollgrid-sync-table,
+::ng-deep .fc-daygrid .fc-daygrid-body,
+::ng-deep .fc-daygrid .fc-scroller {
+  overflow: visible !important;
+}
+
+/* Month Weekday Header Row (SUN, MON, TUE, WED, THU, FRI, SAT) */
+::ng-deep .fc-daygrid .fc-col-header-cell {
+  background: #080d1a !important;
+  padding: 12px 6px !important;
+  border-top: none !important;
+  border-left: none !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.06) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  text-align: center !important;
+}
+
+::ng-deep .fc-daygrid .fc-col-header-cell-cushion {
+  font-size: 0.78rem !important;
+  font-weight: 700 !important;
+  color: #94a3b8 !important;
+  letter-spacing: 0.06em !important;
+  text-transform: uppercase !important;
+  text-decoration: none !important;
+}
+
+/* Month Day Cell - Distinct Calendar Box */
+::ng-deep .fc .fc-daygrid-day {
+  border: 1px solid rgba(255, 255, 255, 0.07) !important;
+  background: rgba(11, 16, 29, 0.35) !important;
+  transition: background-color 0.18s ease, border-color 0.18s ease !important;
+  cursor: pointer !important;
+  position: relative !important;
+}
+
+::ng-deep .fc .fc-daygrid-day:hover {
+  background: rgba(22, 32, 54, 0.55) !important;
+  border-color: rgba(99, 102, 241, 0.32) !important;
+}
+
+/* Day Frame - Spaced, Tall, Authentic Calendar Month Proportions */
+::ng-deep .fc .fc-daygrid-day-frame {
+  min-height: 122px !important;
+  height: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  padding: 6px 6px 8px !important;
+  box-sizing: border-box !important;
+}
+
+/* Day Top (Date Number Positioning) */
+::ng-deep .fc .fc-daygrid-day-top {
+  display: flex !important;
+  flex-direction: row !important;
+  justify-content: flex-end !important;
+  align-items: center !important;
+  padding: 2px 4px 4px 4px !important;
+}
+
+/* Date Number Typography */
+::ng-deep .fc .fc-daygrid-day-number {
+  font-family: inherit !important;
+  font-weight: 600 !important;
+  color: #cbd5e1 !important;
+  font-size: 0.82rem !important;
+  padding: 0 !important;
+  width: 26px !important;
+  height: 26px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 50% !important;
+  text-decoration: none !important;
+  transition: all 0.15s ease !important;
+}
+
+::ng-deep .fc .fc-daygrid-day:hover .fc-daygrid-day-number {
+  color: #ffffff !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Today Cell Highlight - Circular Radiant Badge & Subtle Glow */
+::ng-deep .fc .fc-daygrid-day.fc-day-today {
+  background: rgba(99, 102, 241, 0.08) !important;
+  box-shadow: inset 0 0 0 1.5px rgba(99, 102, 241, 0.45) !important;
+}
+
+::ng-deep .fc .fc-daygrid-day.fc-day-today .fc-daygrid-day-number {
+  background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%) !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  box-shadow: 0 0 12px rgba(99, 102, 241, 0.75), 0 2px 6px rgba(0, 0, 0, 0.4) !important;
+}
+
+/* Days Outside the Current Month (Clean empty filler cells without appointments) */
+::ng-deep .fc .fc-daygrid-day.fc-day-other {
+  background: rgba(4, 7, 14, 0.45) !important;
+  opacity: 0.25 !important;
+  pointer-events: none !important;
+}
+
+::ng-deep .fc .fc-daygrid-day.fc-day-other .fc-daygrid-day-top,
+::ng-deep .fc .fc-daygrid-day.fc-day-other .fc-daygrid-day-events,
+::ng-deep .fc .fc-daygrid-day.fc-day-other .fc-daygrid-event-harness,
+::ng-deep .fc .fc-daygrid-day.fc-day-other .fc-daygrid-more-link {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+/* Events Area Inside Day Cell */
+::ng-deep .fc .fc-daygrid-day-events {
+  margin-top: 2px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 3px !important;
+  flex: 1 !important;
+  min-height: 0 !important;
+}
+
+::ng-deep .fc .fc-daygrid-event-harness {
+  margin: 1px 0 !important;
+}
+
+::ng-deep .fc .fc-daygrid-event {
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  box-shadow: none !important;
+  cursor: pointer !important;
+}
+
+/* "+X more" Link Styled as a Clean Indigo Pill Button */
+::ng-deep .fc .fc-daygrid-more-link {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 4px !important;
+  width: 100% !important;
+  padding: 2.5px 6px !important;
+  border-radius: 5px !important;
+  background: rgba(99, 102, 241, 0.14) !important;
+  border: 1px dashed rgba(129, 140, 248, 0.45) !important;
+  color: #c7d2fe !important;
+  font-size: 0.70rem !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  text-decoration: none !important;
+  box-sizing: border-box !important;
+  margin-top: 2px !important;
+  transition: all 0.16s ease !important;
+}
+
+::ng-deep .fc .fc-daygrid-more-link:hover {
+  background: rgba(99, 102, 241, 0.28) !important;
+  border-color: rgba(129, 140, 248, 0.75) !important;
+  color: #ffffff !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 3px 8px rgba(99, 102, 241, 0.3) !important;
+}
+
+/* --------------------------------------------------------------------------
+   FULLCALENDAR MONTH VIEW "+MORE" POPOVER (LUXURY ANIMATED DROPDOWN)
+   -------------------------------------------------------------------------- */
+@keyframes popoverDropdownOpen {
+  0% {
+    opacity: 0;
+    transform: translateY(-16px) scale(0.95);
+    filter: blur(4px);
+  }
+
+  65% {
+    opacity: 1;
+    transform: translateY(2px) scale(1.008);
+    filter: blur(0px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0px);
+  }
+}
+
+@keyframes popoverDropdownClose {
+  0% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0px);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateY(-14px) scale(0.95);
+    filter: blur(4px);
+  }
+}
+
+/* FullCalendar Month View "+more" Popover - Luxury Floating Date Card */
+::ng-deep .fc .fc-popover {
+  position: absolute !important;
+  background: #0f172a !important;
+  border: 1px solid rgba(129, 140, 248, 0.45) !important;
+  border-radius: 14px !important;
+  box-shadow: 0 25px 55px rgba(0, 0, 0, 0.95), 0 0 35px rgba(99, 102, 241, 0.35) !important;
+  min-width: 280px !important;
+  max-width: 360px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  z-index: 99999 !important;
+  overflow: hidden !important;
+  animation: modalFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  margin: 0 !important;
+}
+
+::ng-deep .fc .fc-popover.fc-popover-closing {
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transition: opacity 0.15s ease !important;
+}
+
+::ng-deep .fc .fc-popover-header {
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.98) 0%, rgba(15, 23, 42, 0.98) 100%) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+  padding: 14px 18px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  flex-shrink: 0 !important;
+}
+
+::ng-deep .fc .fc-popover-title {
+  font-size: 0.96rem !important;
+  font-weight: 700 !important;
+  color: #f8fafc !important;
+  letter-spacing: -0.01em !important;
+}
+
+::ng-deep .fc .fc-popover-close {
+  font-size: 1rem !important;
+  color: #94a3b8 !important;
+  cursor: pointer !important;
+  width: 28px !important;
+  height: 28px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 8px !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  transition: all 0.15s ease !important;
+  opacity: 1 !important;
+}
+
+::ng-deep .fc .fc-popover-close:hover {
+  background: rgba(239, 68, 68, 0.25) !important;
+  color: #f87171 !important;
+  transform: scale(1.08) !important;
+}
+
+::ng-deep .fc .fc-popover-body {
+  padding: 10px 12px !important;
+  max-height: 250px !important;
+  overflow-y: auto !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 6px !important;
+}
+
+/* Custom Scrollbar for Popover */
+::ng-deep .fc .fc-popover-body::-webkit-scrollbar {
+  width: 6px !important;
+}
+
+::ng-deep .fc .fc-popover-body::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.5) !important;
+}
+
+::ng-deep .fc .fc-popover-body::-webkit-scrollbar-thumb {
+  background: rgba(99, 102, 241, 0.4) !important;
+  border-radius: 4px !important;
+}
+
+::ng-deep .fc .fc-popover-body::-webkit-scrollbar-thumb:hover {
+  background: rgba(99, 102, 241, 0.7) !important;
+}
+
+/* Event items inside Popover */
+::ng-deep .fc .fc-popover-body .fc-daygrid-event {
+  margin: 0 !important;
+  border-radius: 7px !important;
+  background: rgba(24, 34, 58, 0.92) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25) !important;
+  transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease !important;
+}
+
+::ng-deep .fc .fc-popover-body .fc-daygrid-event:hover {
+  transform: translateX(3px) !important;
+  background: rgba(38, 52, 85, 0.98) !important;
+  border-color: rgba(129, 140, 248, 0.4) !important;
+}
+
+::ng-deep .fc .fc-popover-body .fc-custom-month-event {
+  padding: 5px 8px !important;
+}
+
+/* More link (+X more) in dayGrid month view */
+::ng-deep .fc .fc-daygrid-more-link {
+  font-size: 0.72rem !important;
+  font-weight: 600 !important;
+  color: #818cf8 !important;
+  background: rgba(99, 102, 241, 0.14) !important;
+  border: 1px dashed rgba(129, 140, 248, 0.4) !important;
+  border-radius: 4px !important;
+  padding: 2px 6px !important;
+  margin: 2px 3px !important;
+  transition: all 0.2s ease !important;
+  cursor: pointer !important;
+}
+
+::ng-deep .fc .fc-daygrid-more-link:hover {
+  background: rgba(99, 102, 241, 0.3) !important;
+  color: #c7d2fe !important;
+  border-color: rgba(129, 140, 248, 0.7) !important;
+  transform: translateY(-1px) scale(1.02) !important;
+}
+
+/* --------------------------------------------------------------------------
+   MOBILE FLOATING ACTION BUTTON (FAB)
+   -------------------------------------------------------------------------- */
+.mobile-fab-btn {
+  display: none;
+  position: fixed;
+  bottom: 24px;
+  left: 24px;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: var(--gradient-primary, linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #d946ef 100%));
+  color: #ffffff;
+  border: none;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 24px rgba(99, 102, 241, 0.5);
+  cursor: pointer;
+  z-index: 90;
+  transition: transform 0.2s ease;
+}
+
+.mobile-fab-btn:active {
+  transform: scale(0.92);
+}
+
+/* --------------------------------------------------------------------------
+   APPOINTMENT DETAILS DRAWER / MODAL OVERLAY (Sleek Modern Luxury Card)
+   -------------------------------------------------------------------------- */
+.modal-backdrop {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  inset: 0 !important;
+  background: rgba(15, 23, 42, 0.45) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  z-index: 100000 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 1.5rem !important;
+  box-sizing: border-box !important;
+  overflow-y: auto !important;
+  margin: 0 !important;
+}
+
+.appointment-detail-sheet {
+  background: #0f172a !important;
+  border-radius: 20px !important;
+  max-width: 550px !important;
+  width: 100% !important;
+  max-height: 88vh !important;
+  display: flex !important;
+  flex-direction: column !important;
+  box-shadow: 0 25px 65px rgba(0, 0, 0, 0.85), 0 0 30px rgba(99, 102, 241, 0.15) !important;
+  overflow: hidden !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  color: var(--text-main, #f8fafc) !important;
+  position: relative !important;
+  margin: auto !important;
+  animation: modalScaleUp 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.sheet-top-accent {
+  height: 3px;
+  width: 100%;
+  background: linear-gradient(90deg, #6366f1 0%, #a855f7 50%, #ec4899 100%);
+  flex-shrink: 0;
+}
+
+.sheet-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 24px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(15, 23, 42, 0.98);
+}
+
+.sheet-header-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.sheet-header-title h3 {
+  margin: 0;
+  font-size: 1.12rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: #f8fafc;
+}
+
+.sheet-apt-num {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  background: rgba(99, 102, 241, 0.18);
+  color: #a5b4fc;
+  border: 1px solid rgba(99, 102, 241, 0.35);
+}
+
+.btn-close-sheet {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #94a3b8;
+  cursor: pointer;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9px;
+  transition: all 0.18s ease;
+}
+
+.btn-close-sheet:hover {
+  color: #ffffff;
+  background: rgba(239, 68, 68, 0.2);
+  border-color: rgba(239, 68, 68, 0.4);
+  transform: scale(1.05);
+}
+
+.sheet-body {
+  padding: 22px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow-y: auto;
+}
+
+/* Status & Time Meta Strip */
+.sheet-meta-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 12px;
+  border-radius: 9999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.status-dot-pulse {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 8px currentColor;
+  display: inline-block;
+}
+
+.meta-time-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #cbd5e1;
+}
+
+.meta-time-chip svg {
+  color: #818cf8;
+}
+
+.meta-sep {
+  color: #475569;
+  font-weight: 400;
+}
+
+/* Client Detail Card */
+.client-detail-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 18px;
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.6) 0%, rgba(15, 23, 42, 0.7) 100%);
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.avatar-ring {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 1.15rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+  border: 2px solid rgba(255, 255, 255, 0.15);
+}
+
+.client-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.client-label-sub {
+  display: block;
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #64748b;
+  margin-bottom: 2px;
+}
+
+.client-name-lg {
+  margin: 0 0 6px 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: -0.01em;
+}
+
+.client-contacts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.contact-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: #94a3b8;
+  padding: 4px 10px;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  text-decoration: none;
+  transition: all 0.18s ease;
+}
+
+.contact-chip:hover {
+  background: rgba(99, 102, 241, 0.16);
+  border-color: rgba(99, 102, 241, 0.4);
+  color: #c7d2fe;
+  transform: translateY(-1px);
+}
+
+.contact-chip svg {
+  color: #818cf8;
+}
+
+/* Appointment Info Grid */
+.sheet-info-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.info-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px 16px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.info-cell.full-width {
+  grid-column: span 2;
+}
+
+.info-cell-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cell-icon {
+  color: #818cf8;
+  flex-shrink: 0;
+}
+
+.info-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.info-val {
+  font-size: 0.92rem;
+  color: #f8fafc;
+}
+
+.info-val.font-semibold {
+  font-weight: 600;
+}
+
+.info-reason-text {
+  font-size: 0.86rem;
+  color: #cbd5e1;
+  line-height: 1.45;
+  font-style: italic;
+  padding-left: 2px;
+}
+
+.specialist-inline-val {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 2px;
+}
+
+.sheet-avatar-circle {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.70rem;
+  font-weight: 700;
+  color: #ffffff;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.sheet-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+  display: block;
+}
+
+/* Actions Row - Prominent Luxury Buttons */
+.sheet-actions-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.btn-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border-radius: 10px;
+  font-size: 0.86rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  line-height: 1;
+}
+
+.btn-action svg {
+  flex-shrink: 0;
+}
+
+.btn-approve {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: #ffffff;
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+}
+
+.btn-approve:hover {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  box-shadow: 0 6px 18px rgba(16, 185, 129, 0.45);
+  transform: translateY(-1.5px);
+}
+
+.btn-reschedule {
+  background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+  color: #ffffff;
+  box-shadow: 0 4px 14px rgba(99, 102, 241, 0.32);
+  border: 1px solid rgba(99, 102, 241, 0.4);
+}
+
+.btn-reschedule:hover {
+  background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%);
+  box-shadow: 0 6px 18px rgba(99, 102, 241, 0.45);
+  transform: translateY(-1.5px);
+}
+
+/* Cancel Appointment - Proper Prominent Danger Button */
+.btn-danger {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: #ffffff;
+  box-shadow: 0 4px 14px rgba(239, 68, 68, 0.35);
+  border: 1px solid rgba(239, 68, 68, 0.45);
+}
+
+.btn-danger:hover {
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  box-shadow: 0 6px 18px rgba(239, 68, 68, 0.5);
+  transform: translateY(-1.5px);
+}
+
+.btn-outline {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #cbd5e1;
+}
+
+.btn-outline:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.22);
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+/* --------------------------------------------------------------------------
+   RESPONSIVE LAYOUT (MEDIA QUERIES)
+   -------------------------------------------------------------------------- */
+@media (max-width: 1300px) {
+  .schedule-header-bar {
+    padding: 8px 14px;
+    gap: 8px;
+  }
+
+  .date-title-heading {
+    font-size: 0.95rem;
+  }
+
+  .date-subtitle-week {
+    font-size: 0.72rem;
+  }
+
+  .btn-date-pill {
+    padding: 0 10px;
+    font-size: 0.80rem;
+    gap: 5px;
+  }
+
+  .provider-select-anchor {
+    min-width: 170px;
+    max-width: 220px;
+  }
+
+  .btn-new-booking {
+    padding: 0 12px;
+    font-size: 0.80rem;
+    gap: 6px;
+  }
+}
+
+@media (max-width: 1080px) {
+  .schedule-header-bar {
+    flex-wrap: wrap;
+    justify-content: space-between;
+    padding: 10px 14px;
+    gap: 10px;
+  }
+
+  .header-left-controls {
+    order: 1;
+  }
+
+  .header-right-controls {
+    order: 2;
+  }
+
+  .header-center-title {
+    order: 3;
+    width: 100%;
+    text-align: center;
+    padding-top: 6px;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  .date-title-heading {
+    font-size: 0.98rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .schedule-app-container {
+    border-radius: 0;
+    border: none;
+  }
+
+  .schedule-header-bar {
+    flex-wrap: wrap;
+    padding: 10px 12px;
+    gap: 8px;
+  }
+
+  .header-center-title {
+    order: -1;
+    width: 100%;
+    text-align: left;
+    margin-bottom: 2px;
+  }
+
+  .date-title-heading {
+    font-size: 0.92rem;
+  }
+
+  .tab-item {
+    padding: 4px 8px;
+    font-size: 0.78rem;
+  }
+
+  .provider-select-anchor .trigger-sub-text {
+    display: none;
+  }
+
+  .booking-btn-text {
+    display: none;
+  }
+
+  .btn-new-booking {
+    padding: 0 10px;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    justify-content: center;
+  }
+
+  .mobile-specialist-bar {
+    display: block;
+  }
+
+  /* Single-provider focus on mobile */
+  .provider-col-header.mobile-hidden,
+  .specialist-time-column.mobile-hidden {
+    display: none !important;
+  }
+
+  .time-header-spacer,
+  .time-axis-col {
+    width: 68px;
+    min-width: 68px;
+  }
+
+  .mobile-fab-btn {
+    display: inline-flex;
+  }
+}
+
+@media (max-width: 480px) {
+  .btn-date-pill {
+    padding: 0 8px;
+    font-size: 0.76rem;
+    gap: 4px;
+  }
+
+  .date-pill-text {
+    font-size: 0.76rem;
+  }
+
+  .btn-today-pill {
+    padding: 0 10px;
+    font-size: 0.76rem;
+  }
+}
+
+/* Animations & Live Effects */
+.animate-fade-in {
+  animation: fadeIn 0.2s ease-out;
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.animate-slide-up {
+  animation: slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Micro-Pulse Radar Glow for Available Status */
+@keyframes pulseGlow {
+
+  0%,
+  100% {
+    box-shadow: 0 0 6px rgba(16, 185, 129, 0.8);
+  }
+
+  50% {
+    box-shadow: 0 0 12px rgba(16, 185, 129, 1), 0 0 4px #34d399;
+  }
+}
+
+/* Radar Ping on Current Time Marker */
+@keyframes liveTimePing {
+  0% {
+    box-shadow: 0 0 0 0 rgba(244, 63, 94, 0.8);
+  }
+
+  70% {
+    box-shadow: 0 0 0 6px rgba(244, 63, 94, 0);
+  }
+
+  100% {
+    box-shadow: 0 0 0 0 rgba(244, 63, 94, 0);
+  }
+}
+
+/* Luxury Datepicker Deep Overrides */
+::ng-deep .luxury-dark-datepicker mat-datepicker-content,
+::ng-deep .luxury-dark-datepicker .mat-datepicker-content {
+  height: auto !important;
+  min-height: auto !important;
+  max-height: max-content !important;
+  width: 290px !important;
+  max-width: 290px !important;
+  padding: 12px 14px 10px 14px !important;
+  border-radius: 16px !important;
+}
+
+::ng-deep .luxury-dark-datepicker mat-calendar,
+::ng-deep .luxury-dark-datepicker .mat-calendar {
+  height: auto !important;
+  min-height: auto !important;
+  width: 100% !important;
+  display: block !important;
+}
+
+::ng-deep .luxury-dark-datepicker .mat-calendar-content {
+  height: auto !important;
+  min-height: auto !important;
+  padding: 0 !important;
+}
+
+::ng-deep .luxury-dark-datepicker .mat-calendar-body {
+  height: auto !important;
+  min-height: auto !important;
+}
+
+::ng-deep .luxury-dark-datepicker .mat-calendar-table {
+  height: auto !important;
+  width: 100% !important;
+  border-collapse: separate !important;
+  border-spacing: 0 4px !important;
+  margin: 0 !important;
+  table-layout: fixed !important;
+}
+
+::ng-deep .luxury-dark-datepicker .mat-calendar-table tbody tr {
+  height: 34px !important;
+  max-height: 34px !important;
+}
+
+::ng-deep .luxury-dark-datepicker .mat-calendar-body-cell-container {
+  height: 34px !important;
+  min-height: 34px !important;
+  max-height: 34px !important;
+  line-height: 34px !important;
+  padding: 0 !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  position: relative !important;
+  vertical-align: middle !important;
+}
+
+::ng-deep .luxury-dark-datepicker .mat-calendar-body-cell {
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: none !important;
+  background: transparent !important;
+  cursor: pointer !important;
+}
+
+::ng-deep .luxury-dark-datepicker .mat-calendar-body-cell::before,
+::ng-deep .luxury-dark-datepicker .mat-calendar-body-cell::after {
+  display: none !important;
+}
+
+::ng-deep .luxury-dark-datepicker .mat-calendar-body-cell-content {
+  width: 32px !important;
+  height: 32px !important;
+  min-width: 32px !important;
+  min-height: 32px !important;
+  max-width: 32px !important;
+  max-height: 32px !important;
+  margin: auto !important;
+  border-radius: 8px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  line-height: 1 !important;
+  position: relative !important;
+  z-index: 1 !important;
+}
+
+::ng-deep .luxury-dark-datepicker tr[aria-hidden="true"]:has(.mat-calendar-body-label) {
+  display: none !important;
+}
+
+::ng-deep .luxury-dark-datepicker td.mat-calendar-body-label {
+  display: table-cell !important;
+  visibility: hidden !important;
+  font-size: 0 !important;
+  line-height: 0 !important;
+  padding: 0 !important;
+  height: 34px !important;
+  color: transparent !important;
+}
+
+::ng-deep .luxury-dark-datepicker .mat-calendar-body-cell.mat-calendar-body-selected .mat-calendar-body-cell-content,
+::ng-deep .luxury-dark-datepicker .mat-calendar-body-cell[aria-selected="true"] .mat-calendar-body-cell-content {
+  background: linear-gradient(135deg, #7c3aed 0%, #6366f1 100%) !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  border-radius: 8px !important;
+  box-shadow: 0 4px 14px rgba(124, 58, 237, 0.65) !important;
+}
+
+::ng-deep .luxury-dark-datepicker mat-calendar,
+::ng-deep .luxury-dark-datepicker .mat-calendar {
+  height: auto !important;
+  min-height: auto !important;
+  width: 100% !important;
+  display: block !important;
+}
+
+::ng-deep .luxury-dark-datepicker .mat-calendar-content {
+  height: auto !important;
+  min-height: auto !important;
+  padding: 0 !important;
+}
+
+::ng-deep .luxury-dark-datepicker .mat-calendar-body {
+  height: auto !important;
+  min-height: auto !important;
+}
+
+::ng-deep .luxury-dark-datepicker .mat-calendar-table {
+  height: auto !important;
+  width: 100% !important;
+  border-collapse: separate !important;
+  border-spacing: 0 4px !important;
+  margin: 0 !important;
+  table-layout: fixed !important;
+}
+
+::ng-deep .luxury-dark-datepicker .mat-calendar-table tbody tr {
+  height: 34px !important;
+  max-height: 34px !important;
+}
+
+::ng-deep .luxury-dark-datepicker .mat-calendar-body-cell-container {
+  height: 34px !important;
+  min-height: 34px !important;
+  max-height: 34px !important;
+  line-height: 34px !important;
+  padding: 0 !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  position: relative !important;
+  vertical-align: middle !important;
+}
+
+::ng-deep .luxury-dark-datepicker .mat-calendar-body-cell {
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: none !important;
+  background: transparent !important;
+  cursor: pointer !important;
+}
+
+::ng-deep .luxury-dark-datepicker .mat-calendar-body-cell::before,
+::ng-deep .luxury-dark-datepicker .mat-calendar-body-cell::after {
+  display: none !important;
+}
+
+::ng-deep .luxury-dark-datepicker .mat-calendar-body-cell-content {
+  width: 32px !important;
+  height: 32px !important;
+  min-width: 32px !important;
+  min-height: 32px !important;
+  max-width: 32px !important;
+  max-height: 32px !important;
+  margin: auto !important;
+  border-radius: 8px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  line-height: 1 !important;
+  position: relative !important;
+  z-index: 1 !important;
+}
+
+::ng-deep .luxury-dark-datepicker tr[aria-hidden="true"]:has(.mat-calendar-body-label) {
+  display: none !important;
+}
+
+::ng-deep .luxury-dark-datepicker td.mat-calendar-body-label {
+  display: table-cell !important;
+  visibility: hidden !important;
+  font-size: 0 !important;
+  line-height: 0 !important;
+  padding: 0 !important;
+  height: 34px !important;
+  color: transparent !important;
+}
+
+::ng-deep .luxury-dark-datepicker .mat-calendar-body-cell.mat-calendar-body-selected .mat-calendar-body-cell-content,
+::ng-deep .luxury-dark-datepicker .mat-calendar-body-cell[aria-selected="true"] .mat-calendar-body-cell-content {
+  background: linear-gradient(135deg, #7c3aed 0%, #6366f1 100%) !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  border-radius: 8px !important;
+  box-shadow: 0 4px 14px rgba(124, 58, 237, 0.65) !important;
+}

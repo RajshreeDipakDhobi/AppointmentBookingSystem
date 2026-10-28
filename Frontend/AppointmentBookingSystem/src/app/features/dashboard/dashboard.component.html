@@ -1,0 +1,194 @@
+<div class="dashboard-page">
+  <!-- Standard Page Header for SuperAdmin -->
+  <div class="page-header" *ngIf="isSuperAdmin">
+    <div class="header-titles">
+      <h2>Dashboard</h2>
+      <p>Platform overview of registered organizations, service providers, and bookings.</p>
+    </div>
+
+    <!-- Quick Action for SuperAdmin -->
+    <button type="button" class="btn btn-primary" (click)="openCreateModal()">
+      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+        stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="12" y1="5" x2="12" y2="19" />
+        <line x1="5" y1="12" x2="19" y2="12" />
+      </svg>
+      <span>Add New Tenant</span>
+    </button>
+  </div>
+
+  <!-- Success Notification Alert -->
+  <div *ngIf="successMessage()" class="alert alert-success animate-fade-in">
+    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+      <polyline points="22 4 12 14.01 9 11.01" />
+    </svg>
+    <span>{{ successMessage() }}</span>
+  </div>
+
+  <!-- SuperAdmin View -->
+  <ng-container *ngIf="isSuperAdmin">
+    <!-- Real Platform Metrics Grid -->
+    <div class="metrics-grid">
+      <!-- Metric 1: Total Organizations -->
+      <div class="metric-card glass-card">
+        <div class="metric-icon-wrap icon-indigo">
+          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z" />
+            <path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2" />
+            <path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2" />
+            <path d="M10 6h4" />
+            <path d="M10 10h4" />
+            <path d="M10 14h4" />
+            <path d="M10 18h4" />
+          </svg>
+        </div>
+        <div class="metric-details">
+          <span class="metric-title">Organizations</span>
+          <div class="metric-value-wrap">
+            <span class="metric-number">{{ totalTenantsCount() }}</span>
+            <span class="metric-sub-badge">{{ activeTenantsCount() }} Active</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Metric 2: Service Providers -->
+      <div class="metric-card glass-card">
+        <div class="metric-icon-wrap icon-purple">
+          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+            <circle cx="9" cy="7" r="4" />
+            <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+            <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+          </svg>
+        </div>
+        <div class="metric-details">
+          <span class="metric-title">Service Providers</span>
+          <div class="metric-value-wrap">
+            <span class="metric-number">{{ totalProvidersCount() }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Metric 3: System Appointments -->
+      <div class="metric-card glass-card">
+        <div class="metric-icon-wrap icon-cyan">
+          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <rect width="18" height="18" x="3" y="4" rx="2" ry="2" />
+            <line x1="16" x2="16" y1="2" y2="6" />
+            <line x1="8" x2="8" y1="2" y2="6" />
+            <line x1="3" x2="21" y1="10" y2="10" />
+            <path d="m9 16 2 2 4-4" />
+          </svg>
+        </div>
+        <div class="metric-details">
+          <span class="metric-title">Total Bookings</span>
+          <div class="metric-value-wrap">
+            <span class="metric-number">{{ totalBookingsCount() }}</span>
+            <span class="metric-sub-label">Platform Wide</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent Organizations Section -->
+    <div class="section-card glass-card">
+      <div class="section-header">
+        <div>
+          <h3>Recent Organizations</h3>
+          <p>Quick glance of registered organizations and businesses.</p>
+        </div>
+        <a routerLink="/tenants" class="btn-link">
+          <span>Manage All Organizations</span>
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="5" y1="12" x2="19" y2="12" />
+            <polyline points="12 5 19 12 12 19" />
+          </svg>
+        </a>
+      </div>
+
+      <!-- Organizations Mini Table -->
+      <div class="table-responsive">
+        <table class="custom-table">
+          <thead>
+            <tr>
+              <th>Organization</th>
+              <th>Contact Email</th>
+              <th>Providers</th>
+              <th>Status</th>
+              <th>Registered</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let tenant of recentTenants()" class="table-row">
+              <td>
+                <div class="org-cell">
+                  <div class="org-avatar">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z" />
+                      <path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2" />
+                      <path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2" />
+                    </svg>
+                  </div>
+                  <div>
+                    <span class="org-name">{{ tenant.name }}</span>
+                    <span class="org-sub">{{ tenant.address || 'Address not set' }}</span>
+                  </div>
+                </div>
+              </td>
+              <td>
+                <span class="contact-email">{{ tenant.contactEmail || 'No email' }}</span>
+              </td>
+              <td>
+                <span class="count-badge">{{ tenant.totalProvidersCount }} Providers</span>
+              </td>
+              <td>
+                <span class="badge" [ngClass]="tenant.status === 1 ? 'badge-booked' : 'badge-cancelled'">
+                  {{ tenant.status === 1 ? 'ACTIVE' : 'DEACTIVATED' }}
+                </span>
+              </td>
+              <td>
+                <span class="date-text">{{ tenant.createdAt | date:'MMM d, y' }}</span>
+              </td>
+            </tr>
+
+            <!-- Empty State -->
+            <tr *ngIf="recentTenants().length === 0 && !isLoading()">
+              <td colspan="5" class="empty-cell">
+                <div class="empty-state">
+                  <h4>No Organizations Registered Yet</h4>
+                  <p>Click "Add New Tenant" above to create your first organization or business account.</p>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </ng-container>
+
+  <!-- Tenant Admin Operational Dashboard: Microsoft Teams-Style Full-Screen Calendar Hub with Full Summary -->
+  <ng-container *ngIf="isTenantAdmin">
+    <app-calendar #adminCalendar (appointmentChanged)="loadTenantAdminData()" (openBooking)="openBookingModal()">
+    </app-calendar>
+  </ng-container>
+
+  <!-- CUSTOMER DASHBOARD VIEW (Delegated to dedicated CustomerAppointmentsComponent) -->
+  <ng-container *ngIf="isCustomer">
+    <app-customer-appointments></app-customer-appointments>
+  </ng-container>
+
+  <!-- Global Booking Modal directly accessible from Dashboard -->
+  <app-booking-modal *ngIf="isBookingModalOpen()" (close)="isBookingModalOpen.set(false)"
+    (booked)="onAppointmentBooked($event)"></app-booking-modal>
+
+  <!-- Add Tenant Modal -->
+  <app-tenant-modal [isOpen]="isModalOpen()" mode="create" (close)="onModalClose()"
+    (saved)="onTenantSaved($event)"></app-tenant-modal>
+</div>

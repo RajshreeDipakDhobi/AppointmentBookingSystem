@@ -1,0 +1,283 @@
+<div class="login-page" [class.is-drawer-view]="isDrawer" [class.drawer-mode]="isDrawer">
+  <!-- Top Navigation Bar for Auth Page (Hidden in drawer mode) -->
+  <header *ngIf="!isDrawer" class="auth-navbar">
+    <a routerLink="/book" class="brand-link" title="AppointEase Home">
+      <div class="nav-logo-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <rect width="18" height="18" x="3" y="4" rx="2" ry="2" />
+          <line x1="16" y1="2" x2="16" y2="6" />
+          <line x1="8" y1="2" x2="8" y2="6" />
+          <line x1="3" y1="10" x2="21" y2="10" />
+          <path d="m9 16 2 2 4-4" />
+        </svg>
+      </div>
+      <span class="brand-text">AppointEase</span>
+    </a>
+
+    <!-- Top-Right Industry Standard Action: Book Appointment CTA -->
+    <a routerLink="/book" class="nav-book-cta">
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect width="18" height="18" x="3" y="4" rx="2" ry="2" />
+        <line x1="16" y1="2" x2="16" y2="6" />
+        <line x1="8" y1="2" x2="8" y2="6" />
+        <line x1="3" y1="10" x2="21" y2="10" />
+      </svg>
+      <span>Book Appointment</span>
+      <svg class="cta-arrow" xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none"
+        stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="9 18 15 12 9 6" />
+      </svg>
+    </a>
+  </header>
+
+  <!-- Ambient Glow Behind Card (Hidden in drawer mode) -->
+  <div *ngIf="!isDrawer" class="auth-ambient-glow"></div>
+
+  <!-- Main Auth Card -->
+  <main class="login-card glass-card animate-fade-in" [class.drawer-card]="isDrawer"
+    [class.register-card]="isRegisterMode">
+    <!-- Brand Header -->
+    <div class="brand-header" [class.compact-header]="isRegisterMode">
+      <div class="brand-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <rect width="18" height="18" x="3" y="4" rx="2" ry="2" />
+          <line x1="16" y1="2" x2="16" y2="6" />
+          <line x1="8" y1="2" x2="8" y2="6" />
+          <line x1="3" y1="10" x2="21" y2="10" />
+          <path d="m9 16 2 2 4-4" />
+        </svg>
+      </div>
+      <h2>{{ isRegisterMode ? 'Create Account' : 'Welcome Back' }}</h2>
+      <p class="subtitle">
+        {{ isRegisterMode ? 'Register to manage appointments & bookings' : 'Sign in to access your appointments &
+        profile' }}
+      </p>
+    </div>
+
+    <!-- Pending Booking Notice Banner -->
+    <div *ngIf="isResumingBooking" class="resume-booking-banner animate-fade-in">
+      <div class="resume-banner-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <rect width="18" height="18" x="3" y="4" rx="2" ry="2" />
+          <line x1="16" y1="2" x2="16" y2="6" />
+          <line x1="8" y1="2" x2="8" y2="6" />
+          <line x1="3" y1="10" x2="21" y2="10" />
+        </svg>
+      </div>
+      <div class="resume-banner-content">
+        <span class="resume-banner-title">Account Required to Book</span>
+        <span class="resume-banner-text">
+          {{ isRegisterMode ? 'Create an account to confirm your reserved appointment.' : 'Sign in to finalize your
+          reserved appointment.' }}
+        </span>
+      </div>
+    </div>
+
+    <!-- Error Alert Banner -->
+    <div *ngIf="errorMessage" class="error-banner animate-fade-in">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10" />
+        <line x1="12" y1="8" x2="12" y2="12" />
+        <line x1="12" y1="16" x2="12.01" y2="16" />
+      </svg>
+      <span>{{ errorMessage }}</span>
+    </div>
+
+    <!-- Sign In Form -->
+    <form *ngIf="!isRegisterMode" [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="login-form">
+      <!-- Email Field -->
+      <div class="form-group">
+        <label for="email" class="form-label">Email Address <span class="required-star">*</span></label>
+        <div class="input-wrapper">
+          <svg class="input-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+            fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect width="20" height="16" x="2" y="4" rx="2" />
+            <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+          </svg>
+          <input id="email" type="email" formControlName="email" class="form-input with-icon"
+            placeholder="name@example.com" autocomplete="email" />
+        </div>
+        <div *ngIf="loginForm.get('email')?.touched && loginForm.get('email')?.invalid" class="form-error">
+          <span *ngIf="loginForm.get('email')?.hasError('required')">Email is required.</span>
+          <span *ngIf="loginForm.get('email')?.hasError('pattern') || loginForm.get('email')?.hasError('email')">Please
+            enter a valid email address (e.g. name&#64;example.com).</span>
+        </div>
+      </div>
+
+      <!-- Password Field -->
+      <div class="form-group">
+        <label for="password" class="form-label">Password <span class="required-star">*</span></label>
+        <div class="input-wrapper">
+          <svg class="input-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+            fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+          </svg>
+          <input id="password" [type]="showPassword ? 'text' : 'password'" formControlName="password"
+            class="form-input with-icon with-action" placeholder="Enter your password"
+            autocomplete="current-password" />
+          <button type="button" class="btn-toggle-visibility" (click)="togglePasswordVisibility()"
+            aria-label="Toggle password visibility">
+            <svg *ngIf="!showPassword" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+              fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+              <circle cx="12" cy="12" r="3" />
+            </svg>
+            <svg *ngIf="showPassword" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+              fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24" />
+              <path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68" />
+              <path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61" />
+              <line x1="2" x2="22" y1="2" y2="22" />
+            </svg>
+          </button>
+        </div>
+        <div *ngIf="loginForm.get('password')?.touched && loginForm.get('password')?.invalid" class="form-error">
+          Password is required.
+        </div>
+      </div>
+
+      <!-- Submit Button -->
+      <button type="submit" class="btn-auth-submit" [disabled]="isLoading">
+        <span *ngIf="!isLoading">Sign In</span>
+        <span *ngIf="isLoading" class="spinner-container">
+          <span class="spinner"></span>
+          <span>Signing in...</span>
+        </span>
+      </button>
+
+      <!-- Toggle to Sign Up -->
+      <div class="auth-switch-prompt">
+        <span>Don't have an account?</span>
+        <button type="button" class="btn-switch-link" (click)="setMode(true)">Sign Up</button>
+      </div>
+    </form>
+
+    <!-- Sign Up Form (Single Column Clean Stacked Layout) -->
+    <form *ngIf="isRegisterMode" [formGroup]="registerForm" (ngSubmit)="onSubmit()" class="login-form">
+      <!-- 1. Full Name -->
+      <div class="form-group">
+        <label class="form-label">Full Name <span class="required-star">*</span></label>
+        <div class="input-wrapper">
+          <svg class="input-icon" xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24"
+            fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+            <circle cx="12" cy="7" r="4" />
+          </svg>
+          <input type="text" formControlName="fullName" placeholder="e.g. Alex Johnson" class="form-input with-icon" />
+        </div>
+        <div *ngIf="registerForm.get('fullName')?.touched && registerForm.get('fullName')?.invalid" class="form-error">
+          Full name is required.
+        </div>
+      </div>
+
+      <!-- 2. Email Address -->
+      <div class="form-group">
+        <label class="form-label">Email Address <span class="required-star">*</span></label>
+        <div class="input-wrapper">
+          <svg class="input-icon" xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24"
+            fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect width="20" height="16" x="2" y="4" rx="2" />
+            <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+          </svg>
+          <input type="email" formControlName="email" placeholder="name@example.com" class="form-input with-icon" />
+        </div>
+        <div *ngIf="registerForm.get('email')?.touched && registerForm.get('email')?.invalid" class="form-error">
+          <span *ngIf="registerForm.get('email')?.hasError('required')">Email is required.</span>
+          <span
+            *ngIf="registerForm.get('email')?.hasError('pattern') || registerForm.get('email')?.hasError('email')">Please
+            enter a valid email address.</span>
+        </div>
+      </div>
+
+      <!-- 3. Same Row: Mobile Number & Password (Right after Email) -->
+      <div class="form-row">
+        <!-- Mobile Number -->
+        <div class="form-group">
+          <label class="form-label">Mobile Number <span class="required-star">*</span></label>
+          <div class="phone-input-wrapper">
+            <span class="phone-prefix">+91</span>
+            <input type="tel" appOnlyDigits inputmode="numeric" maxlength="10" formControlName="phoneNumber"
+              placeholder="98765 43210" class="form-input phone-input-clean" />
+          </div>
+          <div *ngIf="registerForm.get('phoneNumber')?.touched && registerForm.get('phoneNumber')?.invalid"
+            class="form-error">
+            <span *ngIf="registerForm.get('phoneNumber')?.hasError('required')">Mobile required.</span>
+            <span *ngIf="registerForm.get('phoneNumber')?.hasError('pattern')">10 digits required.</span>
+          </div>
+        </div>
+
+        <!-- Password -->
+        <div class="form-group">
+          <label class="form-label">Password <span class="required-star">*</span></label>
+          <div class="input-wrapper">
+            <svg class="input-icon" xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24"
+              fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+            </svg>
+            <input [type]="showPassword ? 'text' : 'password'" formControlName="password" placeholder="Min 6 chars"
+              class="form-input with-icon with-action" />
+            <button type="button" class="btn-toggle-visibility" (click)="togglePasswordVisibility()"
+              aria-label="Toggle password visibility">
+              <svg *ngIf="!showPassword" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+                <circle cx="12" cy="12" r="3" />
+              </svg>
+              <svg *ngIf="showPassword" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24" />
+                <path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68" />
+                <path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61" />
+                <line x1="2" x2="22" y1="2" y2="22" />
+              </svg>
+            </button>
+          </div>
+          <div *ngIf="registerForm.get('password')?.touched && registerForm.get('password')?.invalid"
+            class="form-error">
+            <span *ngIf="registerForm.get('password')?.hasError('required')">Password required.</span>
+            <span *ngIf="registerForm.get('password')?.hasError('minlength')">Min 6 chars.</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4. Address (Textarea) -->
+      <div class="form-group">
+        <label class="form-label">Address <span class="required-star">*</span></label>
+        <div class="input-wrapper textarea-wrapper">
+          <svg class="input-icon textarea-icon" xmlns="http://www.w3.org/2000/svg" width="15" height="15"
+            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+            stroke-linejoin="round">
+            <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
+            <circle cx="12" cy="10" r="3" />
+          </svg>
+          <textarea formControlName="address" rows="2" placeholder="House/Flat No., Street, Area, City..."
+            class="form-input form-textarea with-icon"></textarea>
+        </div>
+        <div *ngIf="registerForm.get('address')?.touched && registerForm.get('address')?.invalid" class="form-error">
+          Address is required.
+        </div>
+      </div>
+
+      <button type="submit" class="btn-auth-submit" [disabled]="isLoading">
+        <span *ngIf="!isLoading">Create Account</span>
+        <span *ngIf="isLoading" class="spinner-container">
+          <span class="spinner"></span>
+          <span>Creating account...</span>
+        </span>
+      </button>
+
+      <!-- Toggle to Sign In -->
+      <div class="auth-switch-prompt">
+        <span>Already have an account?</span>
+        <button type="button" class="btn-switch-link" (click)="setMode(false)">Sign In</button>
+      </div>
+    </form>
+  </main>
+</div>

@@ -1,0 +1,236 @@
+<div class="org-detail-page">
+  <app-topbar [isPublic]="true"></app-topbar>
+
+  <main class="org-detail-main">
+    <div class="org-detail-container">
+
+      <!-- Back Bar -->
+      <nav class="nav-bar">
+        <button type="button" class="btn-back" (click)="backToDirectory()" id="btn-back-to-orgs">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="19" y1="12" x2="5" y2="12"></line>
+            <polyline points="12 19 5 12 12 5"></polyline>
+          </svg>
+          <span>Back to Organizations</span>
+        </button>
+
+        <div class="breadcrumb" *ngIf="tenant()">
+          <span class="crumb-link" (click)="backToDirectory()">Organizations</span>
+          <span class="crumb-sep">/</span>
+          <span class="crumb-curr">{{ tenant()?.name }}</span>
+        </div>
+      </nav>
+
+      <!-- Loading Organization -->
+      <div *ngIf="isLoadingTenant()" class="state-card loading-state">
+        <div class="spinner"></div>
+        <p>Loading organization details...</p>
+      </div>
+
+      <!-- Error State -->
+      <div *ngIf="errorMessage()" class="state-card error-state">
+        <h3>{{ errorMessage() }}</h3>
+        <button type="button" class="btn btn-primary" (click)="backToDirectory()">
+          Browse Organizations
+        </button>
+      </div>
+
+      <!-- Loaded Organization -->
+      <ng-container *ngIf="!isLoadingTenant() && tenant()">
+
+        <!-- Clean Organization Header Card -->
+        <header class="org-header-card">
+          <div class="org-header-left">
+            <div class="org-avatar">
+              <img *ngIf="tenant()?.logoUrl" [src]="tenant()?.logoUrl" [alt]="tenant()?.name" />
+              <span *ngIf="!tenant()?.logoUrl">{{ getInitials(tenant()?.name) }}</span>
+            </div>
+
+            <div class="org-info">
+              <div class="org-title-line">
+                <h1 class="org-name">{{ tenant()?.name }}</h1>
+                <span class="badge badge-verified">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="20 6 9 17 4 12"/>
+                  </svg>
+                  Verified Partner
+                </span>
+                <span class="badge badge-rating" *ngIf="tenant()?.rating">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="#f59e0b" stroke="#f59e0b" stroke-width="1.5">
+                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                  </svg>
+                  <span>{{ tenant()?.rating }}</span>
+                  <span class="rating-sub">({{ (tenant()?.totalReviewsCount || 1200) | number }})</span>
+                </span>
+              </div>
+
+              <div class="org-meta-line">
+                <span class="meta-item" *ngIf="tenant()?.address">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/>
+                    <circle cx="12" cy="10" r="3"/>
+                  </svg>
+                  <span>{{ tenant()?.address }}</span>
+                </span>
+
+                <span class="meta-item" *ngIf="tenant()?.contactPhone">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+                  </svg>
+                  <span>{{ tenant()?.contactPhone | appPhone }}</span>
+                </span>
+
+                <span class="meta-item" *ngIf="tenant()?.contactEmail">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect width="20" height="16" x="2" y="4" rx="2"/>
+                    <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
+                  </svg>
+                  <span>{{ tenant()?.contactEmail }}</span>
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div class="org-header-right">
+            <button type="button" class="btn-primary-action" (click)="openBookingModal()" *ngIf="providers().length > 0">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <rect width="18" height="18" x="3" y="4" rx="2" ry="2"/>
+                <line x1="16" x2="16" y1="2" y2="6"/>
+                <line x1="8" x2="8" y1="2" y2="6"/>
+                <line x1="3" x2="21" y1="10" y2="10"/>
+              </svg>
+              <span>Book Appointment</span>
+            </button>
+          </div>
+        </header>
+
+        <!-- Service Providers Section -->
+        <section class="providers-section" aria-label="Service Providers">
+          <div class="section-header">
+            <div class="section-title-group">
+              <div class="section-heading-row">
+                <h2 class="section-title">Service Providers</h2>
+                <span class="badge-count">{{ providers().length }} Available</span>
+              </div>
+              <p class="section-subtitle">Select a specialist below to schedule your appointment</p>
+            </div>
+
+            <!-- Search Filter (if multiple providers exist) -->
+            <div class="provider-search-box" *ngIf="providers().length > 3">
+              <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"/>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              </svg>
+              <input type="text" [(ngModel)]="searchQuery" placeholder="Filter specialists..." />
+            </div>
+          </div>
+
+          <!-- Providers Loading -->
+          <div *ngIf="isLoadingProviders()" class="providers-loading">
+            <div class="spinner"></div>
+            <span>Loading providers...</span>
+          </div>
+
+          <!-- ZERO PROVIDERS EMPTY STATE (Clean & Simple) -->
+          <div *ngIf="!isLoadingProviders() && providers().length === 0" class="empty-providers-card">
+            <div class="empty-icon-wrap">
+              <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+                <circle cx="9" cy="7" r="4"/>
+                <line x1="17" y1="8" x2="22" y2="13"/>
+                <line x1="22" y1="8" x2="17" y2="13"/>
+              </svg>
+            </div>
+            <h3 class="empty-title">No Service Providers Registered</h3>
+            <p class="empty-desc">
+              <strong>{{ tenant()?.name }}</strong> currently has no service providers listed. Please check back later.
+            </p>
+            <button type="button" class="btn-return" (click)="backToDirectory()">
+              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="19" y1="12" x2="5" y2="12"></line>
+                <polyline points="12 19 5 12 12 5"></polyline>
+              </svg>
+              <span>Explore Other Organizations</span>
+            </button>
+          </div>
+
+          <!-- PROVIDERS GRID -->
+          <div *ngIf="!isLoadingProviders() && filteredProviders().length > 0" class="providers-grid">
+            <div *ngFor="let p of filteredProviders()" class="provider-card">
+              <div class="provider-top">
+                <div class="provider-avatar" [style.background]="p.profilePictureUrl ? 'transparent' : getAvatarGradient(p.name)">
+                  <img *ngIf="p.profilePictureUrl" [src]="p.profilePictureUrl" [alt]="p.name" (error)="p.profilePictureUrl = undefined" />
+                  <span *ngIf="!p.profilePictureUrl">{{ getInitials(p.name) }}</span>
+                </div>
+
+                <div class="provider-meta">
+                  <h3 class="provider-name">{{ p.name }}</h3>
+                  <div class="provider-badges-row">
+                    <span *ngIf="p.serviceType" class="provider-role-badge">{{ p.serviceType }}</span>
+                    <span *ngIf="p.chargesAmount" class="provider-charges-badge">₹{{ p.chargesAmount | number }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <p class="provider-bio" *ngIf="p.bio">
+                {{ p.bio }}
+              </p>
+              <p class="provider-bio text-muted" *ngIf="!p.bio">
+                Certified specialist available for booking.
+              </p>
+
+              <div class="provider-details">
+                <div class="detail-row" *ngIf="p.phoneNumber">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+                  </svg>
+                  <span>{{ p.phoneNumber | appPhone }}</span>
+                </div>
+
+                <div class="detail-row" *ngIf="p.address">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/>
+                    <circle cx="12" cy="10" r="3"/>
+                  </svg>
+                  <span>{{ p.address }}</span>
+                </div>
+              </div>
+
+              <div class="provider-actions">
+                <button type="button" class="btn-book" (click)="openBookingModal(p.id)">
+                  <span>Book Appointment</span>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                    <polyline points="12 5 19 12 12 19"></polyline>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+
+        </section>
+
+      </ng-container>
+
+    </div>
+  </main>
+
+  <!-- Reusable Booking Modal -->
+  <app-booking-modal
+    *ngIf="isBookingModalOpen()"
+    [tenantId]="tenant()?.id"
+    [initialProviderId]="selectedProviderId()"
+    (close)="closeBookingModal()"
+    (booked)="onAppointmentBooked($event)">
+  </app-booking-modal>
+
+
+  <!-- Notification Toast -->
+  <div *ngIf="toastMessage()" class="toast-popup">
+    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+      <polyline points="22 4 12 14.01 9 11.01"/>
+    </svg>
+    <span>{{ toastMessage() }}</span>
+  </div>
+</div>

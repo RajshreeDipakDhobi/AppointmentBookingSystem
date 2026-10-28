@@ -1,0 +1,1006 @@
+<div class="appointments-container">
+
+  <!-- Page Header -->
+  <div class="page-header">
+    <div class="header-titles">
+      <h2>Appointments</h2>
+      <p>Monitor, reschedule, cancel, and manage all client bookings.</p>
+    </div>
+
+    <div class="header-actions">
+      <button type="button" class="btn btn-primary btn-book" (click)="openBookingModal()">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="12" y1="5" x2="12" y2="19" />
+          <line x1="5" y1="12" x2="19" y2="12" />
+        </svg>
+        <span>Book Appointment</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Notification Alerts -->
+  <div *ngIf="successMessage()" class="alert alert-success animate-fade-in">
+    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+      <polyline points="22 4 12 14.01 9 11.01" />
+    </svg>
+    <span>{{ successMessage() }}</span>
+  </div>
+
+  <div *ngIf="errorMessage()" class="alert alert-error animate-fade-in">
+    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="10" />
+      <line x1="12" y1="8" x2="12" y2="12" />
+      <line x1="12" y1="16" x2="12.01" y2="16" />
+    </svg>
+    <span>{{ errorMessage() }}</span>
+  </div>
+
+
+
+  <!-- Controls & Filters Bar -->
+  <!-- Controls & Filters Bar (Luxury Command Dock) -->
+  <div class="filter-panel glass-card">
+    <!-- Top Row: Search + Provider Dropdown + View Toggle -->
+    <div class="filter-row top-row">
+      <!-- Search Input -->
+      <div class="search-box">
+        <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+          fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8" />
+          <line x1="21" y1="21" x2="16.65" y2="16.65" />
+        </svg>
+        <input type="text" [(ngModel)]="searchQuery" (ngModelChange)="onFilterChange()"
+          placeholder="Search by customer name, phone, or appointment ID..." class="search-input" />
+        <button *ngIf="searchQuery" type="button" class="btn-clear-search" (click)="searchQuery = ''; onFilterChange()"
+          title="Clear search">✕</button>
+      </div>
+
+      <!-- Custom Glassmorphism Provider Dropdown Filter (Admin / SuperAdmin only) -->
+      <div *ngIf="isAdmin()" class="custom-select-anchor provider-select-anchor"
+        [class.menu-open]="isProviderDropdownOpen" [class.has-selection]="selectedProviderId !== null">
+        <button type="button" class="custom-select-trigger" (click)="toggleProviderDropdown($event)"
+          [title]="'Filter by service provider: ' + selectedProviderLabel" aria-haspopup="listbox"
+          [attr.aria-expanded]="isProviderDropdownOpen">
+          <!-- Left Icon or Avatar Mini -->
+          <div class="trigger-icon-wrap">
+            <span *ngIf="!selectedProvider" class="trigger-default-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                <circle cx="9" cy="7" r="4" />
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+              </svg>
+            </span>
+            <span *ngIf="selectedProvider" class="trigger-avatar-circle"
+              [style.background]="selectedProvider.profilePictureUrl ? 'transparent' : getAvatarGradient(selectedProvider.name)">
+              <img *ngIf="selectedProvider.profilePictureUrl" [src]="selectedProvider.profilePictureUrl"
+                [alt]="selectedProvider.name" class="trigger-avatar-img"
+                (error)="selectedProvider.profilePictureUrl = undefined" />
+              <span *ngIf="!selectedProvider.profilePictureUrl">{{ getInitials(selectedProvider.name) }}</span>
+            </span>
+          </div>
+
+          <!-- Label Display -->
+          <div class="trigger-label-group">
+            <span class="trigger-main-text">{{ selectedProvider ? selectedProvider.name : 'All Service Providers'
+              }}</span>
+            <span class="trigger-sub-text" *ngIf="selectedProvider">({{ selectedProvider.serviceType }})</span>
+          </div>
+
+          <!-- Inline Clear Button (Reset provider filter) -->
+          <span *ngIf="selectedProviderId !== null" class="trigger-clear-btn" (click)="clearProviderSelection($event)"
+            title="Reset provider filter" role="button">✕</span>
+
+          <!-- Chevron Indicator -->
+          <svg class="trigger-chevron" [class.rotated]="isProviderDropdownOpen" xmlns="http://www.w3.org/2000/svg"
+            width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+            stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="6 9 12 15 18 9" />
+          </svg>
+        </button>
+
+        <!-- Glassmorphism Dropdown Popover Menu -->
+        <div *ngIf="isProviderDropdownOpen" class="custom-dropdown-popover animate-scale-up"
+          (click)="$event.stopPropagation()">
+          <div class="popover-header">
+            <span class="popover-header-title">Filter by Specialist</span>
+            <span class="popover-count-pill">{{ providers().length }} Total</span>
+          </div>
+
+          <div class="popover-items-list">
+            <!-- All Providers Option -->
+            <button type="button" class="popover-option-item" [class.option-selected]="selectedProviderId === null"
+              (click)="selectProvider(null, $event)">
+              <div class="option-icon-box">
+                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="3" width="7" height="7"></rect>
+                  <rect x="14" y="3" width="7" height="7"></rect>
+                  <rect x="14" y="14" width="7" height="7"></rect>
+                  <rect x="3" y="14" width="7" height="7"></rect>
+                </svg>
+              </div>
+              <div class="option-info">
+                <span class="option-title">All Service Providers</span>
+                <span class="option-desc">Show bookings for all team members</span>
+              </div>
+              <svg *ngIf="selectedProviderId === null" class="option-check-icon" xmlns="http://www.w3.org/2000/svg"
+                width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+            </button>
+
+            <!-- Individual Providers List -->
+            <button *ngFor="let p of providers()" type="button" class="popover-option-item"
+              [class.option-selected]="selectedProviderId === p.id" (click)="selectProvider(p.id, $event)">
+              <div class="option-avatar-circle"
+                [style.background]="p.profilePictureUrl ? 'transparent' : getAvatarGradient(p.name)">
+                <img *ngIf="p.profilePictureUrl" [src]="p.profilePictureUrl" [alt]="p.name" class="option-avatar-img"
+                  (error)="p.profilePictureUrl = undefined" />
+                <span *ngIf="!p.profilePictureUrl">{{ getInitials(p.name) }}</span>
+              </div>
+              <div class="option-info">
+                <span class="option-title">{{ p.name }}</span>
+                <span class="option-desc">{{ p.serviceType }}</span>
+              </div>
+              <svg *ngIf="selectedProviderId === p.id" class="option-check-icon" xmlns="http://www.w3.org/2000/svg"
+                width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Custom Glassmorphism Status Dropdown Filter -->
+      <div class="custom-select-anchor status-select-anchor" [class.menu-open]="isStatusDropdownOpen"
+        [class.has-selection]="selectedStatus !== null">
+        <button type="button" class="custom-select-trigger" (click)="toggleStatusDropdown($event)"
+          [title]="'Filter by status: ' + selectedStatusLabel" aria-haspopup="listbox"
+          [attr.aria-expanded]="isStatusDropdownOpen">
+          <!-- Left Dynamic Status Indicator -->
+          <div class="trigger-icon-wrap">
+            <span *ngIf="selectedStatus === null" class="trigger-default-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+              </svg>
+            </span>
+            <span *ngIf="selectedStatus === AppointmentStatus.Booked" class="status-indicator-dot dot-booked"></span>
+            <span *ngIf="selectedStatus === AppointmentStatus.Approved"
+              class="status-indicator-dot dot-approved"></span>
+            <span *ngIf="selectedStatus === AppointmentStatus.RescheduleProposed"
+              class="status-indicator-dot dot-reschedule-proposed"></span>
+            <span *ngIf="selectedStatus === AppointmentStatus.Completed"
+              class="status-indicator-dot dot-completed"></span>
+            <span *ngIf="selectedStatus === AppointmentStatus.Cancelled"
+              class="status-indicator-dot dot-cancelled"></span>
+            <span *ngIf="selectedStatus === AppointmentStatus.Rejected"
+              class="status-indicator-dot dot-rejected"></span>
+          </div>
+
+          <!-- Label Display -->
+          <div class="trigger-label-group">
+            <span class="trigger-main-text">{{ selectedStatusLabel }}</span>
+          </div>
+
+          <!-- Inline Clear Button (Reset status filter) -->
+          <span *ngIf="selectedStatus !== null" class="trigger-clear-btn" (click)="clearStatusSelection($event)"
+            title="Reset status filter" role="button">✕</span>
+
+          <!-- Chevron Indicator -->
+          <svg class="trigger-chevron" [class.rotated]="isStatusDropdownOpen" xmlns="http://www.w3.org/2000/svg"
+            width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+            stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="6 9 12 15 18 9" />
+          </svg>
+        </button>
+
+        <!-- Glassmorphism Dropdown Popover Menu -->
+        <div *ngIf="isStatusDropdownOpen" class="custom-dropdown-popover animate-scale-up"
+          (click)="$event.stopPropagation()">
+          <div class="popover-header">
+            <span class="popover-header-title">Filter by Status</span>
+            <span class="popover-count-pill">7 Options</span>
+          </div>
+
+          <div class="popover-items-list">
+            <!-- All Status Option -->
+            <button type="button" class="popover-option-item" [class.option-selected]="selectedStatus === null"
+              (click)="selectStatus(null, $event)">
+              <div class="option-icon-box">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+                </svg>
+              </div>
+              <div class="option-info">
+                <span class="option-title">All Status</span>
+                <span class="option-desc">Show all appointment states</span>
+              </div>
+              <svg *ngIf="selectedStatus === null" class="option-check-icon" xmlns="http://www.w3.org/2000/svg"
+                width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+            </button>
+
+            <!-- 1. Pending Approval Option -->
+            <button type="button" class="popover-option-item"
+              [class.option-selected]="selectedStatus === AppointmentStatus.Booked"
+              (click)="selectStatus(AppointmentStatus.Booked, $event)">
+              <div class="option-dot-box">
+                <span class="status-indicator-dot dot-booked"></span>
+              </div>
+              <div class="option-info">
+                <span class="option-title text-indigo">Pending Approval</span>
+                <span class="option-desc">New bookings awaiting specialist action</span>
+              </div>
+              <svg *ngIf="selectedStatus === AppointmentStatus.Booked" class="option-check-icon"
+                xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+            </button>
+
+            <!-- 2. Approved Option -->
+            <button type="button" class="popover-option-item"
+              [class.option-selected]="selectedStatus === AppointmentStatus.Approved"
+              (click)="selectStatus(AppointmentStatus.Approved, $event)">
+              <div class="option-dot-box">
+                <span class="status-indicator-dot dot-approved"></span>
+              </div>
+              <div class="option-info">
+                <span class="option-title text-emerald">Approved</span>
+                <span class="option-desc">Confirmed appointments</span>
+              </div>
+              <svg *ngIf="selectedStatus === AppointmentStatus.Approved" class="option-check-icon"
+                xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+            </button>
+
+            <!-- 3. Reschedule Proposed Option -->
+            <button type="button" class="popover-option-item"
+              [class.option-selected]="selectedStatus === AppointmentStatus.RescheduleProposed"
+              (click)="selectStatus(AppointmentStatus.RescheduleProposed, $event)">
+              <div class="option-dot-box">
+                <span class="status-indicator-dot dot-reschedule-proposed"></span>
+              </div>
+              <div class="option-info">
+                <span class="option-title text-amber">Reschedule Proposed</span>
+                <span class="option-desc">New time proposed to customer</span>
+              </div>
+              <svg *ngIf="selectedStatus === AppointmentStatus.RescheduleProposed" class="option-check-icon"
+                xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+            </button>
+
+            <!-- 4. Completed Option -->
+            <button type="button" class="popover-option-item"
+              [class.option-selected]="selectedStatus === AppointmentStatus.Completed"
+              (click)="selectStatus(AppointmentStatus.Completed, $event)">
+              <div class="option-dot-box">
+                <span class="status-indicator-dot dot-completed"></span>
+              </div>
+              <div class="option-info">
+                <span class="option-title text-emerald">Completed</span>
+                <span class="option-desc">Successfully concluded</span>
+              </div>
+              <svg *ngIf="selectedStatus === AppointmentStatus.Completed" class="option-check-icon"
+                xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+            </button>
+
+            <!-- 5. Cancelled Option -->
+            <button type="button" class="popover-option-item"
+              [class.option-selected]="selectedStatus === AppointmentStatus.Cancelled"
+              (click)="selectStatus(AppointmentStatus.Cancelled, $event)">
+              <div class="option-dot-box">
+                <span class="status-indicator-dot dot-cancelled"></span>
+              </div>
+              <div class="option-info">
+                <span class="option-title text-rose">Cancelled</span>
+                <span class="option-desc">Voided or cancelled bookings</span>
+              </div>
+              <svg *ngIf="selectedStatus === AppointmentStatus.Cancelled" class="option-check-icon"
+                xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+            </button>
+
+            <!-- 6. Rejected Option -->
+            <button type="button" class="popover-option-item"
+              [class.option-selected]="selectedStatus === AppointmentStatus.Rejected"
+              (click)="selectStatus(AppointmentStatus.Rejected, $event)">
+              <div class="option-dot-box">
+                <span class="status-indicator-dot dot-rejected"></span>
+              </div>
+              <div class="option-info">
+                <span class="option-title text-red">Rejected</span>
+                <span class="option-desc">Declined by service provider</span>
+              </div>
+              <svg *ngIf="selectedStatus === AppointmentStatus.Rejected" class="option-check-icon"
+                xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Total Appointments Counter (Matches Provider Availability layout) -->
+      <div class="appointments-count">
+        <span>Total: <strong>{{ totalCount() }}</strong> Appointments</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="isLoading()" class="loading-state glass-card">
+    <div class="spinner"></div>
+    <p>Loading appointments data...</p>
+  </div>
+
+  <!-- VIEW: LIST / TABLE VIEW (Enterprise SaaS Grid) -->
+  <div *ngIf="!isLoading()" class="list-view-container animate-fade-in">
+    <div class="table-card glass-card">
+      <div class="table-responsive">
+        <table class="appointments-table" [class.provider-view]="isServiceProvider">
+          <colgroup>
+            <col class="col-id" />
+            <col class="col-customer" />
+            <col *ngIf="!isServiceProvider" class="col-provider" />
+            <col class="col-schedule" />
+            <col class="col-status" />
+            <col class="col-actions" />
+          </colgroup>
+          <thead>
+            <tr>
+              <th class="th-id">Appointment ID</th>
+              <th class="th-customer">Customer</th>
+              <th *ngIf="!isServiceProvider" class="th-provider">Service Provider</th>
+              <th class="th-schedule">Date & Time</th>
+              <th class="th-status">Status</th>
+              <th class="th-actions text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let apt of appointments(); let i = index; let count = count" class="appointment-row"
+              [class.has-open-dropdown]="openActionDropdownId() === apt.id">
+              <!-- 1. Appointment ID -->
+              <td class="td-id">
+                <div class="apt-id-cell">
+                  <div class="apt-id-pill" (click)="viewDetails(apt)" title="Click to view details">
+                    <span class="apt-hash">#</span>
+                    <span class="apt-code">{{ apt.appointmentNumber }}</span>
+                  </div>
+                  <span *ngIf="apt.rescheduledFromAppointmentId" class="rescheduled-tag-pill"
+                    title="Rescheduled from previous appointment">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="9" height="9" viewBox="0 0 24 24" fill="none"
+                      stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="23 4 23 10 17 10" />
+                      <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+                    </svg>
+                    Rescheduled
+                  </span>
+                </div>
+              </td>
+
+              <!-- 2. Customer -->
+              <td class="td-customer">
+                <div class="customer-cell">
+                  <div class="customer-avatar-circle" [ngStyle]="{'background': getAvatarGradient(apt.customerName)}">
+                    <span>{{ apt.customerName | appInitials }}</span>
+                  </div>
+                  <div class="customer-meta">
+                    <span class="customer-name" [title]="apt.customerName">{{ apt.customerName }}</span>
+                    <div class="customer-contacts-col">
+                      <!-- 1. Mobile Phone -->
+                      <div *ngIf="apt.customerPhone && apt.customerPhone !== '-'" class="sub-contact-line"
+                        [title]="apt.customerPhone">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none"
+                          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                          <path
+                            d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+                        </svg>
+                        <span>{{ apt.customerPhone | appPhone }}</span>
+                      </div>
+                      <!-- Fallback when no phone available -->
+                      <span *ngIf="!apt.customerPhone || apt.customerPhone === '-'" class="sub-none">No contact
+                        info</span>
+                    </div>
+                  </div>
+                </div>
+              </td>
+
+              <!-- 3. Service Provider (Hidden for Service Provider themselves) -->
+              <td *ngIf="!isServiceProvider" class="td-provider">
+                <div class="provider-cell">
+                  <div class="provider-avatar-circle"
+                    [ngStyle]="{'background': getAvatarGradient(apt.serviceProviderName || 'Specialist')}">
+                    <img *ngIf="apt.serviceProviderProfilePictureUrl" [src]="apt.serviceProviderProfilePictureUrl"
+                      alt="" class="avatar-photo-sm" (error)="apt.serviceProviderProfilePictureUrl = undefined" />
+                    <span *ngIf="!apt.serviceProviderProfilePictureUrl">{{ (apt.serviceProviderName || 'Specialist') |
+                      appInitials }}</span>
+                  </div>
+                  <div class="provider-meta">
+                    <span class="provider-name" [title]="apt.serviceProviderName || 'Specialist'">{{
+                      apt.serviceProviderName || 'Specialist' }}</span>
+                    <span class="provider-specialty-pill" [title]="apt.serviceProviderType || 'Specialist'">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="9" height="9" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <polygon
+                          points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                      </svg>
+                      <span>{{ apt.serviceProviderType || 'Specialist' }}</span>
+                    </span>
+                  </div>
+                </div>
+              </td>
+
+              <!-- 4. Date & Time -->
+              <td class="td-schedule">
+                <div class="schedule-cell">
+                  <div class="schedule-date-line">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none"
+                      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <rect width="18" height="18" x="3" y="4" rx="2" ry="2" />
+                      <line x1="16" y1="2" x2="16" y2="6" />
+                      <line x1="8" y1="2" x2="8" y2="6" />
+                      <line x1="3" y1="10" x2="21" y2="10" />
+                    </svg>
+                    <span class="schedule-date-text">{{ apt.appointmentDate | appDate }}</span>
+                  </div>
+                  <div class="schedule-time-line">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none"
+                      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <circle cx="12" cy="12" r="10" />
+                      <polyline points="12 6 12 12 16 14" />
+                    </svg>
+                    <span class="schedule-time-text">{{ apt.startTime | appTime }} – {{ apt.endTime | appTime }}</span>
+                  </div>
+                </div>
+              </td>
+
+              <!-- 5. Status -->
+              <td class="td-status">
+                <span class="badge" [ngClass]="apt.status | appStatusBadge"
+                  [title]="apt.status === AppointmentStatus.RescheduleProposed && apt.proposedDate ? ('Proposed Slot: ' + (apt.proposedDate | appDate) + ' ' + (apt.proposedStartTime | appTime) + ' – ' + (apt.proposedEndTime | appTime) + (apt.rescheduleNotes ? ' | Note: ' + apt.rescheduleNotes : '')) : ''">
+                  <span class="dot"></span>
+                  <span *ngIf="apt.status === AppointmentStatus.Booked">Pending Approval</span>
+                  <span *ngIf="apt.status !== AppointmentStatus.Booked">{{ apt.statusText }}</span>
+                </span>
+              </td>
+
+              <!-- 6. Actions (Direct View for Admin & Terminal Statuses, Manage Dropdown for Provider on Active Bookings) -->
+              <td class="td-actions text-right">
+                <div class="row-actions-group">
+                  <!-- Direct View Button (Admin always; Service Provider when in terminal status: Cancelled, Completed, Rejected) -->
+                  <button *ngIf="isAdmin() || isTerminalStatus(apt.status)" type="button" class="btn-direct-view"
+                    (click)="viewDetails(apt)" title="View Details">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none"
+                      stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                      <circle cx="12" cy="12" r="3" />
+                    </svg>
+                    <span>View</span>
+                  </button>
+
+                  <!-- Manage Dropdown for Service Providers on Active / Actionable Bookings ONLY -->
+                  <div *ngIf="!isAdmin() && !isTerminalStatus(apt.status)" class="action-dropdown-wrap"
+                    [class.is-open]="openActionDropdownId() === apt.id" [class.drop-up]="i >= 3 && i >= count - 2">
+                    <button type="button" class="btn-action-dropdown-trigger"
+                      [class.active]="openActionDropdownId() === apt.id" (click)="toggleActionDropdown(apt.id, $event)"
+                      title="Manage Appointment Actions" aria-label="Manage appointment">
+                      <span>Manage</span>
+                      <svg class="dropdown-chevron" [class.rotated]="openActionDropdownId() === apt.id"
+                        xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="6 9 12 15 18 9" />
+                      </svg>
+                    </button>
+
+                    <!-- Glassmorphic Dropdown Menu -->
+                    <div *ngIf="openActionDropdownId() === apt.id" class="action-dropdown-menu animate-fade-in"
+                      (click)="$event.stopPropagation()">
+
+                      <!-- 1. Approve Booking (Provider only, when Booked) -->
+                      <button *ngIf="isServiceProvider && apt.status === AppointmentStatus.Booked" type="button"
+                        class="dropdown-menu-item item-approve" (click)="approveAppointment(apt)">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                          stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                        <span>Approve Booking</span>
+                      </button>
+
+                      <!-- 2. Reject Booking with Reason (Provider only, when Booked) -->
+                      <button *ngIf="isServiceProvider && apt.status === AppointmentStatus.Booked" type="button"
+                        class="dropdown-menu-item item-reject" (click)="openRejectModal(apt)">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                          stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                          <circle cx="12" cy="12" r="10" />
+                          <line x1="15" y1="9" x2="9" y2="15" />
+                          <line x1="9" y1="9" x2="15" y2="15" />
+                        </svg>
+                        <span>Reject with Reason</span>
+                      </button>
+
+                      <!-- 3. Mark Complete (Provider only, when Approved or Booked) -->
+                      <button
+                        *ngIf="isServiceProvider && (apt.status === AppointmentStatus.Approved || apt.status === AppointmentStatus.Booked)"
+                        type="button" class="dropdown-menu-item item-complete"
+                        (click)="closeActionDropdown(); markAsCompleted(apt)">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                          stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                          <polyline points="22 4 12 14.01 9 11.01" />
+                        </svg>
+                        <span>Mark as Completed</span>
+                      </button>
+
+                      <!-- 4. Reschedule / Propose (Provider only; Admin monitors only) -->
+                      <button *ngIf="isServiceProvider && canModify(apt)" type="button"
+                        class="dropdown-menu-item item-reschedule"
+                        (click)="closeActionDropdown(); openRescheduleModal(apt)">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                          stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                          <polyline points="23 4 23 10 17 10" />
+                          <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+                        </svg>
+                        <span>Propose New Time</span>
+                      </button>
+
+                      <!-- 5. Cancel Appointment (When active and >= 1 hr prior) -->
+                      <button *ngIf="canCancel(apt)" type="button" class="dropdown-menu-item item-cancel"
+                        (click)="closeActionDropdown(); openCancelModal(apt)">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                          stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                          <line x1="18" y1="6" x2="6" y2="18" />
+                          <line x1="6" y1="6" x2="18" y2="18" />
+                        </svg>
+                        <span>Cancel Appointment</span>
+                      </button>
+
+                      <div class="dropdown-menu-divider"></div>
+
+                      <!-- 6. View Details (Always available for Provider) -->
+                      <button type="button" class="dropdown-menu-item item-details" (click)="viewDetails(apt)">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                          <circle cx="12" cy="12" r="3" />
+                        </svg>
+                        <span>View Details</span>
+                      </button>
+
+                    </div>
+                  </div>
+                </div>
+              </td>
+            </tr>
+
+            <!-- Empty Row -->
+            <tr *ngIf="appointments().length === 0">
+              <td [attr.colspan]="!isServiceProvider ? 6 : 5" class="empty-table-cell">
+                <div class="empty-state">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <rect width="18" height="18" x="3" y="4" rx="2" ry="2" />
+                    <line x1="16" y1="2" x2="16" y2="6" />
+                    <line x1="8" y1="2" x2="8" y2="6" />
+                    <line x1="3" y1="10" x2="21" y2="10" />
+                  </svg>
+                  <h4>No Appointments Found</h4>
+                  <p>There are no appointments matching your selected filters or search query.</p>
+                  <button type="button" class="btn btn-secondary btn-sm" (click)="openBookingModal()">Book First
+                    Appointment</button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <app-pagination [pageNumber]="currentPage()" [pageSize]="pageSize()" [totalCount]="totalCount()"
+        [totalPages]="totalPages()" (pageChange)="onPageChange($event)" (pageSizeChange)="onPageSizeChange($event)">
+      </app-pagination>
+    </div>
+  </div>
+
+
+
+  <!-- MODALS -->
+
+  <!-- 1. Book New Appointment Modal -->
+  <app-booking-modal *ngIf="showBookingModal" (close)="showBookingModal = false"
+    (booked)="onAppointmentBooked($event)"></app-booking-modal>
+
+  <!-- 2. Reschedule Modal -->
+  <app-reschedule-modal *ngIf="selectedAppointmentForReschedule" [appointment]="selectedAppointmentForReschedule"
+    (close)="selectedAppointmentForReschedule = null"
+    (rescheduled)="onAppointmentRescheduled($event)"></app-reschedule-modal>
+
+  <!-- 3. Cancel Modal -->
+  <app-cancel-modal *ngIf="selectedAppointmentForCancel" [appointment]="selectedAppointmentForCancel"
+    (close)="selectedAppointmentForCancel = null" (cancelled)="onAppointmentCancelled($event)"></app-cancel-modal>
+
+  <!-- 4. Quick Details Modal (Revamped & Formatted) -->
+  <div *ngIf="selectedAppointmentForDetail" class="modal-backdrop" (click)="closeDetails()">
+    <div class="modal-card glass-card modal-detail-card" (click)="$event.stopPropagation()">
+      <!-- Header -->
+      <div class="modal-header">
+        <div class="header-content">
+          <div class="title-with-pill">
+            <h3 class="modal-title">Appointment Details</h3>
+            <span class="apt-detail-id-pill" [appCopy]="selectedAppointmentForDetail.appointmentNumber"
+              title="Click to copy ID">
+              <span class="id-hash">#</span>
+              <span class="id-code">{{ selectedAppointmentForDetail.appointmentNumber }}</span>
+              <svg class="id-copy-icon" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24"
+                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+              </svg>
+            </span>
+          </div>
+          <span class="modal-subtitle">Created on {{ selectedAppointmentForDetail.createdAt | appDate }}</span>
+        </div>
+        <button type="button" class="btn-close" (click)="closeDetails()" aria-label="Close details">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+        </button>
+      </div>
+
+      <div class="modal-body modal-detail-body">
+        <!-- 1. Hero Schedule Banner -->
+        <div class="detail-schedule-banner">
+          <div class="schedule-banner-left">
+            <div class="banner-datetime-item">
+              <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect width="18" height="18" x="3" y="4" rx="2" ry="2" />
+                <line x1="16" y1="2" x2="16" y2="6" />
+                <line x1="8" y1="2" x2="8" y2="6" />
+                <line x1="3" y1="10" x2="21" y2="10" />
+              </svg>
+              <span class="banner-date">{{ selectedAppointmentForDetail.formattedDate }}</span>
+            </div>
+            <div class="banner-divider"></div>
+            <div class="banner-datetime-item">
+              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <polyline points="12 6 12 12 16 14" />
+              </svg>
+              <span class="banner-time">{{ selectedAppointmentForDetail.timeSlotText }}</span>
+            </div>
+          </div>
+
+          <div class="schedule-banner-right">
+            <!-- Overdue Booked -->
+            <span
+              *ngIf="selectedAppointmentForDetail.status === AppointmentStatus.Booked && isAppointmentPast(selectedAppointmentForDetail)"
+              class="status-badge-refined status-overdue-pill">
+              <span class="status-dot dot-overdue"></span>
+              <span>Booked (Past)</span>
+            </span>
+            <!-- Regular Booked -->
+            <span
+              *ngIf="selectedAppointmentForDetail.status === AppointmentStatus.Booked && !isAppointmentPast(selectedAppointmentForDetail)"
+              class="status-badge-refined status-booked-pill">
+              <span class="status-dot dot-booked"></span>
+              <span>Booked</span>
+            </span>
+            <!-- Completed -->
+            <span *ngIf="selectedAppointmentForDetail.status === AppointmentStatus.Completed"
+              class="status-badge-refined status-completed-pill">
+              <span class="status-dot dot-completed"></span>
+              <span>Completed</span>
+            </span>
+            <!-- Cancelled -->
+            <span *ngIf="selectedAppointmentForDetail.status === AppointmentStatus.Cancelled"
+              class="status-badge-refined status-cancelled-pill">
+              <span class="status-dot dot-cancelled"></span>
+              <span>Cancelled</span>
+            </span>
+          </div>
+        </div>
+
+        <!-- 2. Two-Column Structured Info Cards -->
+        <div class="detail-cards-grid">
+          <!-- Card A: Customer Information -->
+          <div class="detail-section-card">
+            <div class="section-card-header">
+              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+                <circle cx="12" cy="7" r="4" />
+              </svg>
+              <span>Customer Information</span>
+            </div>
+            <div class="section-card-body">
+              <div class="info-row">
+                <span class="info-label">Customer Name</span>
+                <span class="info-val info-val-strong">{{ selectedAppointmentForDetail.customerName }}</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">Mobile Phone</span>
+                <span class="info-val">
+                  <span
+                    *ngIf="selectedAppointmentForDetail.customerPhone && selectedAppointmentForDetail.customerPhone !== '-'"
+                    class="info-text-highlight">
+                    {{ selectedAppointmentForDetail.customerPhone | appPhone }}
+                  </span>
+                  <span
+                    *ngIf="!selectedAppointmentForDetail.customerPhone || selectedAppointmentForDetail.customerPhone === '-'"
+                    class="info-empty">Not provided</span>
+                </span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">Email Address</span>
+                <span class="info-val">
+                  <span *ngIf="selectedAppointmentForDetail.customerEmail" class="info-email-text"
+                    [title]="selectedAppointmentForDetail.customerEmail">
+                    {{ selectedAppointmentForDetail.customerEmail }}
+                  </span>
+                  <span *ngIf="!selectedAppointmentForDetail.customerEmail" class="info-empty">Not provided</span>
+                </span>
+              </div>
+              <div *ngIf="selectedAppointmentForDetail.customerAddress" class="info-row">
+                <span class="info-label">Address</span>
+                <span class="info-val">{{ selectedAppointmentForDetail.customerAddress }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card B: Service Provider Information (Clean Typography - No Giant Avatar) -->
+          <div class="detail-section-card">
+            <div class="section-card-header">
+              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
+                <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
+              </svg>
+              <span>Service & Specialist</span>
+            </div>
+            <div class="section-card-body">
+              <div class="info-row">
+                <span class="info-label">Specialist</span>
+                <span class="info-val info-val-strong">{{ selectedAppointmentForDetail.serviceProviderName ||
+                  'Specialist' }}</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">Specialization</span>
+                <span class="info-val">
+                  <span class="provider-specialty-pill">{{ selectedAppointmentForDetail.serviceProviderType }}</span>
+                </span>
+              </div>
+              <div *ngIf="selectedAppointmentForDetail.serviceName" class="info-row">
+                <span class="info-label">Service Booked</span>
+                <span class="info-val">{{ selectedAppointmentForDetail.serviceName }}</span>
+              </div>
+              <div *ngIf="selectedAppointmentForDetail.rescheduledFromAppointmentId" class="info-row">
+                <span class="info-label">Origin</span>
+                <span class="info-val rescheduled-origin-tag">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="23 4 23 10 17 10" />
+                    <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+                  </svg>
+                  Rescheduled from #{{ selectedAppointmentForDetail.rescheduledFromAppointmentId }}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+
+
+
+        <!-- 4. Notes & Remarks Card (If reason or cancellation reason exists) -->
+        <div *ngIf="selectedAppointmentForDetail.reason" class="detail-memo-card">
+          <span class="memo-title">Booking Notes / Reason</span>
+          <p class="memo-text">{{ selectedAppointmentForDetail.reason }}</p>
+        </div>
+
+        <div
+          *ngIf="selectedAppointmentForDetail.cancellationReason || selectedAppointmentForDetail.status === AppointmentStatus.Cancelled"
+          class="detail-memo-card memo-cancelled">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <span class="memo-title text-rose">Cancellation Reason</span>
+            <span *ngIf="selectedAppointmentForDetail.cancelledByName" class="badge-role"
+              style="font-size: 0.72rem; padding: 2px 8px; border-radius: 999px; background: rgba(244,63,94,0.15); color: #fb7185; border: 1px solid rgba(244,63,94,0.25); font-weight: 600;">
+              Cancelled by: {{ selectedAppointmentForDetail.cancelledByName }}
+            </span>
+          </div>
+          <p class="memo-text">{{ selectedAppointmentForDetail.cleanCancellationReason ||
+            selectedAppointmentForDetail.cancellationReason || 'Cancelled without notes' }}</p>
+          <span *ngIf="selectedAppointmentForDetail.cancelledAt" class="memo-timestamp">
+            Cancelled on {{ selectedAppointmentForDetail.cancelledAt | appDate }}
+          </span>
+        </div>
+
+        <!-- Reschedule Proposal Pending Review -->
+        <div
+          *ngIf="selectedAppointmentForDetail.status === AppointmentStatus.RescheduleProposed && selectedAppointmentForDetail.proposedDate"
+          class="detail-memo-card"
+          style="background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.25);">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <span class="memo-title" style="color: #fbbf24;">Reschedule Proposed (Awaiting Customer Response)</span>
+            <span class="badge-role"
+              style="font-size: 0.72rem; padding: 2px 8px; border-radius: 999px; background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.25); font-weight: 600;">
+              Proposed Slot
+            </span>
+          </div>
+          <p class="memo-text" style="color: #fef3c7; font-weight: 600;">
+            {{ selectedAppointmentForDetail.proposedDate | appDate }} at {{
+            selectedAppointmentForDetail.proposedStartTime | appTime }} – {{
+            selectedAppointmentForDetail.proposedEndTime | appTime }}
+          </p>
+          <p *ngIf="selectedAppointmentForDetail.rescheduleNotes" class="memo-text"
+            style="color: #94a3b8; font-size: 0.8rem; margin-top: 4px;">
+            Provider Note: "{{ selectedAppointmentForDetail.rescheduleNotes }}"
+          </p>
+        </div>
+      </div>
+
+
+    </div>
+  </div>
+
+  <!-- Complete Confirmation Modal (Action Modal matching Reschedule UI) -->
+  <div *ngIf="selectedAppointmentForComplete" class="modal-backdrop animate-fade-in" (click)="closeCompleteModal()">
+    <div class="modal-card modal-confirm-card glass-card animate-scale-up" (click)="$event.stopPropagation()">
+      <!-- Modal Header -->
+      <div class="modal-header">
+        <div class="header-content">
+          <h3 class="modal-title">Mark Appointment Completed</h3>
+          <p class="modal-subtitle">Confirm that the appointment was successfully fulfilled.</p>
+        </div>
+        <button type="button" class="btn-close" (click)="closeCompleteModal()" aria-label="Close modal">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+        </button>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="modal-body custom-scrollbar">
+        <!-- Current Schedule Strip (Matches Reschedule Modal Exactly) -->
+        <div class="current-schedule-strip">
+          <div class="strip-item">
+            <span class="strip-label">Appointment ID</span>
+            <span class="strip-val monospace">{{ selectedAppointmentForComplete.appointmentNumber }}</span>
+          </div>
+          <div class="strip-item">
+            <span class="strip-label">Customer</span>
+            <span class="strip-val">{{ selectedAppointmentForComplete.customerName }}</span>
+          </div>
+          <div class="strip-item">
+            <span class="strip-label">Provider</span>
+            <div class="provider-flex-sm">
+              <div class="provider-avatar-mini"
+                [style.background]="selectedAppointmentForComplete.serviceProviderProfilePictureUrl ? 'transparent' : ''">
+                <img *ngIf="selectedAppointmentForComplete.serviceProviderProfilePictureUrl"
+                  [src]="selectedAppointmentForComplete.serviceProviderProfilePictureUrl" alt="" class="avatar-img"
+                  (error)="selectedAppointmentForComplete.serviceProviderProfilePictureUrl = undefined" />
+                <span *ngIf="!selectedAppointmentForComplete.serviceProviderProfilePictureUrl">{{
+                  selectedAppointmentForComplete.serviceProviderName | appInitials }}</span>
+              </div>
+              <span class="strip-val">{{ selectedAppointmentForComplete.serviceProviderName }}</span>
+            </div>
+          </div>
+          <div class="strip-item">
+            <span class="strip-label">Scheduled Time</span>
+            <span class="strip-val current-highlight">{{ selectedAppointmentForComplete.appointmentDate | appDate }} at
+              {{ selectedAppointmentForComplete.startTime | appTime }} – {{ selectedAppointmentForComplete.endTime |
+              appTime }}</span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" [disabled]="isCompleting()" (click)="closeCompleteModal()">
+          Cancel
+        </button>
+        <button type="button" class="btn btn-complete-confirm" [disabled]="isCompleting()"
+          (click)="confirmAndMarkCompleted()">
+          <span *ngIf="isCompleting()" class="spinner-small"></span>
+          <svg *ngIf="!isCompleting()" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+            fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12" />
+          </svg>
+          <span>{{ isCompleting() ? 'Completing...' : 'Confirm & Complete' }}</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Reject Confirmation Modal (Inline matching design) -->
+  <div *ngIf="selectedAppointmentForReject" class="modal-backdrop animate-fade-in" (click)="closeRejectModal()">
+    <div class="modal-card modal-confirm-card glass-card animate-scale-up" (click)="$event.stopPropagation()">
+      <!-- Modal Header -->
+      <div class="modal-header">
+        <div class="header-content">
+          <h3 class="modal-title text-rose">Reject Appointment</h3>
+          <p class="modal-subtitle">Provide a valid reason for declining this appointment request.</p>
+        </div>
+        <button type="button" class="btn-close" (click)="closeRejectModal()" aria-label="Close modal">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+        </button>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="modal-body custom-scrollbar">
+        <div class="current-schedule-strip">
+          <div class="strip-item">
+            <span class="strip-label">Appointment ID</span>
+            <span class="strip-val monospace">{{ selectedAppointmentForReject.appointmentNumber }}</span>
+          </div>
+          <div class="strip-item">
+            <span class="strip-label">Customer</span>
+            <span class="strip-val">{{ selectedAppointmentForReject.customerName }}</span>
+          </div>
+          <div class="strip-item">
+            <span class="strip-label">Scheduled Time</span>
+            <span class="strip-val current-highlight">{{ selectedAppointmentForReject.appointmentDate | appDate }} at {{
+              selectedAppointmentForReject.startTime | appTime }}</span>
+          </div>
+        </div>
+
+        <div class="form-group reject-reason-group">
+          <label class="form-label reject-reason-label">
+            Reason for Rejection <span class="required-star">*</span>
+          </label>
+          <textarea class="form-control reject-textarea" rows="3" [(ngModel)]="rejectionReason"
+            placeholder="e.g. Schedule conflict, emergency maintenance, or slot unavailable..."></textarea>
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" [disabled]="isRejecting()" (click)="closeRejectModal()">
+          Cancel
+        </button>
+        <button type="button" class="btn btn-reject-confirm" [disabled]="isRejecting() || !rejectionReason.trim()"
+          (click)="confirmReject()">
+          <span *ngIf="isRejecting()" class="spinner-small"></span>
+          <svg *ngIf="!isRejecting()" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+            fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10" />
+            <line x1="15" y1="9" x2="9" y2="15" />
+            <line x1="9" y1="9" x2="15" y2="15" />
+          </svg>
+          <span>{{ isRejecting() ? 'Rejecting...' : 'Confirm Rejection' }}</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div>

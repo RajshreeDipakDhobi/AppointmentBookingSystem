@@ -1,0 +1,84 @@
+<div class="org-card glass-card" [class.is-active]="isSelected" (click)="onCardClick()" role="button" tabindex="0" (keydown.enter)="onCardClick()">
+  <div class="org-image-wrapper">
+    <img *ngIf="imageUrl" [src]="imageUrl" [alt]="tenant.name" class="org-thumb-img" loading="lazy" />
+    <div class="org-image-overlay"></div>
+    <span class="org-type-chip">
+      <svg class="chip-shield-icon" xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none"
+        stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+        <path d="m9 12 2 2 4-4" />
+      </svg>
+      <span>Verified Partner</span>
+    </span>
+  </div>
+
+  <!-- Right Side: Content Details -->
+  <div class="org-content-wrapper">
+    <!-- Top Row: Title + Status -->
+    <div class="org-header-row">
+      <div class="org-title-group">
+        <h3 class="org-title" [title]="tenant.name">{{ tenant.name }}</h3>
+      </div>
+    </div>
+
+    <!-- Location Row -->
+    <div class="org-location-row" *ngIf="tenant.address || tenant.contactPhone">
+      <svg class="location-pin-icon" xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none"
+        stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
+        <circle cx="12" cy="10" r="3" />
+      </svg>
+      <span class="location-text" [title]="tenant.address || tenant.contactPhone">
+        {{ tenant.address || tenant.contactPhone }}
+      </span>
+    </div>
+
+    <!-- Category / Service Tags -->
+    <div class="org-tags-list">
+      <span *ngFor="let tag of getTags()" class="org-tag-item">{{ tag }}</span>
+    </div>
+
+    <!-- Bottom Row: Rating, Providers Count & CTA Button -->
+    <div class="org-bottom-bar">
+      <div class="org-meta-stats">
+        <div class="rating-item" *ngIf="tenant.rating">
+          <svg class="star-icon" xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="#f59e0b"
+            stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+          </svg>
+          <span class="rating-text">{{ getRating() }}</span>
+        </div>
+        <div class="provider-count-item" *ngIf="tenant.totalProvidersCount && tenant.totalProvidersCount > 0">
+          <svg class="users-icon" xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+            <circle cx="9" cy="7" r="4" />
+            <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+            <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+          </svg>
+          <span>{{ getProviderCountText() }}</span>
+        </div>
+        <div class="provider-count-item no-providers-item" *ngIf="!tenant.totalProvidersCount || tenant.totalProvidersCount === 0">
+          <svg class="users-icon" xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+            <circle cx="9" cy="7" r="4" />
+            <line x1="17" y1="8" x2="22" y2="13"/>
+            <line x1="22" y1="8" x2="17" y2="13"/>
+          </svg>
+          <span>No Service Providers</span>
+        </div>
+      </div>
+
+      <!-- View Details Button -->
+      <button type="button" class="btn-view-details" [class.btn-selected]="isSelected" (click)="$event.stopPropagation(); onCardClick()">
+        <span>{{ isSelected ? 'Viewing Specialists' : 'View Details' }}</span>
+        <svg class="arrow-icon" xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M5 12h14" />
+          <path d="m12 5 7 7-7 7" />
+        </svg>
+      </button>
+    </div>
+  </div>
+</div>

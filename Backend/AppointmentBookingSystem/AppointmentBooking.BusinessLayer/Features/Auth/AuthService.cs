@@ -1,0 +1,265 @@
+using AppointmentBooking.BusinessLayer.Common.Interfaces;
+using AppointmentBooking.BusinessLayer.Common.Models;
+using AppointmentBooking.BusinessLayer.Features.Auth.DTOs;
+using AppointmentBooking.DomainLayer.Entities;
+using AppointmentBooking.DomainLayer.Enums;
+using AppointmentBooking.InfrastructureLayer.Repositories;
+using AutoMapper;
+using Microsoft.EntityFrameworkCore;
+
+namespace AppointmentBooking.BusinessLayer.Features.Auth;
+
+public class AuthService : IAuthService
+{
+    private readonly IUnitOfWork _unitOfWork;
+    private readonly IPasswordHasher _passwordHasher;
+    private readonly IJwtTokenService _jwtTokenService;
+    private readonly IMapper _mapper;
+
+    public AuthService(
+        IUnitOfWork unitOfWork,
+        IPasswordHasher passwordHasher,
+        IJwtTokenService jwtTokenService,
+        IMapper mapper)
+    {
+        _unitOfWork = unitOfWork;
+        _passwordHasher = passwordHasher;
+        _jwtTokenService = jwtTokenService;
+        _mapper = mapper;
+    }
+
+    public async Task<ApiResponse<AuthResponseDto>> LoginAsync(LoginRequestDto request, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var input = request.Email.Trim();
+            var normalizedEmail = input.ToLower();
+            var digitsOnly = new string(input.Where(char.IsDigit).ToArray());
+
+            var user = await _unitOfWork.Repository<User>()
+                .Query()
+                .Include(u => u.Tenant)
+                .Include(u => u.ServiceProvider)
+                .FirstOrDefaultAsync(u => 
+                    u.Email.ToLower() == normalizedEmail ||
+                    (digitsOnly.Length >= 10 && u.PhoneNumber != null && u.PhoneNumber.Contains(digitsOnly.Substring(digitsOnly.Length - 10))),
+                    cancellationToken);
+
+            if (user == null)
+            {
+                return ApiResponse<AuthResponseDto>.Fail("Invalid email or password.");
+            }
+
+            if (!user.IsActive)
+            {
+                return ApiResponse<AuthResponseDto>.Fail("Your user account has been deactivated. Please contact support.");
+            }
+
+            if (user.TenantId.HasValue && user.Tenant != null && user.Tenant.Status != TenantStatus.Active)
+            {
+                return ApiResponse<AuthResponseDto>.Fail($"Your organization is currently {user.Tenant.Status.ToString().ToLower()}. Access denied.");
+            }
+
+            // 1. Try standard password verification
+            bool isPasswordValid = false;
+            if (!string.IsNullOrEmpty(user.PasswordHash))
+            {
+                isPasswordValid = _passwordHasher.VerifyPassword(request.Password, user.PasswordHash);
+            }
+
+            // 2. If password verification fails, check if customer used their mobile number as password
+            if (!isPasswordValid && !string.IsNullOrWhiteSpace(user.PhoneNumber))
+            {
+                var phoneDigits = new string(user.PhoneNumber.Where(char.IsDigit).ToArray());
+                var pwdDigits = new string(request.Password.Where(char.IsDigit).ToArray());
+                if (!string.IsNullOrEmpty(pwdDigits) && pwdDigits.Length >= 10 && phoneDigits.EndsWith(pwdDigits.Substring(pwdDigits.Length - 10)))
+                {
+                    isPasswordValid = true;
+                    if (string.IsNullOrEmpty(user.PasswordHash))
+                    {
+                        user.PasswordHash = _passwordHasher.HashPassword(pwdDigits);
+                        await _unitOfWork.SaveChangesAsync(cancellationToken);
+                    }
+                }
+            }
+
+            if (!isPasswordValid)
+            {
+                return ApiResponse<AuthResponseDto>.Fail("Invalid email or password.");
+            }
+
+            var authDto = await GenerateAuthResponseAsync(user, cancellationToken);
+            return ApiResponse<AuthResponseDto>.Ok(authDto, "Login successful.");
+        }
+        catch (Exception ex)
+        {
+            return ApiResponse<AuthResponseDto>.Fail(ex.Message);
+        }
+    }
+
+    public async Task<ApiResponse<AuthResponseDto>> RegisterCustomerAsync(RegisterCustomerRequestDto request, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var normalizedEmail = request.Email.Trim().ToLowerInvariant();
+
+            var existingUser = await _unitOfWork.Repository<User>()
+                .Query()
+                .FirstOrDefaultAsync(u => u.Email.ToLower() == normalizedEmail, cancellationToken);
+
+            if (existingUser != null)
+            {
+                if (string.IsNullOrEmpty(existingUser.PasswordHash))
+                {
+                    // Shadow guest account being activated with password
+                    existingUser.PasswordHash = _passwordHasher.HashPassword(request.Password);
+                    if (!string.IsNullOrWhiteSpace(request.PhoneNumber))
+                    {
+                        existingUser.PhoneNumber = request.PhoneNumber.Trim();
+                    }
+                    if (!string.IsNullOrWhiteSpace(request.Address))
+                    {
+                        existingUser.Address = request.Address.Trim();
+                    }
+                    var namePartsUpdate = request.FullName.Trim().Split(' ', 2);
+                    existingUser.FirstName = namePartsUpdate[0];
+                    existingUser.LastName = namePartsUpdate.Length > 1 ? namePartsUpdate[1] : string.Empty;
+                    await _unitOfWork.SaveChangesAsync(cancellationToken);
+                    var updatedAuthDto = await GenerateAuthResponseAsync(existingUser, cancellationToken);
+                    return ApiResponse<AuthResponseDto>.Ok(updatedAuthDto, "Registration successful.");
+                }
+
+                return ApiResponse<AuthResponseDto>.Fail("An account with this email address already exists. Please login instead.");
+            }
+
+            var nameParts = request.FullName.Trim().Split(' ', 2);
+            string firstName = nameParts[0];
+            string lastName = nameParts.Length > 1 ? nameParts[1] : string.Empty;
+
+            var newUser = new User
+            {
+                FirstName = firstName,
+                LastName = lastName,
+                Email = normalizedEmail,
+                PasswordHash = _passwordHasher.HashPassword(request.Password),
+                PhoneNumber = request.PhoneNumber.Trim(),
+                Address = request.Address?.Trim(),
+                Role = UserRole.Customer,
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            await _unitOfWork.Repository<User>().AddAsync(newUser, cancellationToken);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            var authDto = await GenerateAuthResponseAsync(newUser, cancellationToken);
+            return ApiResponse<AuthResponseDto>.Ok(authDto, "Registration successful.");
+        }
+        catch (Exception ex)
+        {
+            return ApiResponse<AuthResponseDto>.Fail(ex.Message);
+        }
+    }
+
+    public async Task<ApiResponse<AuthResponseDto>> RefreshTokenAsync(RefreshTokenRequestDto request, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var tokenHash = _jwtTokenService.HashToken(request.RefreshToken ?? string.Empty);
+
+            var storedToken = await _unitOfWork.Repository<RefreshToken>()
+                .Query()
+                .Include(r => r.User)
+                .ThenInclude(u => u!.Tenant)
+                .FirstOrDefaultAsync(r => r.TokenHash == tokenHash, cancellationToken);
+
+            if (storedToken == null || !storedToken.IsActive)
+            {
+                return ApiResponse<AuthResponseDto>.Fail("Invalid or expired refresh token.");
+            }
+
+            var user = storedToken.User;
+            if (user == null || !user.IsActive)
+            {
+                return ApiResponse<AuthResponseDto>.Fail("User is inactive.");
+            }
+
+            // Revoke the old refresh token (Token Rotation)
+            storedToken.RevokedAt = DateTime.UtcNow;
+            _unitOfWork.Repository<RefreshToken>().Update(storedToken);
+
+            var authDto = await GenerateAuthResponseAsync(user, cancellationToken);
+            return ApiResponse<AuthResponseDto>.Ok(authDto, "Token refreshed successfully.");
+        }
+        catch (Exception ex)
+        {
+            return ApiResponse<AuthResponseDto>.Fail(ex.Message);
+        }
+    }
+
+    public async Task<bool> RevokeTokenAsync(string rawRefreshToken, CancellationToken cancellationToken = default)
+    {
+        var tokenHash = _jwtTokenService.HashToken(rawRefreshToken);
+
+        var storedToken = await _unitOfWork.Repository<RefreshToken>()
+            .FindAsync(r => r.TokenHash == tokenHash, cancellationToken);
+
+        if (storedToken == null || storedToken.IsRevoked)
+        {
+            return false;
+        }
+
+        storedToken.RevokedAt = DateTime.UtcNow;
+        _unitOfWork.Repository<RefreshToken>().Update(storedToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        return true;
+    }
+
+    public async Task<ApiResponse<UserDto>> GetCurrentUserAsync(int userId, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var user = await _unitOfWork.Repository<User>()
+                .Query()
+                .Include(u => u.Tenant)
+                .Include(u => u.ServiceProvider)
+                .FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
+
+            if (user == null)
+            {
+                return ApiResponse<UserDto>.Fail("User not found.");
+            }
+
+            return ApiResponse<UserDto>.Ok(_mapper.Map<UserDto>(user));
+        }
+        catch (Exception ex)
+        {
+            return ApiResponse<UserDto>.Fail(ex.Message);
+        }
+    }
+
+    private async Task<AuthResponseDto> GenerateAuthResponseAsync(User user, CancellationToken cancellationToken)
+    {
+        var (accessToken, accessExpiry) = _jwtTokenService.GenerateAccessToken(user);
+        var (rawRefreshToken, tokenHash, refreshExpiry) = _jwtTokenService.GenerateRefreshToken();
+
+        var refreshTokenEntity = new RefreshToken
+        {
+            UserId = user.Id,
+            TokenHash = tokenHash,
+            ExpiresAt = refreshExpiry,
+            CreatedAt = DateTime.UtcNow,
+        };
+
+        await _unitOfWork.Repository<RefreshToken>().AddAsync(refreshTokenEntity, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        return new AuthResponseDto
+        {
+            AccessToken = accessToken,
+            RefreshToken = rawRefreshToken,
+            ExpiresAt = accessExpiry,
+            User = _mapper.Map<UserDto>(user)
+        };
+    }
+}

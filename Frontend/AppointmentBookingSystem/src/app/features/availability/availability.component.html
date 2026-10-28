@@ -1,0 +1,475 @@
+<div class="availability-container">
+  
+  <!-- Page Header -->
+  <div class="page-header">
+    <div class="header-titles">
+      <h2>Provider Availability</h2>
+      <p>Configure and manage day-wise working hours, rest breaks, and appointment slots for all service providers.</p>
+    </div>
+    <button type="button" class="btn btn-primary btn-add-provider" (click)="openConfigureModal()">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 20h9"/>
+        <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+      </svg>
+      <span>Configure Schedule</span>
+    </button>
+  </div>
+
+  <!-- Notification Alerts -->
+  <div *ngIf="successMessage()" class="alert alert-success animate-fade-in">
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+      <polyline points="22 4 12 14.01 9 11.01" />
+    </svg>
+    <span>{{ successMessage() }}</span>
+  </div>
+
+  <div *ngIf="errorMessage()" class="alert alert-error animate-fade-in">
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="10" />
+      <line x1="12" y1="8" x2="12" y2="12" />
+      <line x1="12" y1="16" x2="12.01" y2="16" />
+    </svg>
+    <span>{{ errorMessage() }}</span>
+  </div>
+
+
+  <!-- Filter & View Mode Controls Bar -->
+  <div class="filter-panel glass-card">
+    <div class="filter-row">
+      <!-- Search Input -->
+      <div class="search-box">
+        <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"/>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input
+          type="text"
+          [(ngModel)]="searchQuery"
+          class="search-input"
+          placeholder="Search by provider name, specialty, or active day..."
+        />
+      </div>
+
+      <div class="providers-count">
+        <span>Total: <strong>{{ filteredProviders.length }}</strong> Providers</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="isLoading()" class="loading-state glass-card">
+    <div class="spinner"></div>
+    <p>Loading provider schedules from server...</p>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- PROVIDER SCHEDULE CARDS & 7-DAY TIMETABLE ROSTER         -->
+  <!-- ======================================================== -->
+  <div *ngIf="!isLoading()" class="table-card glass-card animate-fade-in">
+    <div class="table-responsive">
+      <table class="custom-table list-roster-table">
+        <thead>
+          <tr>
+            <th style="width: 28%;">Provider</th>
+            <th style="width: 26%;">Schedule</th>
+            <th style="width: 14%;">Weekly Slots</th>
+            <th style="width: 12%;">Status</th>
+            <th style="width: 20%;" class="text-right">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <ng-container *ngFor="let p of filteredProviders">
+            <!-- Master Row -->
+            <tr class="table-row roster-row" [class.row-expanded]="isExpanded(p.providerId)">
+              <!-- Provider Cell -->
+              <td>
+                <div class="provider-cell">
+                  <div class="provider-avatar" [style.background]="p.profilePictureUrl ? 'transparent' : getAvatarGradient(p.providerName)">
+                    <img 
+                      *ngIf="p.profilePictureUrl" 
+                      [src]="p.profilePictureUrl" 
+                      [alt]="p.providerName" 
+                      class="avatar-photo" 
+                      (error)="p.profilePictureUrl = null"
+                    />
+                    <span *ngIf="!p.profilePictureUrl">{{ getInitials(p.providerName) }}</span>
+                  </div>
+                  <div>
+                    <span class="provider-name">{{ p.providerName }}</span>
+                    <span class="provider-sub">{{ p.specialization || 'Specialist' }}</span>
+                  </div>
+                </div>
+              </td>
+
+              <!-- Schedule (Dropdown Trigger & Summary) -->
+              <td>
+                <div class="roster-schedule-cell">
+                  <button
+                    type="button"
+                    class="btn-toggle-timetable"
+                    (click)="toggleExpand(p.providerId, $event)"
+                    [title]="isExpanded(p.providerId) ? 'Hide schedule' : 'View schedule'"
+                  >
+                    <span>{{ isExpanded(p.providerId) ? 'Hide Schedule' : 'View Schedule' }}</span>
+                    <svg
+                      class="toggle-chevron"
+                      [class.chevron-open]="isExpanded(p.providerId)"
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="13"
+                      height="13"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2.5"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <polyline points="6 9 12 15 18 9"/>
+                    </svg>
+                  </button>
+                </div>
+              </td>
+
+              <!-- Weekly Slots -->
+              <td>
+                <span class="count-badge count-purple" *ngIf="p.isConfigured">
+                  {{ p.totalWeeklySlots }} Slots/wk
+                </span>
+                <span class="text-dim" *ngIf="!p.isConfigured">—</span>
+              </td>
+
+              <!-- Status (Standard ACTIVE / INACTIVE) -->
+              <td>
+                <span class="badge" [ngClass]="p.isConfigured ? 'badge-booked' : 'badge-cancelled'">
+                  {{ p.isConfigured ? 'ACTIVE' : 'INACTIVE' }}
+                </span>
+              </td>
+
+              <!-- Actions -->
+              <td class="text-right">
+                <div class="actions-group">
+                  <button
+                    type="button"
+                    class="btn-action btn-view"
+                    *ngIf="p.isConfigured"
+                    (click)="openViewSlotsModal(p, undefined, undefined, $event)"
+                    title="View day-wise bookable slots"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                      <circle cx="12" cy="12" r="3"/>
+                    </svg>
+                    <span>View Slots</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    class="btn-action btn-edit"
+                    (click)="openConfigureModal(p, 'weekly', null, null, $event)"
+                    title="Configure working hours and appointment slots"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <circle cx="12" cy="12" r="3"/>
+                      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                    </svg>
+                    <span>{{ p.isConfigured ? 'Edit Schedule' : 'Configure' }}</span>
+                  </button>
+                </div>
+              </td>
+            </tr>
+
+            <!-- Expandable 7-Day Timetable Deck Row -->
+            <tr *ngIf="isExpanded(p.providerId)" class="expanded-deck-row animate-fade-in">
+              <td colspan="5">
+                <div class="expanded-deck-container">
+                  <div class="deck-cards-grid">
+                    <div
+                      *ngFor="let d of p.days; let di = index"
+                      class="deck-day-card"
+                      [class.deck-card-active]="d.isAvailable"
+                      (click)="d.isAvailable ? openViewSlotsModal(p, di, undefined, $event) : null"
+                      [class.cursor-pointer]="d.isAvailable"
+                      [title]="d.isAvailable ? 'Click to inspect ' + d.dayName + ' appointment slots' : d.dayName + ' is marked off'"
+                    >
+                      <div class="deck-card-header">
+                        <span class="d-day-name">{{ d.dayName }}</span>
+                        <span class="d-status-pill" [class.d-pill-active]="d.isAvailable" [class.d-pill-off]="!d.isAvailable">
+                          {{ d.isAvailable ? 'ACTIVE' : 'OFF' }}
+                        </span>
+                      </div>
+
+                      <div *ngIf="d.isAvailable" class="deck-card-body">
+                        <div class="d-time-display">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"/>
+                            <polyline points="12 6 12 12 16 14"/>
+                          </svg>
+                          <span>{{ d.timeDisplay }}</span>
+                        </div>
+
+                        <div class="d-card-footer">
+                          <span class="d-slots-pill">{{ d.totalCalculatedSlots }} Slots</span>
+                          <span class="d-dur-pill">{{ d.slotDurationMinutes }}m duration</span>
+                        </div>
+                      </div>
+
+                      <div *ngIf="!d.isAvailable" class="deck-card-off-body">
+                        <span class="d-off-label">Day Off (Unavailable)</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </td>
+            </tr>
+          </ng-container>
+
+          <!-- Empty State -->
+          <tr *ngIf="filteredProviders.length === 0">
+            <td colspan="5" class="empty-cell">
+              <div class="empty-state">
+                <div class="empty-icon-wrap">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10" />
+                    <polyline points="12 6 12 12 16 14" />
+                  </svg>
+                </div>
+                <h4>No Provider Schedules Found</h4>
+                <p>Register service providers in the Service Providers section to configure their working hours.</p>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+  <!-- ======================================================== -->
+  <!-- STANDALONE SCHEDULE CONFIGURATION MODAL COMPONENT        -->
+  <!-- ======================================================== -->
+  <app-availability-modal
+    [isOpen]="isConfigModalOpen()"
+    [providers]="allProvidersList"
+    [providerId]="selectedProviderId"
+    [providerName]="selectedProviderName"
+    [providerRole]="selectedProviderRole"
+    [initialTab]="configModalInitialTab"
+    [initialDayIndex]="configModalInitialDayIndex"
+    [initialDate]="configModalInitialDate"
+    (close)="closeConfigureModal()"
+    (saved)="onScheduleSaved($event)"
+  ></app-availability-modal>
+
+  <!-- ======================================================== -->
+  <!-- VIEW BOOKABLE SLOTS MODAL (INSPECT DAY-WISE SLOTS)      -->
+  <!-- ======================================================== -->
+  <div *ngIf="isViewSlotsModalOpen()" class="modal-backdrop animate-fade-in" (click)="closeViewSlotsModal()">
+    <div class="modal-dialog view-slots-dialog glass-card animate-scale-up" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
+      
+      <!-- Modal Header -->
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <div class="modal-title-row">
+            <h3 class="modal-title">Live Bookable Appointment Slots</h3>
+            <div class="modal-provider-pill" *ngIf="viewingProvider()">
+              <span class="provider-pill-avatar" [style.background]="viewingProvider()?.profilePictureUrl ? 'transparent' : getAvatarGradient(viewingProvider()?.providerName || '')">
+                <img 
+                  *ngIf="viewingProvider()?.profilePictureUrl" 
+                  [src]="viewingProvider()?.profilePictureUrl!" 
+                  [alt]="viewingProvider()?.providerName" 
+                  class="pill-avatar-img" 
+                  (error)="viewingProvider()!.profilePictureUrl = null"
+                />
+                <span *ngIf="!viewingProvider()?.profilePictureUrl">{{ getInitials(viewingProvider()?.providerName) }}</span>
+              </span>
+              <span class="provider-pill-name">{{ viewingProvider()?.providerName }}</span>
+              <span class="provider-pill-role" *ngIf="viewingProvider()?.specialization">({{ viewingProvider()?.specialization }})</span>
+            </div>
+          </div>
+          <p class="modal-subtitle">
+            Inspect all appointment slots generated by day of week or specific dates according to current working hours.
+          </p>
+        </div>
+        <button type="button" class="btn-close" (click)="closeViewSlotsModal()" aria-label="Close dialog">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="modal-body view-slots-body">
+        
+        <!-- Metrics Bar -->
+        <div class="schedule-summary-bar">
+          <div class="summary-metric">
+            <span class="metric-label">Active Days</span>
+            <span class="metric-val">{{ viewingProvider()?.activeDaysCount }}/7 Days ({{ viewingProvider()?.activeDaysSummary }})</span>
+          </div>
+          <div class="summary-metric">
+            <span class="metric-label">Working Hours</span>
+            <span class="metric-val">{{ viewingProvider()?.workingHoursSummary }}</span>
+          </div>
+          <div class="summary-metric">
+            <span class="metric-label">Rest Break</span>
+            <span class="metric-val">{{ viewingProvider()?.breakSummary }}</span>
+          </div>
+          <div class="summary-metric">
+            <span class="metric-label">Slot Duration</span>
+            <span class="metric-val">{{ viewingProvider()?.slotDurationMinutes }}m</span>
+          </div>
+          <div class="summary-metric">
+            <span class="metric-label">Weekly Capacity</span>
+            <span class="metric-val highlight">{{ viewingProvider()?.totalWeeklySlots }} Slots/wk</span>
+          </div>
+        </div>
+
+        <!-- Day Selection Tabs -->
+        <div class="view-days-strip-wrap">
+          <span class="days-strip-label">Select Day to View Slots:</span>
+          <div class="view-days-tabs">
+            <button
+              type="button"
+              *ngFor="let d of viewingProvider()?.days; let i = index"
+              class="view-day-tab-btn"
+              [class.tab-active]="viewingMode === 'weekly' && viewingDayIndex === i"
+              [class.is-day-available]="d.isAvailable"
+              (click)="selectViewingDay(i)"
+            >
+              <span class="btn-day-code">{{ d.shortName }}</span>
+              <span class="btn-day-slots" *ngIf="d.isAvailable">{{ d.totalCalculatedSlots }} Slots</span>
+              <span class="btn-day-slots off" *ngIf="!d.isAvailable">Off</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Scheduled Special Dates & Holidays (If any exist for this provider) -->
+        <div class="view-special-dates-wrap animate-fade-in" *ngIf="viewingSpecificDates().length > 0">
+          <div class="special-dates-label-row">
+            <span class="days-strip-label">
+              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect width="18" height="18" x="3" y="4" rx="2" ry="2"/>
+                <line x1="16" y1="2" x2="16" y2="6"/>
+                <line x1="8" y1="2" x2="8" y2="6"/>
+                <line x1="3" y1="10" x2="21" y2="10"/>
+              </svg>
+              Scheduled Special Dates & Holidays ({{ viewingSpecificDates().length }}):
+            </span>
+          </div>
+
+          <div class="view-special-dates-strip">
+            <button
+              type="button"
+              *ngFor="let sDate of viewingSpecificDates()"
+              class="special-date-chip-btn"
+              [class.special-date-active]="viewingMode === 'specific-date' && selectedViewingSpecificDate?.id === sDate.id"
+              [class.is-holiday]="!sDate.isAvailable"
+              (click)="selectViewingSpecificDate(sDate)"
+            >
+              <div class="s-chip-header">
+                <span class="s-date-badge">{{ formatSpecificDateShort(sDate.specificDate) }}</span>
+                <span class="s-status-tag" [class.tag-holiday]="!sDate.isAvailable">
+                  {{ sDate.isAvailable ? (sDate.totalCalculatedSlots + ' Slots') : 'Holiday / Off' }}
+                </span>
+              </div>
+              <span class="s-time-sub" *ngIf="sDate.isAvailable">
+                {{ formatTo12Hour(sDate.startTime) }} - {{ formatTo12Hour(sDate.endTime) }}
+              </span>
+              <span class="s-holiday-sub" *ngIf="!sDate.isAvailable">
+                Unavailable
+              </span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Slots Grid for selected day or date -->
+        <div class="slots-preview-section">
+          <!-- Weekly Mode Heading -->
+          <div class="section-heading-row" *ngIf="viewingMode === 'weekly'">
+            <h4>
+              {{ currentViewingDay?.dayName }} Slots:
+              <span *ngIf="currentViewingDay?.isAvailable" class="heading-timing-tag">{{ currentViewingDay?.timeDisplay }}</span>
+            </h4>
+            <span class="slots-badge" *ngIf="currentViewingDay?.isAvailable">
+              {{ viewingSlots().length }} Available Slots &bull; {{ currentViewingDay?.slotDurationMinutes }}m duration
+            </span>
+          </div>
+
+          <!-- Specific Date Mode Heading -->
+          <div class="section-heading-row" *ngIf="viewingMode === 'specific-date'">
+            <h4>
+              {{ formatSpecificDateLong(selectedViewingSpecificDate?.specificDate) }} Slots:
+              <span *ngIf="selectedViewingSpecificDate?.isAvailable" class="heading-timing-tag">
+                {{ formatTo12Hour(selectedViewingSpecificDate?.startTime) }} – {{ formatTo12Hour(selectedViewingSpecificDate?.endTime) }}
+              </span>
+            </h4>
+            <span class="slots-badge" *ngIf="selectedViewingSpecificDate?.isAvailable">
+              {{ viewingSlots().length }} Available Slots &bull; {{ selectedViewingSpecificDate?.slotDurationMinutes || 30 }}m duration &bull; Date Override
+            </span>
+            <span class="slots-badge badge-holiday" *ngIf="!selectedViewingSpecificDate?.isAvailable">
+              Scheduled Holiday / Leave
+            </span>
+          </div>
+
+          <div *ngIf="isLoadingViewSlots()" class="slots-loading">
+            <div class="spinner-sm"></div>
+            <span>Generating slots preview...</span>
+          </div>
+
+          <!-- Slots Grid -->
+          <div *ngIf="!isLoadingViewSlots() && viewingSlots().length > 0" class="slots-grid-view">
+            <div *ngFor="let slot of viewingSlots()" class="slot-tile" [class.slot-tile-blocked]="slot.isBlocked">
+              <svg *ngIf="!slot.isBlocked" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <polyline points="12 6 12 12 16 14"/>
+              </svg>
+              <svg *ngIf="slot.isBlocked" class="icon-blocked" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+              </svg>
+              <span class="slot-time-text" [class.strike-text]="slot.isBlocked">{{ formatSlotDisplay(slot) }}</span>
+              <span *ngIf="slot.isBlocked" class="slot-blocked-badge">BLOCKED</span>
+            </div>
+          </div>
+
+          <!-- Empty Weekly Slots Box -->
+          <div *ngIf="!isLoadingViewSlots() && viewingMode === 'weekly' && (!currentViewingDay?.isAvailable || viewingSlots().length === 0)" class="empty-slots-box">
+            <p>{{ currentViewingDay?.dayName }} is not an active working day for this provider.</p>
+          </div>
+
+          <!-- Holiday / Off Date Empty State -->
+          <div *ngIf="!isLoadingViewSlots() && viewingMode === 'specific-date' && !selectedViewingSpecificDate?.isAvailable" class="empty-slots-box holiday-empty-box">
+            <div class="holiday-box-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="4.93" y1="4.93" x2="19.07" y2="19.07" />
+              </svg>
+            </div>
+            <h5>Marked as Holiday / Day Off</h5>
+            <p>{{ viewingProvider()?.providerName }} is unavailable on {{ formatSpecificDateLong(selectedViewingSpecificDate?.specificDate) }}. No bookable slots are available.</p>
+          </div>
+
+          <!-- Specific Date With 0 Active Slots -->
+          <div *ngIf="!isLoadingViewSlots() && viewingMode === 'specific-date' && selectedViewingSpecificDate?.isAvailable && viewingSlots().length === 0" class="empty-slots-box">
+            <p>No appointment slots generated for this date override.</p>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="closeViewSlotsModal()">Close</button>
+        <button type="button" class="btn btn-primary" (click)="modifyCurrentScheduleFromViewSlots()">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 20h9"/>
+            <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+          </svg>
+          <span>Modify Schedule</span>
+        </button>
+      </div>
+
+    </div>
+  </div>

@@ -1,0 +1,486 @@
+/* ==========================================================================
+   Provider Modal - Luxury Dark Compact Form
+   ========================================================================== */
+
+:host {
+  display: block;
+}
+
+/* Backdrop No Blur */
+.modal-backdrop {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* Dialog Box Sizing */
+.modal-dialog {
+  max-width: 520px !important;
+}
+
+/* Compact Modal Header */
+.modal-header {
+  padding: 0.75rem 1.25rem !important;
+  gap: 0.75rem !important;
+}
+
+.modal-title {
+  font-size: 1.05rem !important;
+  font-weight: 700 !important;
+  line-height: 1.25 !important;
+}
+
+.modal-subtitle {
+  font-size: 0.76rem !important;
+  color: #94a3b8 !important;
+  margin-top: 0.15rem !important;
+  line-height: 1.35 !important;
+}
+
+.btn-close {
+  width: 28px !important;
+  height: 28px !important;
+  min-width: 28px !important;
+  min-height: 28px !important;
+  border-radius: 8px !important;
+}
+
+.btn-close svg {
+  width: 15px !important;
+  height: 15px !important;
+}
+
+/* Compact Modal Body */
+.modal-body {
+  padding: 0.95rem 1.25rem 1rem !important;
+}
+
+/* Compact Modal Footer */
+.modal-footer {
+  padding: 0.65rem 1.25rem !important;
+  gap: 0.6rem !important;
+}
+
+.modal-footer .btn {
+  height: 34px !important;
+  min-height: 34px !important;
+  max-height: 34px !important;
+  padding: 0 1.05rem !important;
+  font-size: 0.82rem !important;
+  border-radius: 8px !important;
+}
+
+.modal-footer .btn-primary {
+  background: var(--gradient-primary) !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.18) !important;
+  box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35) !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.modal-footer .btn-primary:hover:not(:disabled) {
+  transform: translateY(-1px) !important;
+  box-shadow: 0 6px 20px rgba(168, 85, 247, 0.5) !important;
+  filter: brightness(1.08) !important;
+}
+
+.modal-footer .btn:disabled {
+  opacity: 0.45 !important;
+  cursor: not-allowed !important;
+  box-shadow: none !important;
+  transform: none !important;
+  filter: grayscale(0.2) !important;
+}
+
+/* Form Row & Groups */
+.form-row {
+  display: flex;
+  gap: 1rem;
+}
+
+.flex-1 {
+  flex: 1;
+}
+
+.form-group {
+  margin-bottom: 0.82rem;
+}
+
+.form-group.mb-0 {
+  margin-bottom: 0;
+}
+
+.form-label {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #cbd5e1;
+  margin-bottom: 0.28rem;
+  letter-spacing: -0.01em;
+}
+
+.required-star {
+  color: #f43f5e;
+  font-weight: 700;
+  margin-left: 0.15rem;
+}
+
+.form-input {
+  width: 100%;
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  padding: 0.52rem 0.82rem;
+  color: #f8fafc;
+  font-size: 0.85rem;
+  font-family: inherit;
+  outline: none;
+  transition: all 0.18s ease;
+}
+
+.form-input:focus {
+  border-color: #8b5cf6;
+  background: rgba(15, 23, 42, 0.95);
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.2);
+}
+
+.form-input::placeholder {
+  color: #64748b;
+  font-size: 0.82rem;
+}
+
+.form-textarea {
+  min-height: 52px;
+  max-height: 80px;
+  resize: vertical;
+  line-height: 1.45;
+}
+
+.form-error {
+  color: #fb7185;
+  font-size: 0.73rem;
+  margin-top: 0.22rem;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+/* Phone input group */
+.phone-input-group {
+  display: flex;
+  align-items: stretch;
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  overflow: hidden;
+  transition: all 0.18s ease;
+}
+
+.phone-input-group:focus-within {
+  border-color: #8b5cf6;
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.2);
+}
+
+.phone-prefix {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 0.65rem;
+  background: rgba(255, 255, 255, 0.04);
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  color: #94a3b8;
+  font-size: 0.82rem;
+  font-weight: 600;
+  user-select: none;
+}
+
+.phone-input-group .form-input {
+  border: none;
+  background: transparent;
+  padding: 0.52rem 0.75rem;
+  box-shadow: none !important;
+}
+
+/* ==========================================================================
+   Compact Profile Picture Bar (Space-Efficient)
+   ========================================================================== */
+.avatar-compact-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.55rem 0.95rem;
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  margin-bottom: 0.82rem;
+  transition: all 0.2s ease;
+  overflow: visible !important;
+}
+
+.avatar-compact-bar:hover {
+  border-color: rgba(139, 92, 246, 0.3);
+  background: rgba(139, 92, 246, 0.02);
+}
+
+.avatar-mini-wrapper {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.25), rgba(168, 85, 247, 0.3));
+  border: 2px solid rgba(139, 92, 246, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: transform 0.18s ease, border-color 0.18s ease;
+  overflow: visible !important;
+}
+
+.avatar-mini-wrapper:hover {
+  transform: scale(1.05);
+  border-color: #a855f7;
+}
+
+.avatar-mini-img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.avatar-mini-placeholder {
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  font-weight: 700;
+  font-size: 0.85rem;
+  overflow: visible !important;
+}
+
+.avatar-mini-placeholder:not(.has-initials) {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.avatar-initials-text {
+  line-height: 1;
+}
+
+.avatar-camera-badge {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #6366f1, #a855f7);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #0f172a;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6), 0 0 10px rgba(99, 102, 241, 0.4);
+  z-index: 25 !important;
+  transition: transform 0.15s ease;
+}
+
+.avatar-mini-wrapper:hover .avatar-camera-badge {
+  transform: scale(1.12);
+  background: linear-gradient(135deg, #4f46e5, #9333ea);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.7), 0 0 12px rgba(168, 85, 247, 0.6);
+}
+
+.avatar-mini-spinner {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.8);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.avatar-compact-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.22rem;
+  min-width: 0;
+}
+
+.avatar-compact-title {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.avatar-compact-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #f1f5f9;
+}
+
+.avatar-compact-tag {
+  font-size: 0.68rem;
+  color: #94a3b8;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 0.08rem 0.4rem;
+  border-radius: 4px;
+}
+
+.avatar-compact-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+}
+
+.avatar-compact-hint {
+  font-size: 0.72rem;
+  color: #94a3b8;
+}
+
+.btn-compact-remove {
+  padding: 0.22rem 0.55rem;
+  background: rgba(239, 68, 68, 0.1);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  border-radius: 6px;
+  font-size: 0.74rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.btn-compact-remove:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.22);
+  color: #ffffff;
+  border-color: #ef4444;
+}
+
+.avatar-compact-hint {
+  font-size: 0.7rem;
+  color: #64748b;
+}
+
+.avatar-error-inline {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: #f87171;
+  font-size: 0.74rem;
+  margin-top: -0.4rem;
+  margin-bottom: 0.6rem;
+  padding-left: 0.2rem;
+}
+
+.hidden-file-input {
+  display: none;
+}
+
+/* Spinner */
+.spinner-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.spinner-small {
+  width: 13px;
+  height: 13px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Password input wrapper */
+.password-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.password-input-wrap .form-input {
+  width: 100%;
+  padding-right: 2.75rem;
+}
+
+.btn-toggle-eye {
+  position: absolute;
+  right: 0.65rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  outline: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 0.3rem;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 5;
+  transition: all 0.2s ease;
+  line-height: 1;
+}
+
+.btn-toggle-eye:hover {
+  color: #f8fafc;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Currency input group */
+.currency-input-group {
+  display: flex;
+  align-items: stretch;
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  overflow: hidden;
+  transition: all 0.18s ease;
+}
+
+.currency-input-group:focus-within {
+  border-color: #8b5cf6;
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.2);
+}
+
+.currency-prefix {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 0.75rem;
+  background: rgba(255, 255, 255, 0.04);
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  color: #94a3b8;
+  font-size: 0.88rem;
+  font-weight: 700;
+  user-select: none;
+}
+
+.currency-input-group .form-input {
+  border: none;
+  background: transparent;
+  padding: 0.52rem 0.75rem;
+  box-shadow: none !important;
+}
+
+/* Responsive */
+@media (max-width: 580px) {
+  .form-row {
+    flex-direction: column;
+    gap: 0;
+  }
+}
+

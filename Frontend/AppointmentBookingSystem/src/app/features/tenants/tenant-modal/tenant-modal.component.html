@@ -1,0 +1,225 @@
+<div *ngIf="isOpen" class="modal-backdrop animate-fade-in" (click)="onBackdropClick($event)">
+  <div class="modal-dialog glass-card animate-scale-up" role="dialog" aria-modal="true">
+    
+    <!-- Modal Header (Clean & Concise) -->
+    <div class="modal-header">
+      <div class="modal-title-wrap">
+        <h3 class="modal-title">{{ mode === 'create' ? 'Add Organization' : 'Edit Organization' }}</h3>
+        <p class="modal-subtitle">
+          {{ mode === 'create' ? 'Register new organization and administrator' : 'Update organization details' }}
+        </p>
+      </div>
+      <button type="button" class="btn-close" (click)="onClose()" aria-label="Close dialog">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"/>
+          <line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Modal Scrollable Body -->
+    <div class="modal-body">
+      <!-- Error Alert Banner -->
+      <div *ngIf="errorMessage()" class="alert-error animate-fade-in">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="12" y1="8" x2="12" y2="12"/>
+          <line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        <span>{{ errorMessage() }}</span>
+      </div>
+
+      <form id="tenantForm" [formGroup]="tenantForm" (ngSubmit)="onSubmit()" class="modal-form" autocomplete="off">
+        
+        <!-- Section 1: Organization Details -->
+        <div class="form-section-title">Organization Details</div>
+
+        <!-- Row 1: Tenant Name & Tenant Code -->
+        <div class="form-row">
+          <div class="form-group flex-1">
+            <label class="form-label">Organization Name <span class="required-star">*</span></label>
+            <input 
+              type="text" 
+              formControlName="tenantName" 
+              (input)="onTenantNameInput()"
+              class="form-input" 
+              placeholder="e.g. Apollo Dental Care" 
+            />
+            <div *ngIf="tenantForm.get('tenantName')?.touched && tenantForm.get('tenantName')?.invalid" class="form-error">
+              Organization name is required (min 2 characters).
+            </div>
+          </div>
+
+          <div class="form-group flex-1">
+            <label class="form-label">Tenant Code <span class="required-star">*</span></label>
+            <input 
+              type="text" 
+              formControlName="tenantCode" 
+              (input)="onTenantCodeInput()"
+              class="form-input" 
+              placeholder="e.g. apollo-dental" 
+            />
+            <div *ngIf="tenantForm.get('tenantCode')?.touched && tenantForm.get('tenantCode')?.invalid" class="form-error">
+              <span *ngIf="tenantForm.get('tenantCode')?.hasError('required')">Tenant code is required.</span>
+              <span *ngIf="tenantForm.get('tenantCode')?.hasError('pattern')">Letters, numbers, and hyphens only (e.g. apollo-dental).</span>
+              <span *ngIf="tenantForm.get('tenantCode')?.hasError('minlength')">Must be at least 2 characters.</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Row 2: Contact Email & Contact Mobile -->
+        <div class="form-row">
+          <div class="form-group flex-1">
+            <label class="form-label">Contact Email <span class="required-star">*</span></label>
+            <input 
+              type="email" 
+              formControlName="contactEmail" 
+              class="form-input" 
+              placeholder="e.g. contact@apollodental.com" 
+            />
+            <div *ngIf="tenantForm.get('contactEmail')?.touched && tenantForm.get('contactEmail')?.invalid" class="form-error">
+              <span *ngIf="tenantForm.get('contactEmail')?.hasError('required')">Contact email is required.</span>
+              <span *ngIf="tenantForm.get('contactEmail')?.hasError('pattern') || tenantForm.get('contactEmail')?.hasError('email')">Please enter a valid email address.</span>
+            </div>
+          </div>
+
+          <div class="form-group flex-1">
+            <label class="form-label">Contact Mobile <span class="required-star">*</span></label>
+            <div class="phone-input-group">
+              <span class="phone-prefix">+91</span>
+              <input 
+                type="tel" 
+                appOnlyDigits
+                inputmode="numeric"
+                maxlength="10"
+                formControlName="contactPhone" 
+                class="form-input" 
+                placeholder="98765 43210" 
+              />
+            </div>
+            <div *ngIf="tenantForm.get('contactPhone')?.touched && tenantForm.get('contactPhone')?.invalid" class="form-error">
+              <span *ngIf="tenantForm.get('contactPhone')?.hasError('required')">Contact mobile number is required.</span>
+              <span *ngIf="tenantForm.get('contactPhone')?.hasError('pattern')">Mobile number must be exactly 10 digits.</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Row 3: Office / Business Address (Separate Row) -->
+        <div class="form-row">
+          <div class="form-group flex-1">
+            <label class="form-label">Office / Business Address <span class="required-star">*</span></label>
+            <textarea 
+              formControlName="address" 
+              rows="2"
+              autocomplete="off"
+              class="form-input form-textarea" 
+              placeholder="e.g. 102 Park Street, Area, City, State - 400001"
+            ></textarea>
+            <div *ngIf="tenantForm.get('address')?.touched && tenantForm.get('address')?.invalid" class="form-error">
+              Office / Business address is required.
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 2: Administrator Credentials -->
+        <div class="form-section-title">{{ mode === 'create' ? 'Initial Administrator Account' : 'Administrator Account' }}</div>
+
+        <div class="form-row">
+          <div class="form-group flex-1">
+            <label class="form-label">Admin First Name <span class="required-star">*</span></label>
+            <input 
+              type="text" 
+              formControlName="adminFirstName" 
+              class="form-input" 
+              placeholder="e.g. Rajesh" 
+            />
+            <div *ngIf="tenantForm.get('adminFirstName')?.touched && tenantForm.get('adminFirstName')?.invalid" class="form-error">
+              First name is required.
+            </div>
+          </div>
+
+          <div class="form-group flex-1">
+            <label class="form-label">Admin Last Name <span class="required-star">*</span></label>
+            <input 
+              type="text" 
+              formControlName="adminLastName" 
+              class="form-input" 
+              placeholder="e.g. Sharma" 
+            />
+            <div *ngIf="tenantForm.get('adminLastName')?.touched && tenantForm.get('adminLastName')?.invalid" class="form-error">
+              Last name is required.
+            </div>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group flex-1">
+            <label class="form-label">Admin Login Email <span class="required-star">*</span></label>
+            <input 
+              type="email" 
+              formControlName="adminEmail" 
+              name="admin_new_email" 
+              autocomplete="off"
+              class="form-input" 
+              placeholder="e.g. admin@apollodental.com" 
+            />
+            <div *ngIf="tenantForm.get('adminEmail')?.touched && tenantForm.get('adminEmail')?.invalid" class="form-error">
+              <span *ngIf="tenantForm.get('adminEmail')?.hasError('required')">Admin login email is required.</span>
+              <span *ngIf="tenantForm.get('adminEmail')?.hasError('pattern') || tenantForm.get('adminEmail')?.hasError('email')">Please enter a valid email address.</span>
+            </div>
+          </div>
+
+          <div class="form-group flex-1">
+            <label class="form-label">Admin Password <span *ngIf="mode === 'create'" class="required-star">*</span></label>
+            <div class="password-input-wrap">
+              <input 
+                [type]="showPassword() ? 'text' : 'password'" 
+                formControlName="adminPassword" 
+                name="admin_new_password" 
+                autocomplete="new-password"
+                class="form-input" 
+                [placeholder]="mode === 'create' ? 'Min 6 characters' : 'Leave blank to keep current password'" 
+              />
+              <button 
+                type="button" 
+                class="btn-toggle-eye" 
+                (click)="togglePasswordVisibility()" 
+                aria-label="Toggle password visibility"
+              >
+                <svg *ngIf="!showPassword()" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
+                  <circle cx="12" cy="12" r="3"/>
+                </svg>
+                <svg *ngIf="showPassword()" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/>
+                  <path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/>
+                  <path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/>
+                  <line x1="2" y1="2" x2="22" y2="22"/>
+                </svg>
+              </button>
+            </div>
+            <div *ngIf="tenantForm.get('adminPassword')?.touched && tenantForm.get('adminPassword')?.invalid" class="form-error">
+              <span *ngIf="tenantForm.get('adminPassword')?.hasError('required')">Admin password is required.</span>
+              <span *ngIf="tenantForm.get('adminPassword')?.hasError('minlength')">Password must be at least 6 characters.</span>
+            </div>
+          </div>
+        </div>
+      </form>
+    </div>
+
+    <!-- Modal Footer -->
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary btn-cancel" (click)="onClose()">
+        Cancel
+      </button>
+      <button type="submit" form="tenantForm" class="btn btn-primary btn-submit" [disabled]="tenantForm.invalid || isSubmitting()">
+        <span *ngIf="!isSubmitting()">{{ mode === 'create' ? 'Create Organization' : 'Save Changes' }}</span>
+        <span *ngIf="isSubmitting()" class="spinner-inline">
+          <span class="spinner-small"></span>
+          <span>Saving...</span>
+        </span>
+      </button>
+    </div>
+
+  </div>
+</div>

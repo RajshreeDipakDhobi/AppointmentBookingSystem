@@ -1,0 +1,808 @@
+<div *ngIf="isOpen" class="modal-backdrop animate-fade-in" (click)="onBackdropClick($event)">
+  <div class="modal-dialog config-modal-dialog glass-card animate-scale-up" role="dialog" aria-modal="true"
+    (click)="$event.stopPropagation()">
+
+    <!-- ======================================================== -->
+    <!-- MODAL TOP BAR: TITLE, CUSTOM PROVIDER MENU & CLOSE       -->
+    <!-- ======================================================== -->
+    <div class="modal-top-bar">
+      <div class="modal-identity">
+        <h3 class="modal-title">Provider Availability & Shift Setup</h3>
+        <p class="modal-subtitle">
+          Configure weekly recurring hours, click slots to block/unblock, and schedule holiday leaves.
+        </p>
+      </div>
+
+      <!-- Right Header Actions: Custom Popover Provider Selector + Close -->
+      <div class="modal-top-actions">
+        <!-- Custom Styled Glass Provider Dropdown Trigger -->
+        <div class="custom-provider-anchor" (click)="toggleProviderMenu($event)">
+          <div class="provider-pill-trigger">
+            <span class="provider-pill-avatar" [style.background]="activeProviderPhoto ? 'transparent' : getAvatarGradient(providerName)">
+              <img 
+                *ngIf="activeProviderPhoto" 
+                [src]="activeProviderPhoto" 
+                [alt]="providerName" 
+                class="pill-avatar-img" 
+                (error)="onActivePhotoError()"
+              />
+              <span *ngIf="!activeProviderPhoto">{{ getInitials(providerName) }}</span>
+            </span>
+            <div class="provider-pill-text">
+              <span class="provider-pill-caption">ACTIVE PROVIDER</span>
+              <div class="provider-pill-name-row">
+                <span class="provider-pill-name">{{ providerName || 'Select Provider' }}</span>
+                <span class="provider-pill-role" *ngIf="providerRole">({{ providerRole }})</span>
+              </div>
+            </div>
+            <svg class="pill-chevron-icon" [class.rotated]="isProviderMenuOpen" xmlns="http://www.w3.org/2000/svg"
+              width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+              stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
+          </div>
+
+          <!-- Custom Popover Menu (Dark Glass Styled) -->
+          <div *ngIf="isProviderMenuOpen" class="provider-popover-menu glass-card animate-scale-up"
+            (click)="$event.stopPropagation()">
+            <div class="popover-title-row">
+              <span>Select Service Provider</span>
+              <span class="popover-total">{{ providers.length }} Providers</span>
+            </div>
+            <div class="popover-items-scroll">
+              <div *ngFor="let p of providers" class="provider-menu-item"
+                [class.item-active]="p.providerId === selectedProviderId" (click)="selectProvider(p)">
+                <span class="item-avatar-icon" [style.background]="p.profilePictureUrl ? 'transparent' : getAvatarGradient(p.providerName)">
+                  <img 
+                    *ngIf="p.profilePictureUrl" 
+                    [src]="p.profilePictureUrl" 
+                    [alt]="p.providerName" 
+                    class="item-avatar-img" 
+                    (error)="p.profilePictureUrl = null"
+                  />
+                  <span *ngIf="!p.profilePictureUrl">{{ getInitials(p.providerName) }}</span>
+                </span>
+                <div class="item-meta">
+                  <span class="item-fullname">{{ p.providerName }}</span>
+                  <span class="item-role-desc">{{ p.specialization || 'Specialist' }}</span>
+                </div>
+                <svg *ngIf="p.providerId === selectedProviderId" class="item-check-icon"
+                  xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Close Dialog Button -->
+        <button type="button" class="btn-close-modal" (click)="onClose()" aria-label="Close dialog">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- ======================================================== -->
+    <!-- COMPACT MICRO SEGMENTED TAB CONTROLLER                    -->
+    <!-- ======================================================== -->
+    <div class="segmented-control-container">
+      <div class="segmented-control">
+        <button type="button" class="segment-tab-btn" [class.segment-active]="activeTab === 'weekly'"
+          (click)="switchTab('weekly')">
+          <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect width="18" height="18" x="3" y="4" rx="2" ry="2" />
+            <line x1="16" x2="16" y1="2" y2="6" />
+            <line x1="8" x2="8" y1="2" y2="6" />
+            <line x1="3" x2="21" y1="10" y2="10" />
+          </svg>
+          <span class="segment-label">Weekly Hours</span>
+          <span class="segment-badge">{{ activeDaysCount }}/7 Days</span>
+        </button>
+
+        <button type="button" class="segment-tab-btn" [class.segment-active]="activeTab === 'date-wise'"
+          (click)="switchTab('date-wise')">
+          <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10" />
+            <polyline points="12 6 12 12 14 14" />
+          </svg>
+          <span class="segment-label">Dates & Holidays</span>
+          <span class="segment-badge badge-amber" *ngIf="specificDatesList().length > 0">
+            {{ specificDatesList().length }} Scheduled
+          </span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Alert Notifications -->
+    <div *ngIf="successMessage()" class="modal-alert-box alert-success animate-fade-in">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+        stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+        <polyline points="22 4 12 14.01 9 11.01" />
+      </svg>
+      <span>{{ successMessage() }}</span>
+    </div>
+    <div *ngIf="errorMessage()" class="modal-alert-box alert-error animate-fade-in">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+        stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10" />
+        <line x1="12" y1="8" x2="12" y2="12" />
+        <line x1="12" y1="16" x2="12.01" y2="16" />
+      </svg>
+      <span>{{ errorMessage() }}</span>
+    </div>
+
+    <!-- ======================================================== -->
+    <!-- MODAL BODY                                               -->
+    <!-- ======================================================== -->
+    <div class="modal-body-scrollable">
+
+      <!-- ======================================================== -->
+      <!-- TAB 1: WEEKLY RECURRING SCHEDULE                         -->
+      <!-- ======================================================== -->
+      <ng-container *ngIf="activeTab === 'weekly'">
+
+        <!-- Compact Day Selector Ribbon -->
+        <div class="week-ribbon-bar glass-card">
+          <div class="ribbon-days-track">
+            <button type="button" *ngFor="let d of days; let i = index" class="day-chip-btn"
+              [class.chip-selected]="selectedDayIndex === i" [class.chip-off]="!d.isActive"
+              (click)="selectEditingDay(i)">
+              <div class="chip-top">
+                <span class="chip-day-name">{{ d.shortName }}</span>
+                <span class="chip-status-dot" [class.dot-online]="d.isActive" [class.dot-offline]="!d.isActive"></span>
+              </div>
+              <div class="chip-bottom">
+                <span *ngIf="d.isActive" class="chip-time-txt">{{ formatTo12Hour(d.startTime) }}</span>
+                <span *ngIf="!d.isActive" class="chip-off-txt">Off</span>
+              </div>
+              <span class="chip-blocked-tag" *ngIf="d.isActive && d.blockedSlots && d.blockedSlots.length > 0">
+                {{ d.blockedSlots.length }} blk
+              </span>
+            </button>
+          </div>
+
+          <!-- Quick Presets -->
+          <div class="ribbon-presets-wrap">
+            <span class="presets-label">Presets:</span>
+            <div class="presets-pill-group">
+              <button type="button" class="preset-tag" [class.tag-active]="currentPreset === 'weekdays'"
+                (click)="setPreset('weekdays')">Mon–Fri</button>
+              <button type="button" class="preset-tag" [class.tag-active]="currentPreset === 'mon-sat'"
+                (click)="setPreset('mon-sat')">Mon–Sat</button>
+              <button type="button" class="preset-tag" [class.tag-active]="currentPreset === 'all'"
+                (click)="setPreset('all')">All 7</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Unified Shift Editor Canvas -->
+        <div class="shift-canvas glass-card">
+
+          <!-- Canvas Top Subheader -->
+          <div class="canvas-header-bar">
+            <div class="canvas-day-title">
+              <h4 class="day-heading">{{ currentEditingDay.fullName }} Shift Setup</h4>
+              <span class="day-badge-state" [ngClass]="currentEditingDay.isActive ? 'badge-online' : 'badge-offline'">
+                {{ currentEditingDay.isActive ? 'WORKING DAY' : 'DAY OFF (UNAVAILABLE)' }}
+              </span>
+            </div>
+
+            <div class="canvas-header-actions">
+              <button type="button" *ngIf="currentEditingDay.isActive" class="btn-apply-all"
+                (click)="applyCurrentDayHoursToAllActiveDays()"
+                title="Apply {{ currentEditingDay.shortName }}'s hours and slot settings to all active working days">
+                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
+                  <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
+                </svg>
+                <span>Apply to All Active Days</span>
+              </button>
+
+              <label class="toggle-control-label">
+                <span>{{ currentEditingDay.isActive ? 'Working' : 'Day Off' }}</span>
+                <label class="toggle-switch">
+                  <input type="checkbox" [checked]="currentEditingDay.isActive"
+                    (change)="toggleDayActive(currentEditingDay)" />
+                  <span class="toggle-slider"></span>
+                </label>
+              </label>
+            </div>
+          </div>
+
+          <!-- When Day is Active: Unified 2-Column Grid -->
+          <div *ngIf="currentEditingDay.isActive" class="canvas-split-grid animate-fade-in">
+
+            <!-- LEFT COLUMN: WORKING HOURS & SHIFT CONTROLS -->
+            <div class="canvas-col-left">
+
+              <!-- UNIFIED WORKING HOURS & SLOT DURATION ROW (Side by Side) -->
+              <div class="unified-timing-card">
+                <div class="timing-card-top">
+                  <span class="card-section-label">Shift Hours & Slot Duration</span>
+                  <span class="shift-total-pill">
+                    {{ formatDurationText(calculateMinutesDiff(currentEditingDay.startTime, currentEditingDay.endTime))
+                    }} Shift
+                  </span>
+                </div>
+
+                <div class="timing-controls-row">
+                  <!-- Start & End Time Pair -->
+                  <div class="time-range-group">
+                    <ng-container
+                      *ngTemplateOutlet="timeDropdownPicker; context: { field: 'startTime', label: 'START TIME', value: currentEditingDay.startTime, align: 'left', isAmber: false }"></ng-container>
+
+                    <div class="arrow-divider">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="5" y1="12" x2="19" y2="12" />
+                        <polyline points="12 5 19 12 12 19" />
+                      </svg>
+                    </div>
+
+                    <ng-container
+                      *ngTemplateOutlet="timeDropdownPicker; context: { field: 'endTime', label: 'END TIME', value: currentEditingDay.endTime, align: 'right', isAmber: false }"></ng-container>
+                  </div>
+
+                  <!-- Slot Duration Dropdown (30 Mins Auto-selected) -->
+                  <div class="slot-duration-group">
+                    <span class="control-micro-title">SLOT DURATION</span>
+                    <div class="custom-select-wrapper">
+                      <select class="slot-duration-select" [ngModel]="currentEditingDay.slotDurationMinutes || 30"
+                        (ngModelChange)="selectDuration($event)">
+                        <option *ngFor="let opt of durationOptions" [value]="opt.value">
+                          {{ opt.label }}
+                        </option>
+                      </select>
+                      <svg class="custom-select-arrow" xmlns="http://www.w3.org/2000/svg" width="13" height="13"
+                        viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <polyline points="6 9 12 15 18 9" />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Lunch / Rest Break Card -->
+              <div class="unified-timing-card break-card">
+                <div class="timing-card-top">
+                  <div class="break-title-wrap">
+                    <span class="card-section-label">Lunch / Rest Break</span>
+                    <span class="shift-total-pill pill-amber" *ngIf="currentEditingDay.hasBreak">
+                      {{ formatDurationText(calculateMinutesDiff(currentEditingDay.breakStartTime,
+                      currentEditingDay.breakEndTime)) }} Break
+                    </span>
+                  </div>
+
+                  <label class="toggle-switch">
+                    <input type="checkbox" [checked]="currentEditingDay.hasBreak" (change)="toggleBreak()" />
+                    <span class="toggle-slider"></span>
+                  </label>
+                </div>
+
+                <!-- Break Timings Row -->
+                <div *ngIf="currentEditingDay.hasBreak" class="break-timing-row animate-fade-in">
+                  <div class="time-range-group full-width">
+                    <ng-container
+                      *ngTemplateOutlet="timeDropdownPicker; context: { field: 'breakStart', label: 'BREAK START', value: currentEditingDay.breakStartTime, align: 'left', isAmber: true }"></ng-container>
+
+                    <div class="arrow-divider text-amber">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="5" y1="12" x2="19" y2="12" />
+                        <polyline points="12 5 19 12 12 19" />
+                      </svg>
+                    </div>
+
+                    <ng-container
+                      *ngTemplateOutlet="timeDropdownPicker; context: { field: 'breakEnd', label: 'BREAK END', value: currentEditingDay.breakEndTime, align: 'right', isAmber: true }"></ng-container>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- RIGHT COLUMN: INTERACTIVE SLOTS PREVIEW & CLICK-TO-BLOCK -->
+            <div class="canvas-col-right">
+              <div class="slots-preview-panel">
+
+                <div class="slots-panel-top">
+                  <div class="panel-top-left">
+                    <span class="live-dot-pulse"></span>
+                    <span class="slots-panel-title">{{ currentEditingDay.shortName }} Slots</span>
+                  </div>
+
+                  <div class="panel-top-right">
+                    <span class="capacity-pill pill-green">
+                      {{ getDayAvailableCount(currentEditingDay) }} Available
+                    </span>
+                    <span class="capacity-pill pill-red" *ngIf="getDayBlockedCount(currentEditingDay) > 0">
+                      {{ getDayBlockedCount(currentEditingDay) }} Blocked
+                    </span>
+                  </div>
+                </div>
+
+                <!-- Helper Bar with Quick Actions -->
+                <div class="slots-helper-bar">
+                  <span class="helper-text">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none"
+                      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <circle cx="12" cy="12" r="10" />
+                      <line x1="12" y1="16" x2="12" y2="12" />
+                      <line x1="12" y1="8" x2="12.01" y2="8" />
+                    </svg>
+                    Click slot to toggle Available or Blocked
+                  </span>
+
+                  <div class="slots-quick-btns">
+                    <button type="button" class="btn-quick-text" (click)="blockAllDaySlots(currentEditingDay)">
+                      Block All
+                    </button>
+                    <button type="button" class="btn-quick-text btn-clear-text"
+                      *ngIf="getDayBlockedCount(currentEditingDay) > 0"
+                      (click)="clearDayBlockedSlots(currentEditingDay)">
+                      Clear
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Empty State -->
+                <div *ngIf="currentEditingDay.slots.length === 0" class="slots-empty-state">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10" />
+                    <polyline points="12 6 12 12 16 14" />
+                  </svg>
+                  <h5>Calculating slots...</h5>
+                  <p>Select shift hours to generate bookable slots.</p>
+                </div>
+
+                <!-- High-End Interactive Chips Grid (Custom Sleek Scrollbar) -->
+                <div *ngIf="currentEditingDay.slots.length > 0" class="slots-chips-scrollable">
+                  <div class="chips-three-col-grid">
+                    <button type="button" *ngFor="let slot of currentEditingDay.slots" class="interactive-slot-chip"
+                      [class.chip-open]="!slot.isBlocked" [class.chip-locked]="slot.isBlocked"
+                      (click)="toggleDaySlotBlocked(slot, currentEditingDay)"
+                      [title]="slot.isBlocked ? 'Blocked (' + formatSlotDisplay(slot) + ') - Click to unblock' : 'Available (' + formatSlotDisplay(slot) + ') - Click to block'">
+                      <svg *ngIf="!slot.isBlocked" class="chip-icon icon-check" xmlns="http://www.w3.org/2000/svg"
+                        width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+
+                      <svg *ngIf="slot.isBlocked" class="chip-icon icon-lock" xmlns="http://www.w3.org/2000/svg"
+                        width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                      </svg>
+
+                      <span class="chip-timing" [class.strike-through]="slot.isBlocked">{{ formatSlotDisplay(slot)
+                        }}</span>
+                      <span class="chip-tag-blocked" *ngIf="slot.isBlocked">BLOCKED</span>
+                    </button>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+          </div>
+
+          <!-- When Day is Marked Off -->
+          <div *ngIf="!currentEditingDay.isActive" class="day-off-banner animate-fade-in">
+            <div class="day-off-icon-circle">
+              <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="4.93" y1="4.93" x2="19.07" y2="19.07" />
+              </svg>
+            </div>
+            <h4>{{ currentEditingDay.fullName }} is Marked as Day Off</h4>
+            <p>The provider will not be available for customer bookings on this day of the week.</p>
+            <button type="button" class="btn-activate-day" (click)="toggleDayActive(currentEditingDay)">
+              Activate {{ currentEditingDay.fullName }} Working Hours
+            </button>
+          </div>
+
+        </div>
+
+      </ng-container>
+
+      <!-- ======================================================== -->
+      <!-- TAB 2: SPECIAL DATES & HOLIDAYS                          -->
+      <!-- ======================================================== -->
+      <ng-container *ngIf="activeTab === 'date-wise'">
+
+        <!-- Compact 1-Row Date Selection & Action Bar -->
+        <div class="date-selection-bar glass-card">
+          <div class="date-bar-left">
+            <!-- Sleek Date Capsule (Formatted Display + Hidden Native Picker Trigger) -->
+            <label class="date-capsule-picker" title="Click to choose a date">
+              <svg class="calendar-icon" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+                fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <rect width="18" height="18" x="3" y="4" rx="2" ry="2" />
+                <line x1="16" x2="16" y1="2" y2="6" />
+                <line x1="8" x2="8" y1="2" y2="6" />
+                <line x1="3" x2="21" y1="10" y2="10" />
+              </svg>
+              <span class="date-capsule-text">{{ formatDisplayDate(selectedDate) }}</span>
+              <svg class="date-capsule-chevron" xmlns="http://www.w3.org/2000/svg" width="12" height="12"
+                viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"
+                stroke-linejoin="round">
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+              <input type="date" class="date-capsule-hidden-input" [min]="minDate" [ngModel]="selectedDate"
+                (ngModelChange)="onDatePicked($event)" />
+            </label>
+
+            <!-- Quick Jump Pills -->
+            <div class="quick-jump-pills">
+              <button type="button" class="preset-tag" (click)="setQuickDate(0)">Today</button>
+              <button type="button" class="preset-tag" (click)="setQuickDate(1)">Tomorrow</button>
+              <button type="button" class="preset-tag" (click)="setQuickDate(7)">+7 Days</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Upcoming Date Overrides (Positioned at TOP for instant visibility without scrolling) -->
+        <div class="scheduled-overrides-card glass-card animate-fade-in" *ngIf="specificDatesList().length > 0">
+          <div class="scheduled-header-row">
+            <span class="card-section-label">Upcoming Date Overrides ({{ specificDatesList().length }})</span>
+          </div>
+
+          <div class="scheduled-list-track">
+            <div *ngFor="let item of specificDatesList()" class="scheduled-item-row" [class.item-active-edit]="selectedDate === item.specificDate" (click)="onEditOverride(item)" title="Click to view & edit schedule">
+              <div class="item-date-col">
+                <span class="item-date-txt">{{ formatDisplayDate(item.specificDate) }}</span>
+                <span class="item-day-txt">{{ item.dayName }}</span>
+              </div>
+
+              <div class="item-badge-col">
+                <span *ngIf="!item.isAvailable" class="badge-leave-tag">
+                  FULL DAY OFF / LEAVE
+                </span>
+                <span *ngIf="item.isAvailable" class="badge-hours-tag">
+                  {{ formatTo12Hour(item.startTime) }} &ndash; {{ formatTo12Hour(item.endTime) }}
+                  <span class="item-slot-count">({{ item.totalCalculatedSlots }} slots &bull; {{ item.slotDurationMinutes }}m)</span>
+                </span>
+                <span *ngIf="getBlockedSlotsCount(item) > 0" class="badge-blocked-tag">
+                  {{ getBlockedSlotsCount(item) }} blocked
+                </span>
+              </div>
+
+              <div class="item-actions-col">
+                <button type="button" class="btn-item-edit" (click)="$event.stopPropagation(); onEditOverride(item)" title="Edit this date schedule">
+                  Edit
+                </button>
+                <button type="button" class="btn-item-del" (click)="$event.stopPropagation(); deleteDateOverride(item.id, item.specificDate)" title="Remove override and restore standard weekly default">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Date Shift Editor Canvas -->
+        <div class="shift-canvas glass-card">
+
+          <div *ngIf="isDateLoading()" class="date-loading-state">
+            <div class="spinner-sm"></div>
+            <span>Loading schedule and slots for {{ formatDisplayDate(selectedDate) }}...</span>
+          </div>
+
+          <div *ngIf="!isDateLoading()">
+            <div class="canvas-header-bar">
+              <div class="canvas-day-title">
+                <h4 class="day-heading">{{ formatDisplayDate(selectedDate) }}</h4>
+                <span class="day-badge-state" [ngClass]="dateSchedule.isAvailable ? 'badge-online' : 'badge-offline'">
+                  {{ dateSchedule.isAvailable ? 'AVAILABLE FOR APPOINTMENTS' : 'FULL DAY OFF (HOLIDAY / LEAVE)' }}
+                </span>
+              </div>
+
+              <!-- Holiday / Working Switch -->
+              <div class="canvas-header-actions">
+                <label class="toggle-control-label">
+                  <span>{{ dateSchedule.isAvailable ? 'Working' : 'Holiday / Leave' }}</span>
+                  <label class="toggle-switch">
+                    <input type="checkbox" [checked]="dateSchedule.isAvailable" (change)="toggleDateAvailable()" />
+                    <span class="toggle-slider"></span>
+                  </label>
+                </label>
+              </div>
+            </div>
+
+            <!-- When Date is Working -->
+            <div *ngIf="dateSchedule.isAvailable" class="canvas-split-grid animate-fade-in">
+
+              <!-- Left Column: Timings & Slot Duration Dropdown -->
+              <div class="canvas-col-left">
+
+                <!-- Unified Shift Row for Date -->
+                <div class="unified-timing-card">
+                  <div class="timing-card-top">
+                    <span class="card-section-label">Hours & Slot Duration for this Date</span>
+                    <span class="shift-total-pill">
+                      {{ formatDurationText(calculateMinutesDiff(dateSchedule.startTime, dateSchedule.endTime)) }}
+                    </span>
+                  </div>
+
+                  <div class="timing-controls-row">
+                    <!-- Start & End Time -->
+                    <div class="time-range-group">
+                      <ng-container
+                        *ngTemplateOutlet="timeDropdownPicker; context: { field: 'startTime', label: 'START TIME', value: dateSchedule.startTime, align: 'left', isAmber: false }"></ng-container>
+
+                      <div class="arrow-divider">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                          stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                          <line x1="5" y1="12" x2="19" y2="12" />
+                          <polyline points="12 5 19 12 12 19" />
+                        </svg>
+                      </div>
+
+                      <ng-container
+                        *ngTemplateOutlet="timeDropdownPicker; context: { field: 'endTime', label: 'END TIME', value: dateSchedule.endTime, align: 'right', isAmber: false }"></ng-container>
+                    </div>
+
+                    <!-- Slot Duration Dropdown -->
+                    <div class="slot-duration-group">
+                      <span class="control-micro-title">SLOT DURATION</span>
+                      <div class="custom-select-wrapper">
+                        <select class="slot-duration-select" [ngModel]="dateSchedule.slotDurationMinutes || 30"
+                          (ngModelChange)="selectDuration($event)">
+                          <option *ngFor="let opt of durationOptions" [value]="opt.value">
+                            {{ opt.label }}
+                          </option>
+                        </select>
+                        <svg class="custom-select-arrow" xmlns="http://www.w3.org/2000/svg" width="13" height="13"
+                          viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                          stroke-linecap="round" stroke-linejoin="round">
+                          <polyline points="6 9 12 15 18 9" />
+                        </svg>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Break Card for Date -->
+                <div class="unified-timing-card break-card">
+                  <div class="timing-card-top">
+                    <div class="break-title-wrap">
+                      <span class="card-section-label">Lunch / Rest Break</span>
+                      <span class="shift-total-pill pill-amber" *ngIf="dateSchedule.hasBreak">
+                        {{ formatDurationText(calculateMinutesDiff(dateSchedule.breakStartTime,
+                        dateSchedule.breakEndTime)) }} Break
+                      </span>
+                    </div>
+
+                    <label class="toggle-switch">
+                      <input type="checkbox" [checked]="dateSchedule.hasBreak" (change)="toggleBreak()" />
+                      <span class="toggle-slider"></span>
+                    </label>
+                  </div>
+
+                  <div *ngIf="dateSchedule.hasBreak" class="break-timing-row animate-fade-in">
+                    <div class="time-range-group full-width">
+                      <ng-container
+                        *ngTemplateOutlet="timeDropdownPicker; context: { field: 'breakStart', label: 'BREAK START', value: dateSchedule.breakStartTime, align: 'left', isAmber: true }"></ng-container>
+
+                      <div class="arrow-divider text-amber">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                          stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                          <line x1="5" y1="12" x2="19" y2="12" />
+                          <polyline points="12 5 19 12 12 19" />
+                        </svg>
+                      </div>
+
+                      <ng-container
+                        *ngTemplateOutlet="timeDropdownPicker; context: { field: 'breakEnd', label: 'BREAK END', value: dateSchedule.breakEndTime, align: 'right', isAmber: true }"></ng-container>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+
+              <!-- Right Column: Interactive Slots for Date -->
+              <div class="canvas-col-right">
+                <div class="slots-preview-panel">
+                  <div class="slots-panel-top">
+                    <div class="panel-top-left">
+                      <span class="live-dot-pulse"></span>
+                      <span class="slots-panel-title">Slots for this Date</span>
+                    </div>
+                    <div class="panel-top-right">
+                      <span class="capacity-pill pill-green">
+                        {{ getDateAvailableCount() }} Available
+                      </span>
+                      <span class="capacity-pill pill-red" *ngIf="getDateBlockedCount() > 0">
+                        {{ getDateBlockedCount() }} Blocked
+                      </span>
+                    </div>
+                  </div>
+
+                  <div class="slots-helper-bar">
+                    <span class="helper-text">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10" />
+                        <line x1="12" y1="16" x2="12" y2="12" />
+                        <line x1="12" y1="8" x2="12.01" y2="8" />
+                      </svg>
+                      Click slot to toggle block for this specific date
+                    </span>
+
+                    <div class="slots-quick-btns">
+                      <button type="button" class="btn-quick-text" (click)="blockAllDateSlots()">Block All</button>
+                      <button type="button" class="btn-quick-text btn-clear-text" *ngIf="getDateBlockedCount() > 0"
+                        (click)="clearDateBlockedSlots()">Clear</button>
+                    </div>
+                  </div>
+
+                  <div *ngIf="dateSchedule.slots.length === 0" class="slots-empty-state">
+                    <h5>No slots generated</h5>
+                    <p>Adjust hours to produce slots.</p>
+                  </div>
+
+                  <div *ngIf="dateSchedule.slots.length > 0" class="slots-chips-scrollable">
+                    <div class="chips-three-col-grid">
+                      <button type="button" *ngFor="let slot of dateSchedule.slots" class="interactive-slot-chip"
+                        [class.chip-open]="!slot.isBlocked" [class.chip-locked]="slot.isBlocked"
+                        (click)="toggleDateSlotBlocked(slot)"
+                        [title]="slot.isBlocked ? 'Blocked - Click to unblock' : 'Available - Click to block'">
+                        <svg *ngIf="!slot.isBlocked" class="chip-icon icon-check" xmlns="http://www.w3.org/2000/svg"
+                          width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                          stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+
+                        <svg *ngIf="slot.isBlocked" class="chip-icon icon-lock" xmlns="http://www.w3.org/2000/svg"
+                          width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                          stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                          <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+                          <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                        </svg>
+
+                        <span class="chip-timing" [class.strike-through]="slot.isBlocked">{{ formatSlotDisplay(slot)
+                          }}</span>
+                        <span class="chip-tag-blocked" *ngIf="slot.isBlocked">BLOCKED</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- When Date is Holiday / Leave -->
+            <div *ngIf="!dateSchedule.isAvailable" class="day-off-banner animate-fade-in">
+              <div class="day-off-icon-circle">
+                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="4.93" y1="4.93" x2="19.07" y2="19.07" />
+                </svg>
+              </div>
+              <h4>{{ formatDisplayDate(selectedDate) }} is Marked as Holiday / Leave</h4>
+              <p>The provider will be completely unavailable for bookings on this specific calendar date.</p>
+              <button type="button" class="btn-activate-day" (click)="toggleDateAvailable()">
+                Enable Working Hours for this Date
+              </button>
+            </div>
+
+          </div>
+
+        </div>
+
+      </ng-container>
+
+    </div>
+
+    <!-- ======================================================== -->
+    <!-- MODAL FOOTER                                             -->
+    <!-- ======================================================== -->
+    <div class="modal-footer-bar">
+      <div class="footer-summary-text">
+        <ng-container *ngIf="activeTab === 'date-wise'">
+          <span>
+            Schedule Setup for <strong>{{ formatDisplayDate(selectedDate) }}</strong>
+          </span>
+        </ng-container>
+      </div>
+
+      <div class="footer-actions-group">
+        <button type="button" class="btn btn-secondary" (click)="onClose()">Close</button>
+        <button type="button" *ngIf="activeTab === 'weekly'" class="btn btn-primary"
+          [disabled]="isSaving() || activeDaysCount === 0" (click)="onSave()">
+          <span *ngIf="isSaving()" class="btn-spinner-sm"></span>
+          <span>{{ isSaving() ? 'Saving...' : 'Save Weekly Schedule' }}</span>
+        </button>
+        <button type="button" *ngIf="activeTab === 'date-wise'" class="btn btn-primary"
+          [disabled]="isSavingDate()" (click)="saveDateSchedule()">
+          <span *ngIf="isSavingDate()" class="btn-spinner-sm"></span>
+          <span>{{ isSavingDate() ? 'Saving...' : 'Save Date Schedule' }}</span>
+        </button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ======================================================== -->
+<!-- REUSABLE 2-COLUMN (HR & MM SCROLLABLE) TIME PICKER       -->
+<!-- ======================================================== -->
+<ng-template #timeDropdownPicker let-field="field" let-label="label" let-value="value" let-align="align"
+  let-isAmber="isAmber">
+  <div class="time-picker-root" (click)="$event.stopPropagation()">
+    <span class="picker-label-micro" [class.text-amber]="isAmber">{{ label }}</span>
+    <button type="button" class="time-pill-btn" [class.btn-amber-accent]="isAmber"
+      [class.btn-dropdown-opened]="openTimeDropdown === field && !isAmber"
+      [class.btn-dropdown-opened-amber]="openTimeDropdown === field && isAmber"
+      (click)="toggleTimeDropdown(field, $event)">
+      <span class="time-pill-value" [class.text-amber]="isAmber">{{ formatTo12Hour(value) }}</span>
+      <svg class="chevron-indicator" [class.arrow-amber]="isAmber" [class.chevron-open]="openTimeDropdown === field"
+        xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+        stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="6 9 12 15 18 9" />
+      </svg>
+    </button>
+
+    <!-- 2-Column Scrollable HR and MM Dropdown Menu -->
+    <div *ngIf="openTimeDropdown === field" class="time-dropdown-panel glass-card animate-fade-in"
+      [class.align-left]="align === 'left'" [class.align-right]="align === 'right'" [class.amber-theme]="isAmber"
+      (click)="$event.stopPropagation()">
+      <!-- Header with Column Labels and AM/PM Toggle -->
+      <div class="picker-top-bar">
+        <div class="picker-col-headers">
+          <span class="col-head-title">HR</span>
+          <span class="col-head-title">MIN</span>
+        </div>
+        <div class="ampm-toggle-pills" [class.ampm-amber]="isAmber">
+          <button type="button" class="ampm-pill" [class.ampm-active]="getPeriodFromTime(value) === 'AM'"
+            (click)="setPeriod(field, 'AM')">AM</button>
+          <button type="button" class="ampm-pill" [class.ampm-active]="getPeriodFromTime(value) === 'PM'"
+            (click)="setPeriod(field, 'PM')">PM</button>
+        </div>
+      </div>
+
+      <!-- 2 Scrollable Columns: HR and MM -->
+      <div class="picker-columns-grid">
+        <!-- HR Column (All 24 hours available) -->
+        <div class="picker-scroll-col col-hour">
+          <button type="button" *ngFor="let h of hoursList" class="picker-item-btn"
+            [class.item-active]="getHour24(value) === h.h24" (click)="selectHour(field, h.h24)">
+            {{ h.display }}
+          </button>
+        </div>
+
+        <!-- MM Column -->
+        <div class="picker-scroll-col col-min">
+          <button type="button" *ngFor="let m of minutesList" class="picker-item-btn"
+            [class.item-active]="getMinuteStr(value) === m" (click)="selectMinute(field, m)">
+            {{ m }}
+          </button>
+        </div>
+      </div>
+
+      <!-- Footer Bar with Preview & Done button -->
+      <div class="picker-footer-bar">
+        <span class="picker-summary-val" [class.text-amber]="isAmber">{{ formatTo12Hour(value) }}</span>
+        <button type="button" class="btn-picker-done" [class.btn-amber]="isAmber" (click)="openTimeDropdown = null">
+          Done
+        </button>
+      </div>
+    </div>
+  </div>
+</ng-template>

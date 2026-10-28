@@ -1,0 +1,217 @@
+<div class="modal-backdrop animate-fade-in" (click)="onClose()">
+  <div class="modal-card modal-reschedule-dialog glass-card animate-scale-up" (click)="$event.stopPropagation()">
+
+    <!-- Modal Header -->
+    <div class="modal-header">
+      <div class="header-icon-box">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+          <path d="M3 3v5h5" />
+          <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" />
+          <path d="M16 21h5v-5" />
+        </svg>
+      </div>
+      <div class="header-content">
+        <div class="header-title-row">
+          <h3 class="modal-title">{{ isServiceProvider ? 'Propose New Time Slot' : 'Reschedule Appointment' }}</h3>
+          <span class="appointment-chip-id">#{{ appointment.appointmentNumber }}</span>
+        </div>
+        <p class="modal-subtitle">
+          {{ isServiceProvider ? 'Select a recommended time slot to propose to ' + appointment.customerName + '.' : 'Select a new date and available time slot for your appointment.' }}
+        </p>
+      </div>
+
+      <button type="button" class="btn-close" (click)="onClose()" aria-label="Close modal">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18" />
+          <line x1="6" y1="6" x2="18" y2="18" />
+        </svg>
+      </button>
+    </div>
+
+    <!-- Error Banner -->
+    <div *ngIf="errorMessage()" class="alert alert-error animate-shake">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10" />
+        <line x1="12" y1="8" x2="12" y2="12" />
+        <line x1="12" y1="16" x2="12.01" y2="16" />
+      </svg>
+      <span>{{ errorMessage() }}</span>
+    </div>
+
+    <!-- Modal Body -->
+    <div class="modal-body custom-scrollbar">
+
+      <!-- Current Booking Overview Strip -->
+      <div class="current-schedule-strip">
+        <div class="strip-header">
+          <span class="strip-dot"></span>
+          <span class="strip-title">CURRENT SCHEDULE</span>
+        </div>
+        <div class="strip-content">
+          <div class="strip-item">
+            <span class="strip-label">Customer</span>
+            <span class="strip-val">{{ appointment.customerName }}</span>
+          </div>
+          <div class="strip-item">
+            <span class="strip-label">Service Provider</span>
+            <span class="strip-val font-semibold">{{ appointment.serviceProviderName }}</span>
+          </div>
+          <div class="strip-item slot-item">
+            <span class="strip-label">Current Slot</span>
+            <div class="strip-pill">
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                <line x1="16" y1="2" x2="16" y2="6" />
+                <line x1="8" y1="2" x2="8" y2="6" />
+                <line x1="3" y1="10" x2="21" y2="10" />
+              </svg>
+              <span>{{ appointment.formattedDate || appointment.appointmentDate }}</span>
+              <span class="sep">•</span>
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <polyline points="12 6 12 12 16 14" />
+              </svg>
+              <span>{{ appointment.timeSlotText || (appointment.startTime + ' – ' + appointment.endTime) }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Reschedule Split Layout: Left (Direct Calendar) + Right (Slots & Reason) -->
+      <div class="reschedule-split-layout">
+
+        <!-- LEFT PANEL: Direct Interactive Calendar (No Dropdowns!) -->
+        <div class="panel-calendar-card">
+          <div class="panel-header">
+            <div class="panel-header-title-wrap">
+              <svg class="header-icon" xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                <line x1="16" y1="2" x2="16" y2="6" />
+                <line x1="8" y1="2" x2="8" y2="6" />
+                <line x1="3" y1="10" x2="21" y2="10" />
+              </svg>
+              <span class="panel-title">Select New Date</span>
+            </div>
+          </div>
+
+          <!-- Embedded Direct Month Calendar -->
+          <div class="calendar-inline-container">
+            <!-- Month Nav Header -->
+            <div class="cal-nav-bar">
+              <span class="cal-month-title">{{ currentMonthLabel }}</span>
+              <div class="cal-nav-btns">
+                <button type="button" class="btn-cal-today" (click)="selectToday($event)"
+                  title="Jump to today">Today</button>
+                <button type="button" class="btn-cal-nav" [disabled]="isPrevMonthDisabled" (click)="prevMonth($event)"
+                  title="Previous month">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="15 18 9 12 15 6" />
+                  </svg>
+                </button>
+                <button type="button" class="btn-cal-nav" (click)="nextMonth($event)" title="Next month">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="9 18 15 12 9 6" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <!-- Weekday Labels -->
+            <div class="cal-weekdays-grid">
+              <span *ngFor="let dayName of weekdays" class="cal-weekday">{{ dayName }}</span>
+            </div>
+
+            <!-- Calendar Days Grid -->
+            <div class="cal-days-grid">
+              <button *ngFor="let day of calendarDays" type="button" class="cal-day-cell"
+                [class.not-current-month]="!day.isCurrentMonth" [class.past-day]="day.isPast"
+                [class.today-day]="day.isToday" [class.selected-day]="day.isSelected"
+                [disabled]="day.isPast || !day.isCurrentMonth" (click)="selectCalendarDay(day)">
+                <span class="day-num">{{ day.dayNumber }}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- RIGHT PANEL: Available Time Slots + Reason -->
+        <div class="panel-slots-card">
+          <!-- Time Slots Section -->
+          <div class="slots-section">
+            <div class="panel-header space-between">
+              <div class="panel-header-title-wrap">
+                <svg class="header-icon" xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10" />
+                  <polyline points="12 6 12 12 16 14" />
+                </svg>
+                <span class="panel-title">Available Time Slots</span>
+              </div>
+              <span class="slot-count-badge" *ngIf="!isLoadingSlots() && availableCount > 0">
+                <strong>{{ availableCount }}</strong> Slots
+              </span>
+            </div>
+
+            <app-time-slot-picker [slots]="availableSlots" [isLoading]="isLoadingSlots()" [selectedSlot]="selectedSlot"
+              [hideHeader]="true" (slotSelect)="selectSlot($event)"
+              emptyMessage="No available slots found for this date. Please pick another date."></app-time-slot-picker>
+          </div>
+
+          <!-- Reason for Rescheduling Section -->
+          <div class="reason-section">
+            <div class="panel-header">
+              <div class="panel-header-title-wrap">
+                <svg class="header-icon" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 20h9" />
+                  <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+                </svg>
+                <span class="panel-title">Reason for Rescheduling</span>
+                <span class="required-star">*</span>
+              </div>
+            </div>
+
+            <textarea [(ngModel)]="rescheduleReason"
+              placeholder="Please enter the reason for rescheduling (e.g. Schedule conflict, client request)..." rows="2"
+              class="modern-textarea" required></textarea>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- Modal Footer -->
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary" [disabled]="isSubmitting()" (click)="onClose()">
+        Cancel
+      </button>
+
+      <button type="button" class="btn btn-primary btn-reschedule-submit"
+        [disabled]="!selectedSlot || !rescheduleReason || !rescheduleReason.trim() || isSubmitting()"
+        title="Confirm new date and time" (click)="confirmReschedule()">
+        <svg *ngIf="!isSubmitting()" xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24"
+          fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+          <path d="M3 3v5h5" />
+          <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" />
+          <path d="M16 21h5v-5" />
+        </svg>
+        <span *ngIf="!isSubmitting()">{{ isServiceProvider ? 'Propose New Slot' : 'Confirm Reschedule' }}</span>
+        <span *ngIf="isSubmitting()" class="spinner-inline">
+          <span class="spinner-small"></span>
+          <span>{{ isServiceProvider ? 'Submitting Proposal...' : 'Rescheduling...' }}</span>
+        </span>
+      </button>
+    </div>
+
+  </div>
+</div>

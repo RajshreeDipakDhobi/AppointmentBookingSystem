@@ -1,0 +1,287 @@
+<div *ngIf="isOpen" class="modal-backdrop animate-fade-in" (click)="onBackdropClick($event)">
+  <div class="modal-dialog glass-card animate-scale-up" role="dialog" aria-modal="true">
+    
+    <!-- Modal Header -->
+    <div class="modal-header">
+      <div class="modal-title-wrap">
+        <h3 class="modal-title">{{ mode === 'create' ? 'Add Service Provider' : 'Edit Service Provider' }}</h3>
+        <p class="modal-subtitle">
+          {{ mode === 'create' 
+            ? 'Add a new specialist or service provider to your organization.' 
+            : 'Update provider profile, contact details and schedule settings.' }}
+        </p>
+      </div>
+      <button type="button" class="btn-close" (click)="onClose()" aria-label="Close dialog">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"/>
+          <line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Modal Body -->
+    <div class="modal-body">
+      <!-- Error Alert Banner -->
+      <div *ngIf="errorMessage()" class="alert-error animate-fade-in">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="12" y1="8" x2="12" y2="12"/>
+          <line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        <span>{{ errorMessage() }}</span>
+      </div>
+
+      <form id="providerForm" [formGroup]="providerForm" (ngSubmit)="onSubmit()" class="modal-form" autocomplete="off">
+        
+        <!-- Compact Profile Picture Row (Click Avatar directly, No Upload Button) -->
+        <div class="avatar-compact-bar">
+          <div 
+            class="avatar-mini-wrapper" 
+            (click)="fileInput.click()" 
+            [style.background]="previewAvatarUrl() ? 'transparent' : (providerForm.get('name')?.value?.trim() ? getAvatarGradient(providerForm.get('name')?.value) : '')"
+            [title]="previewAvatarUrl() ? 'Click to change photo' : 'Click to upload photo'"
+          >
+            <img 
+              *ngIf="previewAvatarUrl()" 
+              [src]="previewAvatarUrl()" 
+              (error)="onAvatarImgError()" 
+              alt="" 
+              class="avatar-mini-img" 
+            />
+            <div *ngIf="!previewAvatarUrl()" class="avatar-mini-placeholder" [class.has-initials]="providerForm.get('name')?.value?.trim()">
+              <span *ngIf="providerForm.get('name')?.value?.trim()" class="avatar-initials-text">{{ providerForm.get('name')?.value | appInitials }}</span>
+              <svg *ngIf="!providerForm.get('name')?.value?.trim()" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                <circle cx="12" cy="7" r="4"/>
+              </svg>
+            </div>
+            
+            <!-- Camera Badge (Positioned at Top-Right of Avatar) -->
+            <div class="avatar-camera-badge" [title]="previewAvatarUrl() ? 'Change photo' : 'Upload photo'">
+              <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                <circle cx="12" cy="13" r="4"/>
+              </svg>
+            </div>
+
+            <!-- Uploading Spinner Overlay -->
+            <div *ngIf="isUploadingAvatar()" class="avatar-mini-spinner">
+              <span class="spinner-small"></span>
+            </div>
+          </div>
+
+          <div class="avatar-compact-info">
+            <div class="avatar-compact-title">
+              <span class="avatar-compact-label">Profile Photo</span>
+              <span class="avatar-compact-tag">Optional</span>
+            </div>
+            <div class="avatar-compact-actions">
+              <span class="avatar-compact-hint">Click avatar to {{ previewAvatarUrl() ? 'change' : 'upload' }} photo</span>
+              
+              <button 
+                *ngIf="previewAvatarUrl()" 
+                type="button" 
+                class="btn-compact-remove" 
+                (click)="removeAvatar()"
+                [disabled]="isUploadingAvatar() || isSubmitting()"
+              >
+                Remove
+              </button>
+            </div>
+          </div>
+
+          <!-- Hidden File Input -->
+          <input 
+            #fileInput 
+            type="file" 
+            accept="image/png,image/jpeg,image/webp,image/gif" 
+            (change)="onFileSelected($event)" 
+            class="hidden-file-input" 
+          />
+        </div>
+
+        <div *ngIf="avatarError()" class="avatar-error-inline animate-fade-in">
+          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="8" x2="12" y2="12"/>
+            <line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+          <span>{{ avatarError() }}</span>
+        </div>
+
+        <!-- Row 1: Full Name & Specialization -->
+        <div class="form-row">
+          <div class="form-group flex-1">
+            <label class="form-label">Full Name <span class="required-star">*</span></label>
+            <input 
+              type="text" 
+              formControlName="name" 
+              class="form-input" 
+              placeholder="e.g. Dr. Sunita Rao" 
+            />
+            <div *ngIf="providerForm.get('name')?.touched && providerForm.get('name')?.invalid" class="form-error">
+              Full name is required.
+            </div>
+          </div>
+
+          <div class="form-group flex-1">
+            <label class="form-label">Specialization / Service Type <span class="required-star">*</span></label>
+            <input 
+              type="text" 
+              formControlName="serviceType" 
+              class="form-input" 
+              placeholder="e.g. General Dentistry, Hair Stylist" 
+            />
+            <div *ngIf="providerForm.get('serviceType')?.touched && providerForm.get('serviceType')?.invalid" class="form-error">
+              Specialization is required.
+            </div>
+          </div>
+        </div>
+
+        <!-- Row 2: Email & Account Password -->
+        <div class="form-row">
+          <div class="form-group flex-1">
+            <label class="form-label">Email Address <span class="required-star">*</span></label>
+            <input 
+              type="email" 
+              formControlName="email" 
+              class="form-input" 
+              placeholder="e.g. alex@example.com" 
+            />
+            <div *ngIf="providerForm.get('email')?.touched && providerForm.get('email')?.invalid" class="form-error">
+              <span *ngIf="providerForm.get('email')?.hasError('required')">Email is required.</span>
+              <span *ngIf="providerForm.get('email')?.hasError('pattern') || providerForm.get('email')?.hasError('email')">Enter a valid email address.</span>
+            </div>
+          </div>
+
+          <div class="form-group flex-1">
+            <label class="form-label">
+              Account Password <span *ngIf="mode === 'create'" class="required-star">*</span>
+            </label>
+            <div class="password-input-wrap">
+              <input 
+                [type]="showPassword() ? 'text' : 'password'" 
+                formControlName="password" 
+                name="provider_password" 
+                autocomplete="new-password"
+                class="form-input" 
+                [placeholder]="mode === 'create' ? 'Min 6 characters' : 'Leave blank to keep current'" 
+              />
+              <button 
+                type="button" 
+                class="btn-toggle-eye" 
+                (click)="togglePasswordVisibility()" 
+                aria-label="Toggle password visibility"
+              >
+                <svg *ngIf="!showPassword()" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
+                  <circle cx="12" cy="12" r="3"/>
+                </svg>
+                <svg *ngIf="showPassword()" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/>
+                  <path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/>
+                  <path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/>
+                  <line x1="2" y1="2" x2="22" y2="22"/>
+                </svg>
+              </button>
+            </div>
+            <div *ngIf="providerForm.get('password')?.touched && providerForm.get('password')?.invalid" class="form-error">
+              <span *ngIf="providerForm.get('password')?.hasError('required')">Password is required for provider login.</span>
+              <span *ngIf="providerForm.get('password')?.hasError('minlength')">Password must be at least 6 characters.</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Row 3: Mobile Number & Consultation Charges -->
+        <div class="form-row">
+          <div class="form-group flex-1">
+            <label class="form-label">Mobile Number <span class="required-star">*</span></label>
+            <div class="phone-input-group">
+              <span class="phone-prefix">+91</span>
+              <input 
+                type="tel" 
+                appOnlyDigits
+                inputmode="numeric"
+                maxlength="10"
+                formControlName="phoneNumber" 
+                class="form-input" 
+                placeholder="98765 43210" 
+              />
+            </div>
+            <div *ngIf="providerForm.get('phoneNumber')?.touched && providerForm.get('phoneNumber')?.invalid" class="form-error">
+              <span *ngIf="providerForm.get('phoneNumber')?.hasError('required')">Mobile number is required.</span>
+              <span *ngIf="providerForm.get('phoneNumber')?.hasError('pattern')">Mobile number must be 10 digits.</span>
+            </div>
+          </div>
+
+          <div class="form-group flex-1">
+            <label class="form-label">
+              Consultation Charges <span class="required-star">*</span>
+            </label>
+            <div class="currency-input-group">
+              <span class="currency-prefix">₹</span>
+              <input 
+                type="number" 
+                formControlName="chargesAmount" 
+                class="form-input" 
+                min="0"
+                step="50"
+                placeholder="0.00" 
+              />
+            </div>
+            <div *ngIf="providerForm.get('chargesAmount')?.touched && providerForm.get('chargesAmount')?.invalid" class="form-error">
+              <span *ngIf="providerForm.get('chargesAmount')?.hasError('required')">Charges amount is required.</span>
+              <span *ngIf="providerForm.get('chargesAmount')?.hasError('min')">Amount must be 0 or greater.</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Row 4: Cabin / Room / Office Address * (REQUIRED) -->
+        <div class="form-group">
+          <label class="form-label">Cabin / Room / Office Address <span class="required-star">*</span></label>
+          <textarea 
+            formControlName="address" 
+            class="form-input form-textarea" 
+            rows="2" 
+            placeholder="e.g. Room 204, Floor 2, Main Wing"
+          ></textarea>
+          <div *ngIf="providerForm.get('address')?.touched && providerForm.get('address')?.invalid" class="form-error">
+            <span *ngIf="providerForm.get('address')?.hasError('required')">Cabin / office address is required.</span>
+            <span *ngIf="providerForm.get('address')?.hasError('minlength')">Address must be at least 2 characters.</span>
+          </div>
+        </div>
+
+        <!-- Row 4: Bio / Profile Summary * (REQUIRED) -->
+        <div class="form-group mb-0">
+          <label class="form-label">Bio / Profile Summary <span class="required-star">*</span></label>
+          <textarea 
+            formControlName="bio" 
+            class="form-input form-textarea" 
+            rows="2" 
+            placeholder="e.g. 10+ years experience in restorative dentistry and cosmetic smile makeovers."
+          ></textarea>
+          <div *ngIf="providerForm.get('bio')?.touched && providerForm.get('bio')?.invalid" class="form-error">
+            <span *ngIf="providerForm.get('bio')?.hasError('required')">Bio / profile summary is required.</span>
+            <span *ngIf="providerForm.get('bio')?.hasError('minlength')">Bio must be at least 5 characters.</span>
+          </div>
+        </div>
+
+      </form>
+    </div>
+
+    <!-- Modal Footer -->
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary btn-cancel" (click)="onClose()">
+        Cancel
+      </button>
+      <button type="submit" form="providerForm" class="btn btn-primary btn-submit" [disabled]="providerForm.invalid || isSubmitting() || isUploadingAvatar()">
+        <span *ngIf="!isSubmitting()">{{ mode === 'create' ? 'Add Provider' : 'Save Changes' }}</span>
+        <span *ngIf="isSubmitting()" class="spinner-inline">
+          <span class="spinner-small"></span>
+          <span>Saving...</span>
+        </span>
+      </button>
+    </div>
+
+  </div>
+</div>

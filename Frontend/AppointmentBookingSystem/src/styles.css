@@ -1,0 +1,1848 @@
+@import '@angular/material/prebuilt-themes/indigo-pink.css';
+
+/* ==========================================================================
+   AppointEase Design System - Luxury Dark Glassmorphism
+   ========================================================================== */
+
+:root {
+  /* Color Palette */
+  --bg-dark: #0a0e17;
+  --bg-card: rgba(15, 23, 42, 0.78);
+  --bg-card-hover: rgba(30, 41, 59, 0.85);
+  --bg-input: rgba(15, 23, 42, 0.65);
+
+  --primary: #6366f1;
+  --primary-hover: #4f46e5;
+  --primary-glow: rgba(99, 102, 241, 0.35);
+
+  --secondary: #8b5cf6;
+  --accent: #10b981;
+  --accent-glow: rgba(16, 185, 129, 0.3);
+  --danger: #f43f5e;
+  --warning: #f59e0b;
+
+  --gradient-primary: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #d946ef 100%);
+  --gradient-accent: linear-gradient(135deg, #10b981 0%, #06b6d4 100%);
+  --gradient-card: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.01) 100%);
+
+  /* Text Colors */
+  --text-main: #f8fafc;
+  --text-muted: #94a3b8;
+  --text-dim: #64748b;
+
+  /* Borders & Shadows */
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-focus: rgba(99, 102, 241, 0.6);
+  --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 10px 25px -3px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
+  --shadow-glow: 0 0 40px rgba(99, 102, 241, 0.2);
+
+  /* Radius - Professional Enterprise Standard */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-full: 9999px;
+
+  /* Fonts */
+  --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
+/* Base Reset */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  min-height: 100%;
+  width: 100%;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+html::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+body {
+  min-height: 100%;
+  width: 100%;
+  font-family: var(--font-sans);
+  background-color: var(--bg-dark);
+  color: var(--text-main);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-image:
+    radial-gradient(circle at 15% 15%, rgba(99, 102, 241, 0.12) 0%, transparent 40%),
+    radial-gradient(circle at 85% 85%, rgba(139, 92, 246, 0.12) 0%, transparent 40%),
+    radial-gradient(circle at 50% 50%, rgba(16, 185, 129, 0.04) 0%, transparent 60%);
+  background-attachment: fixed;
+  overflow-x: clip;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+body::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+/* Custom Modern Sleek Glassmorphism Scrollbars for All Scrollable Elements */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(99, 102, 241, 0.45) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(99, 102, 241, 0.4);
+  border-radius: 9999px;
+  transition: background 0.2s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #6366f1 0%, #8b5cf6 100%);
+  box-shadow: 0 0 8px rgba(99, 102, 241, 0.5);
+}
+
+::-webkit-scrollbar-button {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Glassmorphism Card */
+.glass-card {
+  background: var(--bg-card);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+}
+
+/* Form Styling */
+.form-group {
+  margin-bottom: 0.75rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.form-label {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 0.25rem;
+  letter-spacing: 0.01em;
+}
+
+.form-input {
+  width: 100%;
+  background: var(--bg-input);
+  color: var(--text-main);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 0.75rem 1rem;
+  font-family: var(--font-sans);
+  font-size: 0.95rem;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  outline: none;
+}
+
+.form-input:focus {
+  border-color: var(--primary);
+  background: rgba(30, 41, 59, 0.7);
+  box-shadow: 0 0 0 3px var(--primary-glow);
+}
+
+.form-input::placeholder {
+  color: var(--text-dim);
+}
+
+/* Chrome/Safari Autofill Dark Mode Fix */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active,
+textarea:-webkit-autofill,
+textarea:-webkit-autofill:hover,
+textarea:-webkit-autofill:focus,
+textarea:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px #0b1120 inset !important;
+  box-shadow: 0 0 0 1000px #0b1120 inset !important;
+  -webkit-text-fill-color: #f8fafc !important;
+  transition: background-color 5000s ease-in-out 0s;
+  caret-color: #ffffff;
+}
+
+.form-error {
+  margin-top: 0.35rem;
+  font-size: 0.8rem;
+  color: var(--danger);
+  font-weight: 500;
+}
+
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: 0.88rem;
+  line-height: 1.4;
+  padding: 0.55rem 1.15rem;
+  border-radius: var(--radius-md, 8px);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  text-decoration: none;
+  outline: none;
+  gap: 0.5rem;
+  user-select: none;
+}
+
+.btn-primary {
+  background: var(--gradient-primary);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 4px 15px rgba(99, 102, 241, 0.35);
+}
+
+.btn-primary:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(99, 102, 241, 0.5);
+  filter: brightness(1.08);
+}
+
+.btn-primary:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.btn-primary:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.btn-secondary {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-main);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md, 8px);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+}
+
+.btn-danger {
+  background: linear-gradient(135deg, #f43f5e 0%, #e11d48 100%);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 4px 15px rgba(244, 63, 94, 0.35);
+}
+
+.btn-danger:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(244, 63, 94, 0.55);
+  filter: brightness(1.08);
+}
+
+.btn-danger:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.btn-danger:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-success {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.35);
+}
+
+.btn-success:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(16, 185, 129, 0.55);
+  filter: brightness(1.08);
+}
+
+.btn-success:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.btn-success:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-outline {
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-muted);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md, 8px);
+}
+
+.btn-outline:hover:not(:disabled) {
+  background: rgba(244, 63, 94, 0.15);
+  border-color: rgba(244, 63, 94, 0.4);
+  color: #fda4af;
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid transparent;
+}
+
+.btn-ghost:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-main);
+}
+
+.btn-lg {
+  padding: 0.75rem 1.4rem;
+  font-size: 0.95rem;
+  border-radius: var(--radius-md, 8px);
+}
+
+.btn-sm {
+  padding: 0.35rem 0.75rem;
+  font-size: 0.8rem;
+  border-radius: var(--radius-sm, 6px);
+}
+
+/* Universal Table Action Icon Button */
+.btn-action-icon,
+.btn-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+  color: #94a3b8;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  padding: 0;
+  flex-shrink: 0;
+  gap: 0.35rem;
+}
+
+.btn-action-icon:hover,
+.btn-icon:hover {
+  background: rgba(99, 102, 241, 0.18);
+  border-color: rgba(99, 102, 241, 0.45);
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+.btn-action-icon.btn-cancel:hover,
+.btn-icon.btn-delete:hover {
+  background: rgba(244, 63, 94, 0.18);
+  border-color: rgba(244, 63, 94, 0.45);
+  color: #fda4af;
+}
+
+/* Universal Badge System */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.28rem 0.65rem;
+  border-radius: 9999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.badge .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+
+.badge-approved {
+  background: rgba(16, 185, 129, 0.14) !important;
+  color: #34d399 !important;
+  border: 1px solid rgba(16, 185, 129, 0.35) !important;
+}
+
+.badge-approved .dot {
+  background: #10b981 !important;
+  box-shadow: 0 0 6px rgba(16, 185, 129, 0.6);
+}
+
+.badge-booked {
+  background: rgba(99, 102, 241, 0.14) !important;
+  color: #a5b4fc !important;
+  border: 1px solid rgba(99, 102, 241, 0.35) !important;
+}
+
+.badge-booked .dot {
+  background: #818cf8 !important;
+  box-shadow: 0 0 6px rgba(129, 140, 248, 0.6);
+}
+
+.badge-completed {
+  background: rgba(52, 211, 153, 0.14) !important;
+  color: #6ee7b7 !important;
+  border: 1px solid rgba(52, 211, 153, 0.35) !important;
+}
+
+.badge-completed .dot {
+  background: #34d399 !important;
+  box-shadow: 0 0 6px rgba(52, 211, 153, 0.6);
+}
+
+.badge-cancelled {
+  background: rgba(244, 63, 94, 0.14) !important;
+  color: #fb7185 !important;
+  border: 1px solid rgba(244, 63, 94, 0.35) !important;
+}
+
+.badge-cancelled .dot {
+  background: #fb7185 !important;
+  box-shadow: 0 0 6px rgba(244, 63, 94, 0.6);
+}
+
+.badge-rejected {
+  background: rgba(239, 68, 68, 0.14) !important;
+  color: #f87171 !important;
+  border: 1px solid rgba(239, 68, 68, 0.35) !important;
+}
+
+.badge-rejected .dot {
+  background: #ef4444 !important;
+  box-shadow: 0 0 6px rgba(239, 68, 68, 0.6);
+}
+
+.badge-rescheduled,
+.badge-reschedule-proposed {
+  background: rgba(245, 158, 11, 0.14) !important;
+  color: #fbbf24 !important;
+  border: 1px solid rgba(245, 158, 11, 0.35) !important;
+}
+
+.badge-rescheduled .dot,
+.badge-reschedule-proposed .dot {
+  background: #f59e0b !important;
+  box-shadow: 0 0 6px rgba(245, 158, 11, 0.6);
+}
+
+/* ==========================================================================
+   MASTER UNIVERSAL MODAL SYSTEM (Single Source of Truth)
+   ========================================================================== */
+.modal-backdrop {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  inset: 0 !important;
+  background: rgba(15, 23, 42, 0.45) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  z-index: 100000 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 1.25rem !important;
+  box-sizing: border-box !important;
+  overflow-y: auto !important;
+  margin: 0 !important;
+  animation: modalFadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.modal-dialog,
+.modal-card {
+  margin: auto !important;
+  width: 100% !important;
+  max-width: 580px;
+  max-height: 88vh !important;
+  display: flex !important;
+  flex-direction: column !important;
+  background: #0f172a !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.9), 0 0 40px rgba(99, 102, 241, 0.15) !important;
+  overflow: hidden !important;
+  position: relative !important;
+  animation: modalScaleUp 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.modal-sm {
+  max-width: 460px !important;
+}
+
+.modal-md {
+  max-width: 580px !important;
+}
+
+.modal-lg,
+.booking-modal-dialog {
+  max-width: 860px !important;
+}
+
+.modal-xl,
+.config-modal-dialog {
+  max-width: 1080px !important;
+}
+
+.view-slots-dialog {
+  max-width: 680px !important;
+  width: 92% !important;
+}
+
+@keyframes modalFadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes modalScaleUp {
+  from {
+    transform: scale(0.96) translateY(8px);
+    opacity: 0;
+  }
+
+  to {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+}
+
+.modal-header,
+.modal-top-bar {
+  display: flex !important;
+  align-items: flex-start !important;
+  justify-content: space-between !important;
+  gap: 1rem !important;
+  padding: 1.25rem 1.75rem !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  flex-shrink: 0 !important;
+  background: rgba(15, 23, 42, 0.95) !important;
+}
+
+.modal-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+
+.modal-subtitle {
+  color: var(--text-muted);
+  font-size: 0.84rem;
+  margin-top: 0.25rem;
+  line-height: 1.4;
+}
+
+/* Universal Luxury Modal Close Button with crimson glow & rotation */
+.btn-close,
+.btn-close-modal,
+.btn-dialog-close {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  color: #94a3b8 !important;
+  cursor: pointer;
+  width: 36px !important;
+  height: 36px !important;
+  min-width: 36px !important;
+  min-height: 36px !important;
+  border-radius: 10px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  flex-shrink: 0 !important;
+  padding: 0 !important;
+  outline: none;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.btn-close:hover,
+.btn-close-modal:hover,
+.btn-dialog-close:hover {
+  color: #ffffff !important;
+  background: rgba(244, 63, 94, 0.2) !important;
+  border-color: rgba(244, 63, 94, 0.4) !important;
+  transform: rotate(90deg) !important;
+  box-shadow: 0 0 16px rgba(244, 63, 94, 0.3) !important;
+}
+
+.btn-close:active,
+.btn-close-modal:active,
+.btn-dialog-close:active {
+  transform: rotate(90deg) scale(0.92) !important;
+}
+
+.modal-body {
+  padding: 1.5rem 1.75rem;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.modal-footer,
+.modal-footer-bar {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  gap: 0.75rem !important;
+  padding: 1.1rem 1.75rem !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
+  background: rgba(15, 23, 42, 0.95) !important;
+  flex-shrink: 0 !important;
+}
+
+/* Identical Button Styling Across ALL Pop Modals in Entire Project */
+.modal-footer .btn,
+.modal-footer-bar .btn {
+  height: 40px !important;
+  min-height: 40px !important;
+  max-height: 40px !important;
+  padding: 0 1.25rem !important;
+  font-family: var(--font-sans) !important;
+  font-size: 0.88rem !important;
+  font-weight: 600 !important;
+  line-height: 1 !important;
+  border-radius: 10px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.5rem !important;
+  white-space: nowrap !important;
+  cursor: pointer !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  text-decoration: none !important;
+  box-sizing: border-box !important;
+}
+
+.modal-footer .btn svg,
+.modal-footer-bar .btn svg {
+  flex-shrink: 0 !important;
+}
+
+/* Secondary Button in Modals (Cancel, Close, Keep Appointment, Back) */
+.modal-footer .btn-secondary,
+.modal-footer-bar .btn-secondary {
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: #f1f5f9 !important;
+  border: 1px solid rgba(255, 255, 255, 0.16) !important;
+  box-shadow: none !important;
+}
+
+.modal-footer .btn-secondary:hover:not(:disabled),
+.modal-footer-bar .btn-secondary:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.15) !important;
+  border-color: rgba(255, 255, 255, 0.3) !important;
+  color: #ffffff !important;
+  transform: translateY(-1px) !important;
+}
+
+/* Primary Action Button in Modals (Confirm, Save, Done, Review, Action) */
+.modal-footer .btn-primary,
+.modal-footer-bar .btn-primary {
+  background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%) !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.18) !important;
+  box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35) !important;
+}
+
+.modal-footer .btn-primary:hover:not(:disabled),
+.modal-footer-bar .btn-primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%) !important;
+  box-shadow: 0 6px 20px rgba(99, 102, 241, 0.55) !important;
+  transform: translateY(-1px) !important;
+  filter: brightness(1.08) !important;
+}
+
+/* Danger / Destructive Action Button in Modals (Cancel Slot, Void, Delete) */
+.modal-footer .btn-danger,
+.modal-footer-bar .btn-danger {
+  background: linear-gradient(135deg, #f43f5e 0%, #e11d48 100%) !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.18) !important;
+  box-shadow: 0 4px 14px rgba(244, 63, 94, 0.35) !important;
+}
+
+.modal-footer .btn-danger:hover:not(:disabled),
+.modal-footer-bar .btn-danger:hover:not(:disabled) {
+  background: linear-gradient(135deg, #e11d48 0%, #be123c 100%) !important;
+  box-shadow: 0 6px 20px rgba(244, 63, 94, 0.55) !important;
+  transform: translateY(-1px) !important;
+}
+
+/* Success Action Button in Modals (Mark Completed, Approve) */
+.modal-footer .btn-success,
+.modal-footer-bar .btn-success {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.18) !important;
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35) !important;
+}
+
+.modal-footer .btn-success:hover:not(:disabled),
+.modal-footer-bar .btn-success:hover:not(:disabled) {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%) !important;
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.55) !important;
+  transform: translateY(-1px) !important;
+}
+
+.modal-footer .btn:disabled,
+.modal-footer-bar .btn:disabled {
+  opacity: 0.5 !important;
+  cursor: not-allowed !important;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+/* Universal Table Card Rule: Allow custom popovers / dropdowns to float freely */
+.table-card {
+  overflow: visible !important;
+  position: relative !important;
+}
+
+.table-responsive {
+  border-radius: var(--radius-lg, 12px) var(--radius-lg, 12px) 0 0 !important;
+}
+
+/* Universal Custom Scrollbars */
+.modal-body,
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
+}
+
+.modal-body::-webkit-scrollbar,
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.modal-body::-webkit-scrollbar-track,
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.modal-body::-webkit-scrollbar-thumb,
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+}
+
+.modal-body::-webkit-scrollbar-thumb:hover,
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(99, 102, 241, 0.55);
+}
+
+/* Form Controls Consistency */
+.form-control,
+.form-input,
+.form-textarea,
+textarea.form-control,
+textarea.form-input,
+textarea {
+  width: 100% !important;
+  background: var(--bg-input, rgba(15, 23, 42, 0.7)) !important;
+  color: var(--text-main, #f8fafc) !important;
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.12)) !important;
+  border-radius: var(--radius-md, 10px) !important;
+  padding: 0.58rem 0.85rem !important;
+  font-family: var(--font-sans) !important;
+  font-size: 0.88rem !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  outline: none !important;
+}
+
+.form-control:focus,
+.form-input:focus,
+.form-textarea:focus,
+textarea.form-control:focus,
+textarea.form-input:focus,
+textarea:focus {
+  border-color: var(--primary, #6366f1) !important;
+  background: rgba(30, 41, 59, 0.8) !important;
+  box-shadow: 0 0 0 3px var(--primary-glow, rgba(99, 102, 241, 0.25)) !important;
+}
+
+.form-textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.form-input.with-icon,
+.input-wrapper .form-input.with-icon,
+.input-wrapper input.with-icon {
+  padding-left: 2.85rem !important;
+}
+
+.form-input.with-action,
+.input-wrapper .form-input.with-action,
+.input-wrapper input.with-action {
+  padding-right: 2.85rem !important;
+}
+
+.required,
+.required-star {
+  color: var(--danger, #f43f5e) !important;
+  margin-left: 0.25rem !important;
+  font-weight: 700 !important;
+}
+
+/* Universal Phone Input Group with +91 Country Prefix */
+.phone-input-group {
+  display: flex !important;
+  align-items: stretch !important;
+  width: 100%;
+  position: relative;
+  background: var(--bg-input, rgba(15, 23, 42, 0.6));
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.1));
+  border-radius: var(--radius-md, 8px);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+}
+
+.phone-input-group:focus-within {
+  border-color: var(--primary, #6366f1) !important;
+  background: rgba(30, 41, 59, 0.7) !important;
+  box-shadow: 0 0 0 3px var(--primary-glow, rgba(99, 102, 241, 0.25)) !important;
+}
+
+.phone-prefix {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 0 0.85rem;
+  background: rgba(255, 255, 255, 0.05);
+  border-right: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.1));
+  color: var(--primary-light, #818cf8);
+  font-size: 0.88rem;
+  font-weight: 700;
+  user-select: none;
+  flex-shrink: 0;
+  letter-spacing: 0.02em;
+}
+
+.phone-input-group .form-control,
+.phone-input-group .form-input {
+  border: none !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  flex: 1;
+  padding-left: 0.75rem;
+  width: 100%;
+}
+
+/* Universal Alert Banners */
+.alert,
+.alert-box {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  font-size: 0.86rem;
+  line-height: 1.4;
+  margin-bottom: 1rem;
+  animation: fadeIn 0.2s ease;
+}
+
+.alert-error {
+  background: rgba(244, 63, 94, 0.12);
+  border: 1px solid rgba(244, 63, 94, 0.35);
+  color: #fda4af;
+}
+
+.alert-success {
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  color: #6ee7b7;
+}
+
+.alert-warning {
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  color: #fcd34d;
+}
+
+/* Universal Badges & Status Chips */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.25rem 0.65rem;
+  border-radius: 6px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: capitalize;
+  line-height: 1;
+}
+
+.dot,
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.badge-booked {
+  background: rgba(99, 102, 241, 0.15);
+  color: #a5b4fc;
+  border: 1px solid rgba(99, 102, 241, 0.35);
+}
+
+.badge-booked .dot,
+.badge-booked .status-dot {
+  background: #818cf8;
+}
+
+.badge-completed,
+.badge-active {
+  background: rgba(16, 185, 129, 0.15);
+  color: #6ee7b7;
+  border: 1px solid rgba(16, 185, 129, 0.35);
+}
+
+.badge-completed .dot,
+.badge-completed .status-dot,
+.badge-active .dot {
+  background: #34d399;
+}
+
+.badge-cancelled,
+.badge-inactive {
+  background: rgba(244, 63, 94, 0.15);
+  color: #fda4af;
+  border: 1px solid rgba(244, 63, 94, 0.35);
+}
+
+.badge-cancelled .dot,
+.badge-cancelled .status-dot,
+.badge-inactive .dot {
+  background: #fb7185;
+}
+
+.badge-rescheduled,
+.badge-pending {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fcd34d;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+}
+
+.badge-rescheduled .dot,
+.badge-rescheduled .status-dot,
+.badge-pending .dot {
+  background: #fbbf24;
+}
+
+.badge-overdue {
+  background: rgba(245, 158, 11, 0.18);
+  color: #fde68a;
+  border: 1px solid rgba(245, 158, 11, 0.45);
+}
+
+.badge-overdue .dot,
+.badge-overdue .dot-overdue {
+  background: #f59e0b;
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.6);
+}
+
+.past-lock-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.6rem;
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  border-radius: var(--radius-sm, 6px);
+  color: #fbbf24;
+  font-size: 0.73rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  cursor: help;
+  user-select: none;
+}
+
+.past-lock-pill svg {
+  color: #f59e0b;
+}
+
+/* Container */
+.container {
+  width: 100%;
+  max-width: 1140px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* ==========================================================================
+   MASTER UNIVERSAL DATE & TIME PICKER SYSTEM (High-Visibility Dark Glass)
+   ========================================================================== */
+input[type="date"],
+input[type="time"],
+input[type="datetime-local"] {
+  color-scheme: dark !important;
+  font-family: var(--font-sans) !important;
+  background: var(--bg-input, rgba(15, 23, 42, 0.7)) !important;
+  color: var(--text-main, #f8fafc) !important;
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.1)) !important;
+  border-radius: var(--radius-md, 10px) !important;
+  padding: 0.65rem 0.95rem !important;
+  outline: none !important;
+  font-size: 0.88rem !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+input[type="date"]:hover,
+input[type="time"]:hover,
+input[type="datetime-local"]:hover {
+  border-color: rgba(99, 102, 241, 0.4) !important;
+  background: rgba(20, 30, 55, 0.8) !important;
+}
+
+input[type="date"]:focus,
+input[type="time"]:focus,
+input[type="datetime-local"]:focus {
+  border-color: var(--primary, #6366f1) !important;
+  background: rgba(25, 35, 65, 0.9) !important;
+  box-shadow: 0 0 0 3px var(--primary-glow, rgba(99, 102, 241, 0.25)) !important;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-calendar-picker-indicator,
+input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+  filter: invert(1) brightness(1.7) contrast(1.2) drop-shadow(0 0 4px rgba(129, 140, 248, 0.9)) !important;
+  cursor: pointer !important;
+  opacity: 0.95 !important;
+  margin-left: 0.45rem !important;
+  transition: all 0.2s ease !important;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator:hover,
+input[type="time"]::-webkit-calendar-picker-indicator:hover,
+input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
+  filter: invert(1) brightness(2.2) drop-shadow(0 0 8px rgba(129, 140, 248, 1)) !important;
+  transform: scale(1.15) !important;
+}
+
+/* ==========================================================================
+   MASTER UNIVERSAL SELECT / DROPDOWN SYSTEM
+   ========================================================================== */
+select:not(.size-select),
+.form-select,
+.filter-select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-color: var(--bg-input, rgba(15, 23, 42, 0.72));
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.85rem center;
+  background-size: 13px;
+  color: #f8fafc;
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.1));
+  border-radius: var(--radius-md, 10px);
+  padding: 0.65rem 2.4rem 0.65rem 0.95rem;
+  font-family: var(--font-sans);
+  font-size: 0.88rem;
+  font-weight: 500;
+  outline: none;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+select:not(.size-select):hover,
+.form-select:hover,
+.filter-select:hover {
+  border-color: rgba(99, 102, 241, 0.45);
+  background-color: rgba(20, 30, 55, 0.85);
+}
+
+select:not(.size-select):focus,
+.form-select:focus,
+.filter-select:focus {
+  border-color: var(--primary, #6366f1);
+  background-color: rgba(15, 23, 42, 0.95);
+  box-shadow: 0 0 0 3px var(--primary-glow, rgba(99, 102, 241, 0.25));
+}
+
+select option,
+.form-select option,
+.filter-select option {
+  background: #0f172a !important;
+  color: #f8fafc !important;
+  padding: 0.65rem 1rem !important;
+}
+
+/* When select is inside a dedicated select-wrap with an explicit chevron */
+.filter-select-wrap select,
+.filter-select-wrap .filter-select {
+  background-image: none !important;
+  padding-right: 0.45rem !important;
+  border: none !important;
+}
+
+/* ==========================================================================
+   UNIVERSAL LUXURY CUSTOM DROPDOWN POPOVER SYSTEM
+   Replaces native browser OS select controls with glassmorphic dark popovers
+   ========================================================================== */
+.custom-select-anchor {
+  position: relative;
+  display: inline-flex;
+  z-index: 50;
+}
+
+.custom-select-anchor.menu-open {
+  z-index: 1000;
+}
+
+.custom-select-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.58rem 0.95rem;
+  background: rgba(10, 15, 29, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  color: #f8fafc;
+  cursor: pointer;
+  outline: none;
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 500;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  white-space: nowrap;
+}
+
+.custom-select-trigger:hover {
+  border-color: rgba(99, 102, 241, 0.45);
+  background: rgba(15, 23, 42, 0.85);
+}
+
+.custom-select-anchor.menu-open .custom-select-trigger,
+.custom-select-trigger:focus-visible {
+  border-color: rgba(99, 102, 241, 0.65);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.22);
+  background: rgba(15, 23, 42, 0.95);
+}
+
+.custom-select-anchor.has-selection .custom-select-trigger {
+  border-color: rgba(99, 102, 241, 0.45);
+  background: rgba(15, 23, 42, 0.88);
+}
+
+.trigger-icon-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #818cf8;
+  flex-shrink: 0;
+}
+
+.trigger-avatar-circle {
+  width: 24px;
+  height: 24px;
+  border-radius: 50% !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #ffffff;
+  overflow: hidden !important;
+}
+
+.trigger-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50% !important;
+}
+
+.trigger-label-group {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.trigger-main-text {
+  font-weight: 600;
+  color: #f8fafc;
+  font-size: 0.85rem;
+}
+
+.trigger-sub-text {
+  font-weight: 400;
+  color: #94a3b8;
+  font-size: 0.8rem;
+}
+
+.trigger-chevron {
+  color: #94a3b8;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  margin-left: 0.15rem;
+}
+
+.trigger-chevron.rotated {
+  transform: rotate(180deg);
+  color: #a5b4fc;
+}
+
+/* Floating Popover Container - Opaque Solid Slate to prevent bleed-through */
+.custom-dropdown-popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  min-width: 275px;
+  max-width: 350px;
+  background: #0f172a !important;
+  border: 1px solid rgba(255, 255, 255, 0.16) !important;
+  border-radius: 14px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.95), 0 0 0 1px rgba(99, 102, 241, 0.25) !important;
+  z-index: 9999 !important;
+  overflow: hidden;
+}
+
+.popover-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.65rem 0.95rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #cbd5e1 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: #090d16 !important;
+}
+
+.popover-count-pill {
+  font-size: 0.68rem;
+  background: rgba(255, 255, 255, 0.08);
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+  color: #e2e8f0;
+}
+
+.popover-items-list {
+  max-height: 315px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 0.45rem 0.35rem 0.45rem 0.45rem;
+  background: #0f172a !important;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(99, 102, 241, 0.45) transparent;
+}
+
+.popover-items-list::-webkit-scrollbar {
+  width: 5px;
+}
+
+.popover-items-list::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.5);
+  border-radius: 999px;
+  margin: 4px 0;
+}
+
+.popover-items-list::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(99, 102, 241, 0.55) 0%, rgba(139, 92, 246, 0.55) 100%);
+  border-radius: 999px;
+  transition: all 0.2s ease;
+}
+
+.popover-items-list::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #6366f1 0%, #8b5cf6 100%);
+  box-shadow: 0 0 10px rgba(99, 102, 241, 0.6);
+}
+
+.popover-items-list::-webkit-scrollbar-button {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+.popover-option-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.62rem 0.8rem;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  color: #f8fafc !important;
+  font-family: inherit;
+  margin-bottom: 0.2rem;
+}
+
+.popover-option-item:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+}
+
+.popover-option-item.option-selected {
+  background: rgba(99, 102, 241, 0.22) !important;
+  border-color: rgba(99, 102, 241, 0.45) !important;
+}
+
+.option-icon-box {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: rgba(99, 102, 241, 0.15);
+  color: #818cf8;
+}
+
+.option-dot-box {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.option-avatar-circle {
+  width: 30px;
+  height: 30px;
+  border-radius: 50% !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #ffffff;
+  flex-shrink: 0;
+  overflow: hidden !important;
+}
+
+.option-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50% !important;
+}
+
+.option-info {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.option-title {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #ffffff !important;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.option-desc {
+  font-size: 0.74rem;
+  color: #94a3b8 !important;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 1px;
+}
+
+.option-check-icon {
+  color: #818cf8 !important;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+/* ==========================================================================
+   MASTER UNIVERSAL ROUND AVATARS (All Profile & Provider Photos Strictly Circular)
+   ========================================================================== */
+.provider-avatar,
+.provider-avatar-mini,
+.provider-avatar-circle,
+.provider-pill-avatar,
+.card-avatar,
+.summary-avatar,
+.summary-avatar-sm,
+.provider-ticket-avatar,
+.avatar-box,
+.avatar-mini-wrapper,
+.item-avatar-icon {
+  border-radius: 50% !important;
+  overflow: hidden !important;
+}
+
+.provider-avatar img,
+.provider-avatar-mini img,
+.provider-avatar-circle img,
+.provider-pill-avatar img,
+.card-avatar img,
+.summary-avatar img,
+.summary-avatar-sm img,
+.provider-ticket-avatar img,
+.avatar-box img,
+.avatar-mini-wrapper img,
+.item-avatar-icon img,
+.avatar-img,
+.avatar-photo,
+.pill-avatar-img,
+.item-avatar-img,
+.ticket-avatar-img {
+  border-radius: 50% !important;
+  object-fit: cover !important;
+}
+
+/* ==========================================================================
+   MODAL ISOLATION & STACKING (Ensure Modals Float Above Topbar & Sidebar)
+   ========================================================================== */
+body:has(.modal-backdrop) app-topbar,
+body:has(.modal-backdrop) .topbar,
+body:has(.modal-backdrop) app-sidebar,
+body:has(.modal-backdrop) .sidebar {
+  z-index: 10 !important;
+}
+
+body:has(.modal-backdrop) .page-content,
+body:has(.modal-backdrop) .main-wrapper {
+  position: relative !important;
+  z-index: 100000 !important;
+}
+
+/* ==========================================================================
+   ANGULAR MATERIAL DATEPICKER - LUXURY DARK GLASSMORPHISM
+   ========================================================================== */
+
+/* Set Material 3 CSS variables globally for datepicker */
+:root,
+.cdk-overlay-container,
+.mat-datepicker-popup,
+mat-datepicker-content,
+.mat-datepicker-content {
+  --mat-datepicker-calendar-container-background-color: #0f172a !important;
+  --mat-datepicker-calendar-container-text-color: #f8fafc !important;
+  --mat-datepicker-calendar-date-text-color: #f8fafc !important;
+  --mat-datepicker-calendar-date-outline-color: rgba(99, 102, 241, 0.6) !important;
+  --mat-datepicker-calendar-date-selected-state-background-color: #6366f1 !important;
+  --mat-datepicker-calendar-date-selected-state-text-color: #ffffff !important;
+  --mat-datepicker-calendar-date-today-outline-color: #818cf8 !important;
+  --mat-datepicker-calendar-header-text-color: #ffffff !important;
+  --mat-datepicker-calendar-header-divider-color: transparent !important;
+  --mat-sys-surface-container-high: #0f172a !important;
+  --mat-sys-surface: #0f172a !important;
+  --mat-sys-on-surface: #f8fafc !important;
+  --mat-sys-on-surface-variant: #94a3b8 !important;
+  --mat-sys-primary: #818cf8 !important;
+  --mat-sys-on-primary: #ffffff !important;
+}
+
+/* Outer Container (Overlay & Popup) - Opens with pleasant gap below trigger */
+.luxury-dark-datepicker,
+.mat-datepicker-popup,
+.cdk-overlay-pane:has(mat-datepicker-content),
+.cdk-overlay-pane:has(.mat-datepicker-content) {
+  border-radius: 18px !important;
+  margin-top: 10px !important;
+  transform: translateZ(0) !important;
+}
+
+/* Smooth Slide-Down & Scale-In Animation for Datepicker */
+@keyframes datepickerSmoothSlideIn {
+  0% {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.97);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Datepicker Card Content (Ultra-Clean Luxury Glassmorphic Container) */
+.luxury-dark-datepicker mat-datepicker-content,
+.luxury-dark-datepicker .mat-datepicker-content,
+mat-datepicker-content,
+.mat-datepicker-content {
+  background: #0b1120 !important;
+  background-color: #0b1120 !important;
+  backdrop-filter: blur(28px) !important;
+  -webkit-backdrop-filter: blur(28px) !important;
+  border-radius: 16px !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(255, 255, 255, 0.05), 0 8px 30px rgba(99, 102, 241, 0.22) !important;
+  color: #f8fafc !important;
+  overflow: hidden !important;
+  padding: 12px 14px 10px 14px !important;
+  animation: datepickerSmoothSlideIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+  transform-origin: top left !important;
+  height: auto !important;
+  min-height: auto !important;
+  max-height: max-content !important;
+  width: 290px !important;
+  max-width: 290px !important;
+}
+
+/* Calendar Element Sizing */
+mat-calendar,
+.mat-calendar {
+  background: transparent !important;
+  background-color: transparent !important;
+  font-family: 'Plus Jakarta Sans', -apple-system, sans-serif !important;
+  width: 100% !important;
+  height: auto !important;
+  min-height: auto !important;
+  max-height: max-content !important;
+  color: #f8fafc !important;
+  display: block !important;
+}
+
+.mat-calendar-content {
+  height: auto !important;
+  min-height: auto !important;
+  max-height: max-content !important;
+  padding: 0 !important;
+}
+
+.mat-calendar-body {
+  height: auto !important;
+  min-height: auto !important;
+}
+
+/* Header & Controls Alignment */
+.mat-calendar-header {
+  padding: 2px 2px 8px 2px !important;
+}
+
+.mat-calendar-controls {
+  margin: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 8px !important;
+}
+
+/* Period Button (e.g. "OCT 2026 ▾") */
+.mat-calendar-period-button {
+  color: #f8fafc !important;
+  font-weight: 700 !important;
+  font-size: 0.86rem !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 9px !important;
+  padding: 5px 12px !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  letter-spacing: 0.02em !important;
+  outline: none !important;
+  box-shadow: none !important;
+  cursor: pointer !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+}
+
+.mat-calendar-period-button:focus,
+.mat-calendar-period-button.cdk-focused {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-color: rgba(99, 102, 241, 0.45) !important;
+  outline: none !important;
+}
+
+.mat-calendar-period-button:hover {
+  background: rgba(99, 102, 241, 0.2) !important;
+  border-color: rgba(99, 102, 241, 0.5) !important;
+  color: #ffffff !important;
+}
+
+.mat-calendar-arrow {
+  border-top-color: #818cf8 !important;
+  margin-left: 5px !important;
+}
+
+/* Modern Clean Navigation Arrows inside Datepicker (< and >) */
+.mat-calendar-controls .mat-calendar-previous-button,
+.mat-calendar-controls .mat-calendar-next-button,
+button.mat-calendar-previous-button,
+button.mat-calendar-next-button,
+.mat-calendar-previous-button.mat-mdc-icon-button,
+.mat-calendar-next-button.mat-mdc-icon-button {
+  width: 32px !important;
+  height: 32px !important;
+  min-width: 32px !important;
+  padding: 0 !important;
+  border-radius: 9px !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  color: #cbd5e1 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  box-shadow: none !important;
+  outline: none !important;
+  margin: 0 2px !important;
+}
+
+/* Remove default material focus/ripple layers that caused ugly uneven colors */
+.mat-calendar-controls .mat-mdc-button-persistent-ripple,
+.mat-calendar-controls .mat-mdc-focus-indicator,
+.mat-calendar-controls .mdc-icon-button__ripple {
+  display: none !important;
+}
+
+.mat-calendar-previous-button:focus,
+.mat-calendar-next-button:focus,
+.mat-calendar-previous-button.cdk-focused,
+.mat-calendar-next-button.cdk-focused,
+.mat-calendar-previous-button.cdk-program-focused,
+.mat-calendar-next-button.cdk-program-focused {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-color: rgba(99, 102, 241, 0.45) !important;
+  color: #ffffff !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+.mat-calendar-previous-button:hover,
+.mat-calendar-next-button:hover {
+  background: rgba(99, 102, 241, 0.22) !important;
+  border-color: rgba(99, 102, 241, 0.55) !important;
+  color: #ffffff !important;
+  transform: translateY(-1px) !important;
+}
+
+.mat-calendar-previous-button:active,
+.mat-calendar-next-button:active {
+  transform: translateY(0) scale(0.96) !important;
+}
+
+.mat-calendar-previous-button svg,
+.mat-calendar-next-button svg {
+  fill: currentColor !important;
+  width: 17px !important;
+  height: 17px !important;
+}
+
+/* Weekday Table Header (S M T W T F S) */
+.mat-calendar-table-header th {
+  color: #64748b !important;
+  font-size: 0.70rem !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.06em !important;
+  padding: 4px 0 6px 0 !important;
+  text-align: center !important;
+  height: 22px !important;
+  line-height: 22px !important;
+}
+
+.mat-calendar-table-header-divider {
+  display: none !important;
+}
+
+/* Calendar Date Cells (Days 1 to 31) - Real Proportional Compact Grid */
+.mat-calendar-table {
+  height: auto !important;
+  width: 100% !important;
+  border-collapse: separate !important;
+  border-spacing: 0 4px !important;
+  margin: 0 !important;
+  table-layout: fixed !important;
+}
+
+.mat-calendar-table tbody tr {
+  height: 34px !important;
+  max-height: 34px !important;
+}
+
+.mat-calendar-body-cell-container {
+  height: 34px !important;
+  min-height: 34px !important;
+  max-height: 34px !important;
+  line-height: 34px !important;
+  padding: 0 !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  position: relative !important;
+  vertical-align: middle !important;
+}
+
+.mat-calendar-body-cell {
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: none !important;
+  background: transparent !important;
+  cursor: pointer !important;
+}
+
+.mat-calendar-body-cell::before,
+.mat-calendar-body-cell::after {
+  display: none !important;
+}
+
+.mat-calendar-body-cell-content {
+  width: 32px !important;
+  height: 32px !important;
+  min-width: 32px !important;
+  min-height: 32px !important;
+  max-width: 32px !important;
+  max-height: 32px !important;
+  margin: auto !important;
+  border-radius: 8px !important;
+  color: #e2e8f0 !important;
+  font-size: 0.82rem !important;
+  font-weight: 500 !important;
+  border: 1px solid transparent !important;
+  transition: all 0.16s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  background-color: transparent !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  line-height: 1 !important;
+  position: relative !important;
+  z-index: 1 !important;
+}
+
+.mat-calendar-body-cell:not(.mat-calendar-body-disabled):hover .mat-calendar-body-cell-content {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-color: rgba(255, 255, 255, 0.14) !important;
+  color: #ffffff !important;
+  transform: scale(1.05) !important;
+}
+
+/* Today Circle (when unselected) */
+.mat-calendar-body-today:not(.mat-calendar-body-selected) .mat-calendar-body-cell-content {
+  border: 1.5px solid rgba(129, 140, 248, 0.8) !important;
+  color: #818cf8 !important;
+  font-weight: 700 !important;
+  background: rgba(99, 102, 241, 0.08) !important;
+}
+
+/* Selected Date - Glowing Purple/Violet Gradient */
+.mat-calendar-body-selected {
+  background: transparent !important;
+}
+
+.mat-calendar-body-cell.mat-calendar-body-selected .mat-calendar-body-cell-content,
+.mat-calendar-body-cell[aria-selected="true"] .mat-calendar-body-cell-content,
+.mat-calendar-body-selected .mat-calendar-body-cell-content,
+.mat-calendar-body-cell-content.mat-calendar-body-selected {
+  background: linear-gradient(135deg, #7c3aed 0%, #6366f1 100%) !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  border-color: transparent !important;
+  border-radius: 9px !important;
+  box-shadow: 0 4px 14px rgba(124, 58, 237, 0.65) !important;
+  transform: scale(1.04) !important;
+}
+
+/* Keep the spacer cell in the table layout so dates align to the correct weekday! */
+tr[aria-hidden="true"]:has(.mat-calendar-body-label) {
+  display: none !important;
+}
+
+td.mat-calendar-body-label {
+  display: table-cell !important;
+  visibility: hidden !important;
+  font-size: 0 !important;
+  line-height: 0 !important;
+  padding: 0 !important;
+  height: 34px !important;
+  color: transparent !important;
+}
+
+.mat-calendar-body-cell-content.mat-focus-indicator {
+  border-radius: 9px !important;
+}
+
+/* Global cursor lock during column drag-resize */
+body.is-resizing-column,
+body.is-resizing-column * {
+  cursor: col-resize !important;
+  user-select: none !important;
+}

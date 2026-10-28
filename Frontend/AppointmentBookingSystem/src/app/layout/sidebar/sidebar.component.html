@@ -1,0 +1,141 @@
+<aside class="sidebar" [class.open]="layoutService.isSidebarOpen()">
+  <!-- Brand Header -->
+  <div class="sidebar-header">
+    <a routerLink="/book" class="brand" title="Go to Booking Portal">
+      <div class="brand-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <rect width="18" height="18" x="3" y="4" rx="2" ry="2" />
+          <line x1="16" x2="16" y1="2" y2="6" />
+          <line x1="8" x2="8" y1="2" y2="6" />
+          <line x1="3" x2="21" y1="10" y2="10" />
+          <path d="m9 16 2 2 4-4" />
+        </svg>
+      </div>
+      <div class="brand-text">
+        <h1 class="brand-title">AppointEase</h1>
+      </div>
+    </a>
+
+    <!-- Mobile Close Button (shown on mobile when sidebar is open) -->
+    <button type="button" class="btn-close-sidebar" (click)="layoutService.closeSidebar()" aria-label="Close sidebar">
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+        stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="18" y1="6" x2="6" y2="18" />
+        <line x1="6" y1="6" x2="18" y2="18" />
+      </svg>
+    </button>
+  </div>
+
+  <!-- Navigation Menu -->
+  <nav class="sidebar-nav">
+    <div class="nav-section-label">MAIN NAVIGATION</div>
+
+    <!-- SuperAdmin: Dashboard & Manage Tenants -->
+    <ng-container *ngIf="isSuperAdmin">
+      <a routerLink="/dashboard" routerLinkActive="active" class="nav-item" (click)="layoutService.closeSidebar()">
+        <svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect width="7" height="9" x="3" y="3" rx="1" />
+          <rect width="7" height="5" x="14" y="3" rx="1" />
+          <rect width="7" height="9" x="14" y="12" rx="1" />
+          <rect width="7" height="5" x="3" y="16" rx="1" />
+        </svg>
+        <span>Dashboard</span>
+      </a>
+
+      <a routerLink="/tenants" routerLinkActive="active" class="nav-item" (click)="layoutService.closeSidebar()">
+        <svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z" />
+          <path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2" />
+          <path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2" />
+          <path d="M10 6h4" />
+          <path d="M10 10h4" />
+          <path d="M10 14h4" />
+          <path d="M10 18h4" />
+        </svg>
+        <span>Manage Tenants</span>
+      </a>
+    </ng-container>
+
+    <!-- Tenant Admin: Dashboard, Providers, Availability, Appointments -->
+    <ng-container *ngIf="isTenantAdmin">
+      <a routerLink="/dashboard" routerLinkActive="active" class="nav-item" (click)="layoutService.closeSidebar()">
+        <svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect width="7" height="9" x="3" y="3" rx="1" />
+          <rect width="7" height="5" x="14" y="3" rx="1" />
+          <rect width="7" height="9" x="14" y="12" rx="1" />
+          <rect width="7" height="5" x="3" y="16" rx="1" />
+        </svg>
+        <span>Dashboard</span>
+      </a>
+
+      <a routerLink="/providers" routerLinkActive="active" class="nav-item" (click)="layoutService.closeSidebar()">
+        <svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+          <circle cx="9" cy="7" r="4" />
+          <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+          <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+        </svg>
+        <span>Service Providers</span>
+      </a>
+
+      <a routerLink="/availability" routerLinkActive="active" class="nav-item" (click)="layoutService.closeSidebar()">
+        <svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10" />
+          <polyline points="12 6 12 12 16 14" />
+        </svg>
+        <span>Availability & Slots</span>
+      </a>
+
+      <a routerLink="/appointments" routerLinkActive="active" class="nav-item" (click)="layoutService.closeSidebar()">
+        <svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect width="18" height="18" x="3" y="4" rx="2" ry="2" />
+          <line x1="16" x2="16" y1="2" y2="6" />
+          <line x1="8" x2="8" y1="2" y2="6" />
+          <line x1="3" x2="21" y1="10" y2="10" />
+        </svg>
+        <span>Appointments</span>
+      </a>
+    </ng-container>
+
+    <!-- Service Provider: My Appointments (No Dashboard) -->
+    <ng-container *ngIf="isServiceProvider">
+
+      <a routerLink="/appointments" routerLinkActive="active" class="nav-item" (click)="layoutService.closeSidebar()">
+        <svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect width="18" height="18" x="3" y="4" rx="2" ry="2" />
+          <line x1="16" x2="16" y1="2" y2="6" />
+          <line x1="8" y1="2" x2="8" y2="6" />
+          <line x1="3" y1="10" x2="21" y2="10" />
+        </svg>
+        <span>My Appointments</span>
+      </a>
+    </ng-container>
+
+    <!-- Customer: My Appointments -->
+    <ng-container *ngIf="isCustomer">
+      <a routerLink="/my-appointments" routerLinkActive="active" class="nav-item"
+        (click)="layoutService.closeSidebar()">
+        <svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect width="18" height="18" x="3" y="4" rx="2" ry="2" />
+          <line x1="16" y1="2" x2="16" y2="6" />
+          <line x1="8" y1="2" x2="8" y2="6" />
+          <line x1="3" y1="10" x2="21" y2="10" />
+        </svg>
+        <span>My Appointments</span>
+      </a>
+    </ng-container>
+  </nav>
+</aside>
+
+<!-- Backdrop overlay for mobile viewport -->
+<div *ngIf="layoutService.isSidebarOpen()" class="sidebar-backdrop animate-fade-in"
+  (click)="layoutService.closeSidebar()"></div>
