@@ -77,9 +77,8 @@ export interface BookAppointmentRequestDto {
   customerName: string;
   customerEmail: string;
   customerPhone: string;
-  customerAddress?: string;
+  customerAddress: string;
   reason?: string;
-  password?: string;
 }
 
 export interface RescheduleAppointmentRequestDto {

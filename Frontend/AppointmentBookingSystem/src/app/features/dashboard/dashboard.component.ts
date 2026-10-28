@@ -12,6 +12,7 @@ import { TenantDto, TenantStatus } from '../../core/models/tenant.models';
 import { AppointmentDto, AppointmentStatsDto, AppointmentStatus, AvailableSlotDto } from '../../core/models/appointment.models';
 import { ServiceProviderDto } from '../../core/models/provider.models';
 import { TenantModalComponent } from '../tenants/tenant-modal/tenant-modal.component';
+import { TenantProfileModalComponent } from '../tenants/tenant-profile-modal/tenant-profile-modal.component';
 import { BookingModalComponent } from '../appointments/booking-modal/booking-modal.component';
 import { CustomerAppointmentsComponent } from '../customer/my-appointments/customer-appointments.component';
 import { CalendarComponent } from '../calendar/calendar.component';
@@ -24,7 +25,8 @@ import { isAppointmentPast, canCancelAppointment } from '../../core/constants/ap
     CommonModule, 
     FormsModule, 
     RouterModule, 
-    TenantModalComponent, 
+    TenantModalComponent,
+    TenantProfileModalComponent,
     BookingModalComponent, 
     CustomerAppointmentsComponent,
     CalendarComponent
@@ -49,6 +51,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   readonly isLoading = signal<boolean>(false);
   readonly isModalOpen = signal<boolean>(false);
+  readonly isProfileModalOpen = signal<boolean>(false);
+  readonly selectedTenantForView = signal<TenantDto | null>(null);
   readonly isBookingModalOpen = signal<boolean>(false);
   readonly successMessage = signal<string>('');
 
@@ -298,6 +302,16 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   onModalClose(): void {
     this.isModalOpen.set(false);
+  }
+
+  openViewModal(tenant: TenantDto): void {
+    this.selectedTenantForView.set(tenant);
+    this.isProfileModalOpen.set(true);
+  }
+
+  onProfileModalClose(): void {
+    this.isProfileModalOpen.set(false);
+    this.selectedTenantForView.set(null);
   }
 
   onTenantSaved(newTenant: TenantDto): void {

@@ -25,6 +25,7 @@ export interface CalendarDay {
   dayNumber: number;   // 1, 2, ... 31
   isCurrentMonth: boolean;
   isPast: boolean;     // before minDate
+  isBeyondLimit: boolean; // after maxDate (15 days)
   isToday: boolean;
   isSelected: boolean;
 }
@@ -85,6 +86,7 @@ export class BookingModalComponent implements OnInit {
   // Selected Date & Interactive Calendar State (Monday-based week)
   selectedDate: string = ''; // YYYY-MM-DD
   minDate: string = '';
+  maxDate: string = '';
   currentMonthDate: Date = new Date();
   readonly weekdays: string[] = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
@@ -100,9 +102,6 @@ export class BookingModalComponent implements OnInit {
   customerPhone = '';
   customerAddress = '';
   bookingNotes = '';
-  createAccount: boolean = false;
-  accountPassword: string = '';
-  showPasswordText: boolean = false;
 
   // Logged-in Customer & Staff state
   isLoggedInUser = signal<boolean>(false);
@@ -185,7 +184,17 @@ export class BookingModalComponent implements OnInit {
     );
   }
 
+  get canGoNextMonth(): boolean {
+    const nextMonthFirst = new Date(
+      this.currentMonthDate.getFullYear(),
+      this.currentMonthDate.getMonth() + 1,
+      1
+    );
+    return this.formatDateIso(nextMonthFirst) <= this.maxDate;
+  }
+
   nextMonth(): void {
+    if (!this.canGoNextMonth) return;
     this.currentMonthDate = new Date(
       this.currentMonthDate.getFullYear(),
       this.currentMonthDate.getMonth() + 1,
@@ -216,6 +225,7 @@ export class BookingModalComponent implements OnInit {
         dayNumber: dayNum,
         isCurrentMonth: false,
         isPast: true,
+        isBeyondLimit: false,
         isToday: false,
         isSelected: false
       });
@@ -226,6 +236,7 @@ export class BookingModalComponent implements OnInit {
       const d = new Date(year, month, dayNum);
       const dateStr = this.formatDateIso(d);
       const isPast = dateStr < this.minDate;
+      const isBeyondLimit = dateStr > this.maxDate;
       const isToday = dateStr === this.minDate;
       const isSelected = dateStr === this.selectedDate;
 
@@ -235,6 +246,7 @@ export class BookingModalComponent implements OnInit {
         dayNumber: dayNum,
         isCurrentMonth: true,
         isPast,
+        isBeyondLimit,
         isToday,
         isSelected
       });
@@ -251,6 +263,7 @@ export class BookingModalComponent implements OnInit {
         dayNumber: dayNum,
         isCurrentMonth: false,
         isPast: false,
+        isBeyondLimit: true,
         isToday: false,
         isSelected: false
       });
@@ -267,7 +280,7 @@ export class BookingModalComponent implements OnInit {
   }
 
   selectCalendarDay(day: CalendarDay): void {
-    if (day.isPast || !day.isCurrentMonth) return;
+    if (day.isPast || day.isBeyondLimit || !day.isCurrentMonth) return;
     this.selectedDate = day.dateStr;
     this.selectedSlot = null;
     this.errorMessage.set('');
@@ -278,6 +291,10 @@ export class BookingModalComponent implements OnInit {
   ngOnInit(): void {
     const today = new Date();
     this.minDate = this.formatDateIso(today);
+    const maxDateObj = new Date(today);
+    maxDateObj.setDate(maxDateObj.getDate() + 15);
+    this.maxDate = this.formatDateIso(maxDateObj);
+
     this.selectedDate = this.initialDate ? this.initialDate : this.minDate;
     const dateObj = this.initialDate ? new Date(this.initialDate) : today;
     this.currentMonthDate = new Date(dateObj.getFullYear(), dateObj.getMonth(), 1);
@@ -655,10 +672,6 @@ export class BookingModalComponent implements OnInit {
       this.errorMessage.set('Please enter the reason for visit / appointment purpose.');
       return;
     }
-    if (this.createAccount && (!this.accountPassword || this.accountPassword.trim().length < 6)) {
-      this.errorMessage.set('Account password must be at least 6 characters long.');
-      return;
-    }
     this.errorMessage.set('');
     this.currentStep = 4;
   }
@@ -700,9 +713,8 @@ export class BookingModalComponent implements OnInit {
       customerName: this.customerName.trim(),
       customerEmail: this.customerEmail.trim(),
       customerPhone: this.customerPhone.trim(),
-      customerAddress: this.customerAddress.trim() || undefined,
-      reason: this.bookingNotes.trim() || undefined,
-      password: this.createAccount && this.accountPassword.trim() ? this.accountPassword.trim() : undefined
+      customerAddress: this.customerAddress.trim(),
+      reason: this.bookingNotes.trim() || undefined
     };
 
     this.appointmentService.bookAppointment(req).subscribe({
@@ -748,8 +760,6 @@ export class BookingModalComponent implements OnInit {
     sessionStorage.removeItem('pending_booking_draft');
     this.selectedSlot = null;
     this.confirmedAppointment.set(null);
-    this.createAccount = false;
-    this.accountPassword = '';
     this.bookingNotes = '';
     this.copiedRef = false;
     this.linkedCustomer = null;

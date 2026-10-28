@@ -14,6 +14,7 @@ import {
 import { UserRole } from '../../../core/models/auth.models';
 import { TimeSlotPickerComponent } from '../../../shared/components/time-slot-picker/time-slot-picker.component';
 import { ConfirmService } from '../../../shared/components/confirmation-modal/confirm.service';
+import { canRescheduleAppointment } from '../../../core/constants/app.constants';
 
 export interface CalendarDay {
   date: Date;
@@ -236,6 +237,11 @@ export class RescheduleModalComponent implements OnInit {
   }
 
   confirmReschedule(): void {
+    if (!canRescheduleAppointment(this.appointment)) {
+      this.errorMessage.set('Appointments can only be rescheduled at least 1 hour prior to the scheduled start time.');
+      return;
+    }
+
     if (!this.selectedSlot) {
       this.errorMessage.set('Please select an available time slot.');
       return;

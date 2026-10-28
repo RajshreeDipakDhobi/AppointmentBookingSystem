@@ -25,7 +25,6 @@ export interface CreateServiceProviderRequestDto {
   serviceType: string;
   email: string;
   phoneNumber: string;
-  password: string;
   chargesAmount: number;
   address?: string;
   bio?: string;

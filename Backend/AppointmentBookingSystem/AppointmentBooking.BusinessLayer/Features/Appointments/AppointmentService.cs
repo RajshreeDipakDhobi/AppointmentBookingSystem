@@ -30,9 +30,9 @@ public class AppointmentService : IAppointmentService
         _dateTimeProvider = dateTimeProvider;
     }
 
-    public async Task<ProviderDailyAvailabilityResponseDto?> GetAvailableSlotsAsync(int providerId, DateTime date)
+    public async Task<ProviderDailyAvailabilityResponseDto?> GetAvailableSlotsAsync(int providerId, DateTime date, CancellationToken cancellationToken = default)
     {
-        var provider = await _unitOfWork.Repository<ServiceProvider>().GetByIdAsync(providerId);
+        var provider = await _unitOfWork.Repository<ServiceProvider>().GetByIdAsync(providerId, cancellationToken);
         if (provider == null)
         {
             return null;
@@ -58,7 +58,7 @@ public class AppointmentService : IAppointmentService
         }
 
         var availability = await _unitOfWork.Repository<ProviderAvailability>().Query()
-            .FirstOrDefaultAsync(pa => pa.ServiceProviderId == providerId && pa.DayOfWeek == date.DayOfWeek);
+            .FirstOrDefaultAsync(pa => pa.ServiceProviderId == providerId && pa.DayOfWeek == date.DayOfWeek, cancellationToken);
 
         if (availability == null || !availability.IsAvailable)
         {
@@ -76,7 +76,7 @@ public class AppointmentService : IAppointmentService
                      && a.Status != AppointmentStatus.Cancelled
                      && a.Status != AppointmentStatus.Rescheduled
                      && a.Status != AppointmentStatus.Rejected)
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
 
         // Calculate time slot intervals using timezone-aware business local time
         var now = _dateTimeProvider.GetCurrentLocalTime();
@@ -126,7 +126,7 @@ public class AppointmentService : IAppointmentService
         return response;
     }
 
-    public async Task<UserDto?> LookupCustomerAsync(int? tenantId, string query)
+    public async Task<UserDto?> LookupCustomerAsync(int? tenantId, string query, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(query))
             return null;
@@ -147,17 +147,17 @@ public class AppointmentService : IAppointmentService
 
         if (cleanQuery.Contains("@"))
         {
-            customer = await usersQuery.FirstOrDefaultAsync(u => u.Email.ToLower() == normalizedEmail);
+            customer = await usersQuery.FirstOrDefaultAsync(u => u.Email.ToLower() == normalizedEmail, cancellationToken);
         }
         else if (digitsOnly.Length >= 7)
         {
             var matchDigits = digitsOnly.Length >= 10 ? digitsOnly.Substring(digitsOnly.Length - 10) : digitsOnly;
-            customer = await usersQuery.FirstOrDefaultAsync(u => u.PhoneNumber != null && u.PhoneNumber.Contains(matchDigits));
+            customer = await usersQuery.FirstOrDefaultAsync(u => u.PhoneNumber != null && u.PhoneNumber.Contains(matchDigits), cancellationToken);
         }
         else
         {
             customer = await usersQuery.FirstOrDefaultAsync(u =>
-                (u.FirstName + " " + u.LastName).ToLower().Contains(cleanQuery.ToLower()));
+                (u.FirstName + " " + u.LastName).ToLower().Contains(cleanQuery.ToLower()), cancellationToken);
         }
 
         if (customer == null)
@@ -180,7 +180,7 @@ public class AppointmentService : IAppointmentService
         };
     }
 
-    public async Task<List<UserDto>> SearchCustomersAsync(int? tenantId, string query)
+    public async Task<List<UserDto>> SearchCustomersAsync(int? tenantId, string query, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(query))
             return new List<UserDto>();
@@ -206,7 +206,7 @@ public class AppointmentService : IAppointmentService
             .OrderBy(u => u.FirstName)
             .ThenBy(u => u.LastName)
             .Take(8)
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
 
         return list.Select(customer => new UserDto
         {
@@ -225,10 +225,16 @@ public class AppointmentService : IAppointmentService
         }).ToList();
     }
 
-    public async Task<ApiResponse<AppointmentDto>> BookAppointmentAsync(int? tenantId, int? customerId, BookAppointmentRequestDto request)
+    public async Task<ApiResponse<AppointmentDto>> BookAppointmentAsync(
+        int? tenantId, 
+        int? customerId, 
+        BookAppointmentRequestDto request, 
+        bool isBookedByProvider = false, 
+        string? createdByName = null, 
+        CancellationToken cancellationToken = default)
     {
         // 1. Validate Provider
-        var provider = await _unitOfWork.Repository<ServiceProvider>().GetByIdAsync(request.ServiceProviderId);
+        var provider = await _unitOfWork.Repository<ServiceProvider>().GetByIdAsync(request.ServiceProviderId, cancellationToken);
         if (provider == null)
         {
             return ApiResponse<AppointmentDto>.Fail("Service provider not found.");
@@ -264,6 +270,13 @@ public class AppointmentService : IAppointmentService
         if (appointmentDate < now.Date)
         {
             return ApiResponse<AppointmentDto>.Fail("Cannot book an appointment for a past date.");
+        }
+
+        // Block dates beyond 15 days from today
+        var maxAdvanceBookingDate = now.Date.AddDays(15);
+        if (appointmentDate > maxAdvanceBookingDate)
+        {
+            return ApiResponse<AppointmentDto>.Fail($"Appointments can only be booked up to 15 days in advance (until {maxAdvanceBookingDate:dd-MMM-yyyy}).");
         }
 
         // Block past time slots on today's date
@@ -340,17 +353,8 @@ public class AppointmentService : IAppointmentService
                 }
             }
 
-            // If no explicit password is provided, use customer's mobile number as their account password!
-            var defaultPassword = !string.IsNullOrWhiteSpace(request.Password)
-                ? request.Password.Trim()
-                : (!string.IsNullOrWhiteSpace(request.CustomerPhone)
-                    ? new string(request.CustomerPhone.Where(char.IsDigit).ToArray())
-                    : null);
-
-            if (string.IsNullOrWhiteSpace(defaultPassword) && !string.IsNullOrWhiteSpace(request.CustomerPhone))
-            {
-                defaultPassword = request.CustomerPhone.Trim();
-            }
+            // Set default initial customer password to "123456"
+            var defaultPassword = "123456";
 
             if (customerUser == null)
             {
@@ -360,7 +364,7 @@ public class AppointmentService : IAppointmentService
                     FirstName = nameParts[0],
                     LastName = nameParts.Length > 1 ? nameParts[1] : string.Empty,
                     Email = normalizedEmail,
-                    PasswordHash = !string.IsNullOrWhiteSpace(defaultPassword) ? _passwordHasher.HashPassword(defaultPassword) : null,
+                    PasswordHash = _passwordHasher.HashPassword(defaultPassword),
                     PhoneNumber = request.CustomerPhone.Trim(),
                     Address = request.CustomerAddress?.Trim(),
                     Role = UserRole.Customer,
@@ -373,8 +377,8 @@ public class AppointmentService : IAppointmentService
             }
             else
             {
-                // If user was created without password, set mobile number as password!
-                if (string.IsNullOrEmpty(customerUser.PasswordHash) && !string.IsNullOrWhiteSpace(defaultPassword))
+                // If user was created without password, set default password to "123456"
+                if (string.IsNullOrEmpty(customerUser.PasswordHash))
                 {
                     customerUser.PasswordHash = _passwordHasher.HashPassword(defaultPassword);
                 }
@@ -414,9 +418,12 @@ public class AppointmentService : IAppointmentService
                 AppointmentDate = appointmentDate,
                 StartTime = startTime,
                 EndTime = endTime,
-                Status = AppointmentStatus.Booked,
+                Status = isBookedByProvider ? AppointmentStatus.Approved : AppointmentStatus.Booked,
+                ApprovedAt = isBookedByProvider ? DateTime.UtcNow : null,
                 CreatedAt = DateTime.UtcNow,
-                CreatedBy = $"{customerUser.FirstName} {customerUser.LastName}".Trim()
+                CreatedBy = !string.IsNullOrWhiteSpace(createdByName) 
+                    ? createdByName.Trim() 
+                    : (isBookedByProvider ? "Service Provider" : $"{customerUser.FirstName} {customerUser.LastName}".Trim())
             };
 
             await _unitOfWork.Repository<Appointment>().AddAsync(appointment);
@@ -443,7 +450,8 @@ public class AppointmentService : IAppointmentService
         int? tenantId, 
         int? customerId, 
         bool isAdmin, 
-        RescheduleAppointmentRequestDto request)
+        RescheduleAppointmentRequestDto request,
+        CancellationToken cancellationToken = default)
     {
         var query = _unitOfWork.Repository<Appointment>().Query()
             .Include(a => a.ServiceProvider).ThenInclude(s => s.User)
@@ -477,6 +485,11 @@ public class AppointmentService : IAppointmentService
         }
 
         var now = _dateTimeProvider.GetCurrentLocalTime();
+        var appointmentStartDateTime = appointment.AppointmentDate.Date.Add(appointment.StartTime);
+        if (now >= appointmentStartDateTime.AddHours(-1))
+        {
+            return ApiResponse<AppointmentDto>.Fail("Appointments can only be rescheduled at least 1 hour prior to the scheduled start time.");
+        }
 
         if (!TimeSpan.TryParse(request.NewStartTime, out var newStart) || !TimeSpan.TryParse(request.NewEndTime, out var newEnd))
         {
@@ -487,6 +500,12 @@ public class AppointmentService : IAppointmentService
         if (newDate < now.Date)
         {
             return ApiResponse<AppointmentDto>.Fail("Cannot reschedule to a past date.");
+        }
+
+        var maxAdvanceRescheduleDate = now.Date.AddDays(15);
+        if (newDate > maxAdvanceRescheduleDate)
+        {
+            return ApiResponse<AppointmentDto>.Fail($"Appointments can only be rescheduled up to 15 days in advance (until {maxAdvanceRescheduleDate:dd-MMM-yyyy}).");
         }
 
         if (newDate == now.Date && newStart <= now.TimeOfDay)
@@ -571,7 +590,8 @@ public class AppointmentService : IAppointmentService
         int? customerId, 
         bool isAdmin, 
         CancelAppointmentRequestDto request,
-        string? cancellerName = null)
+        string? cancellerName = null,
+        CancellationToken cancellationToken = default)
     {
         var query = _unitOfWork.Repository<Appointment>().Query()
             .Include(a => a.ServiceProvider).ThenInclude(s => s.User)
@@ -605,7 +625,7 @@ public class AppointmentService : IAppointmentService
 
         var now = _dateTimeProvider.GetCurrentLocalTime();
         var appointmentStartDateTime = appointment.AppointmentDate.Date.Add(appointment.StartTime);
-        if (now > appointmentStartDateTime.AddHours(-1))
+        if (now >= appointmentStartDateTime.AddHours(-1))
         {
             return ApiResponse<AppointmentDto>.Fail("Appointments can only be cancelled at least 1 hour prior to the scheduled start time.");
         }
@@ -637,6 +657,10 @@ public class AppointmentService : IAppointmentService
             appointment.Status = AppointmentStatus.Cancelled;
             appointment.CancelledAt = DateTime.UtcNow;
             appointment.CancellationReason = $"{reasonText} (Cancelled by {canceller})";
+            appointment.ProposedDate = null;
+            appointment.ProposedStartTime = null;
+            appointment.ProposedEndTime = null;
+            appointment.RescheduleNotes = null;
             appointment.UpdatedAt = DateTime.UtcNow;
 
             await _unitOfWork.SaveChangesAsync();
@@ -664,14 +688,14 @@ public class AppointmentService : IAppointmentService
 
 
 
-    public async Task<List<AppointmentDto>> GetMyAppointmentsAsync(int customerId)
+    public async Task<List<AppointmentDto>> GetMyAppointmentsAsync(int customerId, CancellationToken cancellationToken = default)
     {
         var appointments = await _unitOfWork.Repository<Appointment>().Query()
             .Include(a => a.ServiceProvider).ThenInclude(sp => sp.User)
             .Include(a => a.Customer)
             .Where(a => a.CustomerId == customerId)
             .OrderByDescending(a => a.CreatedAt)
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
 
         return _mapper.Map<List<AppointmentDto>>(appointments);
     }
@@ -679,7 +703,8 @@ public class AppointmentService : IAppointmentService
     public async Task<PagedResult<AppointmentDto>> GetMyAppointmentsPagedAsync(
         int customerId, 
         PaginationParams paginationParams, 
-        AppointmentStatus? status = null)
+        AppointmentStatus? status = null,
+        CancellationToken cancellationToken = default)
     {
         var query = _unitOfWork.Repository<Appointment>().Query()
             .Include(a => a.ServiceProvider).ThenInclude(sp => sp.User)
@@ -706,13 +731,13 @@ public class AppointmentService : IAppointmentService
                                   || (a.Customer != null && (a.Customer.FirstName + " " + a.Customer.LastName).ToLower().Contains(search)));
         }
 
-        var totalCount = await query.CountAsync();
+        var totalCount = await query.CountAsync(cancellationToken);
 
         var appointments = await query
             .OrderByDescending(a => a.CreatedAt)
             .Skip((paginationParams.PageNumber - 1) * paginationParams.PageSize)
             .Take(paginationParams.PageSize)
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
 
         var dtos = _mapper.Map<List<AppointmentDto>>(appointments);
         return new PagedResult<AppointmentDto>(dtos, totalCount, paginationParams.PageNumber, paginationParams.PageSize);
@@ -724,7 +749,8 @@ public class AppointmentService : IAppointmentService
         DateTime? startDate, 
         DateTime? endDate, 
         AppointmentStatus? status, 
-        string? search)
+        string? search,
+        CancellationToken cancellationToken = default)
     {
         var query = _unitOfWork.Repository<Appointment>().Query()
             .Include(a => a.ServiceProvider).ThenInclude(sp => sp.User)
@@ -763,7 +789,7 @@ public class AppointmentService : IAppointmentService
 
         var appointments = await query
             .OrderByDescending(a => a.CreatedAt)
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
 
         return _mapper.Map<List<AppointmentDto>>(appointments);
     }
@@ -774,7 +800,8 @@ public class AppointmentService : IAppointmentService
         DateTime? startDate, 
         DateTime? endDate, 
         AppointmentStatus? status, 
-        PaginationParams paginationParams)
+        PaginationParams paginationParams,
+        CancellationToken cancellationToken = default)
     {
         var query = _unitOfWork.Repository<Appointment>().Query()
             .Include(a => a.ServiceProvider).ThenInclude(sp => sp.User)
@@ -811,24 +838,24 @@ public class AppointmentService : IAppointmentService
                                   || a.AppointmentNumber.ToLower().Contains(lowerSearch));
         }
 
-        var totalCount = await query.CountAsync();
+        var totalCount = await query.CountAsync(cancellationToken);
 
         var appointments = await query
             .OrderByDescending(a => a.CreatedAt)
             .Skip((paginationParams.PageNumber - 1) * paginationParams.PageSize)
             .Take(paginationParams.PageSize)
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
 
         var dtos = _mapper.Map<List<AppointmentDto>>(appointments);
         return new PagedResult<AppointmentDto>(dtos, totalCount, paginationParams.PageNumber, paginationParams.PageSize);
     }
 
-    public async Task<AppointmentDto?> GetAppointmentByIdAsync(int appointmentId, int tenantId)
+    public async Task<AppointmentDto?> GetAppointmentByIdAsync(int appointmentId, int tenantId, CancellationToken cancellationToken = default)
     {
         var appointment = await _unitOfWork.Repository<Appointment>().Query()
             .Include(a => a.ServiceProvider).ThenInclude(sp => sp.User)
             .Include(a => a.Customer)
-            .FirstOrDefaultAsync(a => a.Id == appointmentId && a.TenantId == tenantId);
+            .FirstOrDefaultAsync(a => a.Id == appointmentId && a.TenantId == tenantId, cancellationToken);
 
         return appointment == null ? null : _mapper.Map<AppointmentDto>(appointment);
     }
@@ -840,7 +867,8 @@ public class AppointmentService : IAppointmentService
         int? currentUserId, 
         bool isAdmin, 
         UpdateAppointmentStatusDto request,
-        string? cancellerName = null)
+        string? cancellerName = null,
+        CancellationToken cancellationToken = default)
     {
         try
         {
@@ -896,6 +924,17 @@ public class AppointmentService : IAppointmentService
             if (appointment.Status == AppointmentStatus.Rejected && request.Status != AppointmentStatus.Rejected)
             {
                 return ApiResponse<AppointmentDto>.Fail("Cannot change the status of an already rejected appointment.");
+            }
+
+            if (request.Status == AppointmentStatus.Cancelled || request.Status == AppointmentStatus.RescheduleProposed)
+            {
+                var now = _dateTimeProvider.GetCurrentLocalTime();
+                var appointmentStartDateTime = appointment.AppointmentDate.Date.Add(appointment.StartTime);
+                if (now >= appointmentStartDateTime.AddHours(-1))
+                {
+                    var actionName = request.Status == AppointmentStatus.Cancelled ? "cancelled" : "rescheduled";
+                    return ApiResponse<AppointmentDto>.Fail($"Appointments can only be {actionName} at least 1 hour prior to the scheduled start time.");
+                }
             }
 
             // If transitioning from RescheduleProposed to Approved or Booked (Customer accepting the proposal)
@@ -959,6 +998,10 @@ public class AppointmentService : IAppointmentService
                     }
                     var cancelNote = !string.IsNullOrWhiteSpace(request.Notes) ? request.Notes.Trim() : "Cancelled by staff";
                     appointment.CancellationReason = $"{cancelNote} (Cancelled by {staffCanceller})";
+                    appointment.ProposedDate = null;
+                    appointment.ProposedStartTime = null;
+                    appointment.ProposedEndTime = null;
+                    appointment.RescheduleNotes = null;
                     break;
 
                 case AppointmentStatus.Completed:
@@ -978,7 +1021,7 @@ public class AppointmentService : IAppointmentService
         }
     }
 
-    public async Task<ApiResponse<AppointmentDto>> RespondToRescheduleProposalAsync(int appointmentId, int customerId, bool accept)
+    public async Task<ApiResponse<AppointmentDto>> RespondToRescheduleProposalAsync(int appointmentId, int customerId, bool accept, CancellationToken cancellationToken = default)
     {
         try
         {
@@ -986,7 +1029,7 @@ public class AppointmentService : IAppointmentService
                 .Include(a => a.ServiceProvider)
                     .ThenInclude(sp => sp.User)
                 .Include(a => a.Customer)
-                .FirstOrDefaultAsync(a => a.Id == appointmentId && a.CustomerId == customerId);
+                .FirstOrDefaultAsync(a => a.Id == appointmentId && (customerId <= 0 || a.CustomerId == customerId), cancellationToken);
 
             if (appointment == null)
             {
@@ -1014,7 +1057,7 @@ public class AppointmentService : IAppointmentService
                                 && a.Status != AppointmentStatus.Rescheduled
                                 && a.Status != AppointmentStatus.Rejected
                                 && a.StartTime < appointment.ProposedEndTime.Value 
-                                && a.EndTime > appointment.ProposedStartTime.Value);
+                                && a.EndTime > appointment.ProposedStartTime.Value, cancellationToken);
 
                 if (isSlotTaken)
                 {
@@ -1032,21 +1075,23 @@ public class AppointmentService : IAppointmentService
                 appointment.RescheduleNotes = null;
                 appointment.UpdatedAt = DateTime.UtcNow;
 
-                await _unitOfWork.SaveChangesAsync();
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
                 return ApiResponse<AppointmentDto>.Ok(_mapper.Map<AppointmentDto>(appointment), "Proposed reschedule accepted successfully. Appointment is confirmed!");
             }
             else
             {
-                // Declined by customer: revert back to Booked, clear proposal
-                appointment.Status = AppointmentStatus.Booked;
+                // Declined by customer: cancel the appointment
+                appointment.Status = AppointmentStatus.Cancelled;
+                appointment.CancelledAt = DateTime.UtcNow;
+                appointment.CancellationReason = "Reschedule proposal declined by customer";
                 appointment.ProposedDate = null;
                 appointment.ProposedStartTime = null;
                 appointment.ProposedEndTime = null;
                 appointment.RescheduleNotes = null;
                 appointment.UpdatedAt = DateTime.UtcNow;
 
-                await _unitOfWork.SaveChangesAsync();
-                return ApiResponse<AppointmentDto>.Ok(_mapper.Map<AppointmentDto>(appointment), "Reschedule proposal declined. Appointment remains at its original scheduled time.");
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+                return ApiResponse<AppointmentDto>.Ok(_mapper.Map<AppointmentDto>(appointment), "Reschedule proposal declined. Appointment has been cancelled.");
             }
         }
         catch (Exception ex)
@@ -1055,7 +1100,7 @@ public class AppointmentService : IAppointmentService
         }
     }
 
-    public async Task<AppointmentStatsDto> GetStatsAsync(int tenantId, int? providerId = null)
+    public async Task<AppointmentStatsDto> GetStatsAsync(int tenantId, int? providerId = null, CancellationToken cancellationToken = default)
     {
         var query = _unitOfWork.Repository<Appointment>().Query()
             .Where(a => a.TenantId == tenantId);
@@ -1065,7 +1110,7 @@ public class AppointmentService : IAppointmentService
             query = query.Where(a => a.ServiceProviderId == providerId.Value);
         }
 
-        var appointments = await query.ToListAsync();
+        var appointments = await query.ToListAsync(cancellationToken);
 
         var today = _dateTimeProvider.Today;
 
@@ -1079,11 +1124,11 @@ public class AppointmentService : IAppointmentService
         };
     }
 
-    public async Task<AppointmentStatsDto> GetCustomerStatsAsync(int customerId)
+    public async Task<AppointmentStatsDto> GetCustomerStatsAsync(int customerId, CancellationToken cancellationToken = default)
     {
         var appointments = await _unitOfWork.Repository<Appointment>().Query()
             .Where(a => a.CustomerId == customerId)
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
 
         var today = _dateTimeProvider.Today;
 

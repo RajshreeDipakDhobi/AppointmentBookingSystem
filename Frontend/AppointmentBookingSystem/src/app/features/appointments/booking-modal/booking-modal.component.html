@@ -259,7 +259,7 @@
                   </svg>
                 </button>
 
-                <button type="button" class="btn-cal-nav" (click)="nextMonth()" title="Next month">
+                <button type="button" class="btn-cal-nav" [disabled]="!canGoNextMonth" (click)="nextMonth()" title="Next month">
                   <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none"
                     stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                     <polyline points="9 18 15 12 9 6" />
@@ -276,9 +276,9 @@
             <!-- Days Grid -->
             <div class="calendar-days-grid">
               <button *ngFor="let day of calendarDays" type="button" class="calendar-day-btn"
-                [class.not-current-month]="!day.isCurrentMonth" [class.past-day]="day.isPast"
+                [class.not-current-month]="!day.isCurrentMonth" [class.past-day]="day.isPast || day.isBeyondLimit"
                 [class.today-day]="day.isToday" [class.selected-day]="day.isSelected"
-                [disabled]="day.isPast || !day.isCurrentMonth" (click)="selectCalendarDay(day)">
+                [disabled]="day.isPast || day.isBeyondLimit || !day.isCurrentMonth" (click)="selectCalendarDay(day)">
                 <span class="day-num">{{ day.dayNumber }}</span>
               </button>
             </div>

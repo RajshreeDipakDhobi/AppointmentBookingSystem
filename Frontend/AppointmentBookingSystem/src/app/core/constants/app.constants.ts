@@ -159,13 +159,43 @@ export function isAppointmentPast(apt: { appointmentDate?: string | Date; startT
 }
 
 /**
- * Checks if an appointment can be rescheduled to a new future date/time.
- * Permitted for any active Booked appointment (including past appointments that need rescheduling),
- * but prohibited for already Completed or Cancelled appointments.
+ * Reschedule Policy: Appointments can only be rescheduled at least 1 hour prior
+ * to their scheduled start time, and only if active (Booked or Approved).
  */
 export function canRescheduleAppointment(apt: AppointmentDto | null | undefined): boolean {
   if (!apt) return false;
-  return apt.status === AppointmentStatus.Booked || apt.status === AppointmentStatus.Approved;
+  if (apt.status !== AppointmentStatus.Booked && apt.status !== AppointmentStatus.Approved) {
+    return false;
+  }
+
+  const rawDate: any = apt.appointmentDate;
+  let year = 0, month = 0, day = 0;
+  if (typeof rawDate === 'string') {
+    const datePart = rawDate.includes('T') ? rawDate.split('T')[0] : rawDate;
+    const parts = datePart.split('-').map(Number);
+    year = parts[0];
+    month = parts[1];
+    day = parts[2];
+  } else if (rawDate instanceof Date) {
+    year = rawDate.getFullYear();
+    month = rawDate.getMonth() + 1;
+    day = rawDate.getDate();
+  }
+  if (!year || !month || !day) return false;
+
+  let startHour = 0, startMinute = 0;
+  if (apt.startTime) {
+    const timeParts = apt.startTime.split(':').map(Number);
+    startHour = timeParts[0] ?? 0;
+    startMinute = timeParts[1] ?? 0;
+  }
+
+  const appointmentStart = new Date(year, month - 1, day, startHour, startMinute, 0);
+  const now = new Date();
+
+  // Reschedule threshold: now must be strictly before 1 hour of start time
+  const oneHourBeforeStart = new Date(appointmentStart.getTime() - 60 * 60 * 1000);
+  return now.getTime() < oneHourBeforeStart.getTime();
 }
 
 /**

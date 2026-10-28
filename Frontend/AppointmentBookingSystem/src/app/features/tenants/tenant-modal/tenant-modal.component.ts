@@ -28,24 +28,18 @@ export class TenantModalComponent implements OnChanges {
   tenantForm: FormGroup;
   readonly isSubmitting = signal<boolean>(false);
   readonly errorMessage = signal<string | null>(null);
-  readonly showPassword = signal<boolean>(false);
-
-  private isTenantCodeManual = false;
 
   constructor() {
     this.tenantForm = this.fb.group({
-      // Organization fields (All Required)
+      // Organization fields
       tenantName: ['', [Validators.required, Validators.minLength(2)]],
-      tenantCode: ['', [Validators.required, Validators.minLength(2), Validators.pattern(/^[a-z0-9\-]+$/i)]],
       contactEmail: ['', [Validators.required, Validators.pattern(EMAIL_REGEX)]],
       contactPhone: ['', [Validators.required, Validators.pattern(PHONE_10_DIGIT_REGEX)]],
       address: ['', [Validators.required]],
 
-      // Admin Account fields (All Required)
+      // Admin Account fields
       adminFirstName: ['', [Validators.required]],
-      adminLastName: ['', [Validators.required]],
-      adminEmail: ['', [Validators.required, Validators.pattern(EMAIL_REGEX)]],
-      adminPassword: ['', [Validators.required, Validators.minLength(6)]]
+      adminLastName: ['', [Validators.required]]
     });
   }
 
@@ -55,86 +49,29 @@ export class TenantModalComponent implements OnChanges {
     }
   }
 
-  onTenantNameInput(): void {
-    if (this.mode === 'create' && !this.isTenantCodeManual) {
-      const name = this.tenantForm.get('tenantName')?.value || '';
-      const slug = name.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
-      this.tenantForm.get('tenantCode')?.setValue(slug, { emitEvent: false });
-    }
-  }
-
-  onTenantCodeInput(): void {
-    this.isTenantCodeManual = true;
-  }
-
   private resetAndInitForm(): void {
     this.errorMessage.set(null);
     this.isSubmitting.set(false);
-    this.showPassword.set(false);
 
     if (this.mode === 'edit' && this.tenantToEdit) {
-      this.isTenantCodeManual = true;
-      // Edit mode: populate organization fields AND admin fields
       this.tenantForm.reset({
         tenantName: this.tenantToEdit.name,
-        tenantCode: this.tenantToEdit.tenantCode || this.tenantToEdit.slug || '',
-        contactEmail: this.tenantToEdit.contactEmail || '',
+        contactEmail: this.tenantToEdit.contactEmail || this.tenantToEdit.adminEmail || '',
         contactPhone: filter10Digits(this.tenantToEdit.contactPhone || ''),
         address: this.tenantToEdit.address || '',
         adminFirstName: this.tenantToEdit.adminFirstName || '',
-        adminLastName: this.tenantToEdit.adminLastName || '',
-        adminEmail: this.tenantToEdit.adminEmail || '',
-        adminPassword: ''
+        adminLastName: this.tenantToEdit.adminLastName || ''
       });
-
-      this.tenantForm.get('tenantName')?.setValidators([Validators.required, Validators.minLength(2)]);
-      this.tenantForm.get('tenantCode')?.setValidators([Validators.required, Validators.minLength(2), Validators.pattern(/^[a-z0-9\-]+$/i)]);
-      this.tenantForm.get('contactEmail')?.setValidators([Validators.required, Validators.pattern(EMAIL_REGEX)]);
-      this.tenantForm.get('contactPhone')?.setValidators([Validators.required, Validators.pattern(PHONE_10_DIGIT_REGEX)]);
-      this.tenantForm.get('address')?.setValidators([Validators.required]);
-      this.tenantForm.get('adminFirstName')?.setValidators([Validators.required]);
-      this.tenantForm.get('adminLastName')?.setValidators([Validators.required]);
-      this.tenantForm.get('adminEmail')?.setValidators([Validators.required, Validators.pattern(EMAIL_REGEX)]);
-      this.tenantForm.get('adminPassword')?.setValidators([Validators.minLength(6)]);
     } else {
-      this.isTenantCodeManual = false;
-      // Create mode: all fields required
       this.tenantForm.reset({
         tenantName: '',
-        tenantCode: '',
         contactEmail: '',
         contactPhone: '',
         address: '',
         adminFirstName: '',
-        adminLastName: '',
-        adminEmail: '',
-        adminPassword: ''
+        adminLastName: ''
       });
-
-      this.tenantForm.get('tenantName')?.setValidators([Validators.required, Validators.minLength(2)]);
-      this.tenantForm.get('tenantCode')?.setValidators([Validators.required, Validators.minLength(2), Validators.pattern(/^[a-z0-9\-]+$/i)]);
-      this.tenantForm.get('contactEmail')?.setValidators([Validators.required, Validators.pattern(EMAIL_REGEX)]);
-      this.tenantForm.get('contactPhone')?.setValidators([Validators.required, Validators.pattern(PHONE_10_DIGIT_REGEX)]);
-      this.tenantForm.get('address')?.setValidators([Validators.required]);
-      this.tenantForm.get('adminFirstName')?.setValidators([Validators.required]);
-      this.tenantForm.get('adminLastName')?.setValidators([Validators.required]);
-      this.tenantForm.get('adminEmail')?.setValidators([Validators.required, Validators.pattern(EMAIL_REGEX)]);
-      this.tenantForm.get('adminPassword')?.setValidators([Validators.required, Validators.minLength(6)]);
     }
-
-    this.tenantForm.get('tenantName')?.updateValueAndValidity();
-    this.tenantForm.get('tenantCode')?.updateValueAndValidity();
-    this.tenantForm.get('contactEmail')?.updateValueAndValidity();
-    this.tenantForm.get('contactPhone')?.updateValueAndValidity();
-    this.tenantForm.get('address')?.updateValueAndValidity();
-    this.tenantForm.get('adminFirstName')?.updateValueAndValidity();
-    this.tenantForm.get('adminLastName')?.updateValueAndValidity();
-    this.tenantForm.get('adminEmail')?.updateValueAndValidity();
-    this.tenantForm.get('adminPassword')?.updateValueAndValidity();
-  }
-
-  togglePasswordVisibility(): void {
-    this.showPassword.update(show => !show);
   }
 
   onBackdropClick(event: MouseEvent): void {
@@ -162,14 +99,11 @@ export class TenantModalComponent implements OnChanges {
     if (this.mode === 'create') {
       const createDto: CreateTenantRequestDto = {
         tenantName: val.tenantName.trim(),
-        tenantCode: val.tenantCode ? val.tenantCode.trim().toLowerCase() : undefined,
-        contactEmail: val.contactEmail?.trim() || undefined,
+        contactEmail: val.contactEmail.trim(),
         contactPhone: val.contactPhone ? val.contactPhone.trim() : undefined,
         address: val.address ? val.address.trim() : undefined,
         adminFirstName: val.adminFirstName.trim(),
-        adminLastName: val.adminLastName.trim(),
-        adminEmail: val.adminEmail.trim(),
-        adminPassword: val.adminPassword
+        adminLastName: val.adminLastName.trim()
       };
 
       this.tenantService.createTenant(createDto).subscribe({
@@ -185,14 +119,11 @@ export class TenantModalComponent implements OnChanges {
     } else if (this.mode === 'edit' && this.tenantToEdit) {
       const updateDto: UpdateTenantRequestDto = {
         tenantName: val.tenantName.trim(),
-        tenantCode: val.tenantCode ? val.tenantCode.trim().toLowerCase() : undefined,
         contactEmail: val.contactEmail?.trim() || undefined,
         contactPhone: val.contactPhone ? val.contactPhone.trim() : undefined,
         address: val.address ? val.address.trim() : undefined,
         adminFirstName: val.adminFirstName ? val.adminFirstName.trim() : undefined,
-        adminLastName: val.adminLastName ? val.adminLastName.trim() : undefined,
-        adminEmail: val.adminEmail ? val.adminEmail.trim() : undefined,
-        adminPassword: val.adminPassword && val.adminPassword.trim().length > 0 ? val.adminPassword : undefined
+        adminLastName: val.adminLastName ? val.adminLastName.trim() : undefined
       };
 
       this.tenantService.updateTenant(this.tenantToEdit.id, updateDto).subscribe({

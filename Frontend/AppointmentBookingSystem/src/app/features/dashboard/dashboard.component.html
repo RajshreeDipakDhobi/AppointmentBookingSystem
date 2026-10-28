@@ -122,6 +122,7 @@
               <th>Providers</th>
               <th>Status</th>
               <th>Registered</th>
+              <th class="text-right">Action</th>
             </tr>
           </thead>
           <tbody>
@@ -156,11 +157,20 @@
               <td>
                 <span class="date-text">{{ tenant.createdAt | date:'MMM d, y' }}</span>
               </td>
+              <td class="text-right">
+                <button type="button" class="btn-action btn-view" (click)="openViewModal(tenant)" title="View Organization Profile">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
+                    <circle cx="12" cy="12" r="3"/>
+                  </svg>
+                  <span>View</span>
+                </button>
+              </td>
             </tr>
 
             <!-- Empty State -->
             <tr *ngIf="recentTenants().length === 0 && !isLoading()">
-              <td colspan="5" class="empty-cell">
+              <td colspan="6" class="empty-cell">
                 <div class="empty-state">
                   <h4>No Organizations Registered Yet</h4>
                   <p>Click "Add New Tenant" above to create your first organization or business account.</p>
@@ -191,4 +201,11 @@
   <!-- Add Tenant Modal -->
   <app-tenant-modal [isOpen]="isModalOpen()" mode="create" (close)="onModalClose()"
     (saved)="onTenantSaved($event)"></app-tenant-modal>
+
+  <!-- View Tenant Profile Modal -->
+  <app-tenant-profile-modal 
+    [isOpen]="isProfileModalOpen()" 
+    [tenant]="selectedTenantForView()" 
+    (close)="onProfileModalClose()">
+  </app-tenant-profile-modal>
 </div>

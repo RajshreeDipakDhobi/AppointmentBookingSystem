@@ -135,6 +135,8 @@ public class ServiceProviderService : IServiceProviderService
                 var firstName = names.Length > 0 ? names[0] : request.Name.Trim();
                 var lastName = names.Length > 1 ? names[1] : string.Empty;
 
+                var rawPassword = "123456";
+
                 var user = new User
                 {
                     TenantId = tenantId,
@@ -142,7 +144,7 @@ public class ServiceProviderService : IServiceProviderService
                     LastName = lastName,
                     Email = normalizedEmail,
                     PhoneNumber = request.PhoneNumber.Trim(),
-                    PasswordHash = _passwordHasher.HashPassword(request.Password),
+                    PasswordHash = _passwordHasher.HashPassword(rawPassword),
                     Role = UserRole.ServiceProvider,
                     IsActive = true,
                     Address = request.Address,

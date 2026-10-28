@@ -1,0 +1,101 @@
+<div *ngIf="isOpen && tenant" class="modal-backdrop animate-fade-in" (click)="onBackdropClick($event)">
+  <div class="modal-dialog glass-card animate-scale-up" role="dialog" aria-modal="true">
+    
+    <!-- Modal Header -->
+    <div class="modal-header">
+      <div class="header-left">
+        <div class="org-avatar">
+          <span>{{ initials }}</span>
+        </div>
+        <div class="header-titles">
+          <div class="title-row">
+            <h3 class="modal-title">{{ tenant.name }}</h3>
+            <span class="status-badge" [ngClass]="getStatusClass(tenant.status)">
+              <span class="status-dot"></span>
+              {{ getStatusLabel(tenant.status) }}
+            </span>
+          </div>
+          <span class="tenant-code-sub">Code: {{ tenant.tenantCode || tenant.slug }}</span>
+        </div>
+      </div>
+      <button type="button" class="btn-close" (click)="onClose()" aria-label="Close dialog">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"/>
+          <line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Modal Body: Direct, Clean Profile Details (No Unwanted / Dummy Info) -->
+    <div class="modal-body">
+      <div class="profile-info-grid">
+        
+        <!-- Administrator Name -->
+        <div class="info-group">
+          <span class="info-label">Administrator</span>
+          <span class="info-val font-semibold">{{ adminName }}</span>
+        </div>
+
+        <!-- Contact / Login Email -->
+        <div class="info-group">
+          <span class="info-label">Contact / Login Email</span>
+          <span class="info-val highlight">{{ tenant.contactEmail || 'Not available' }}</span>
+        </div>
+
+        <!-- Contact Phone -->
+        <div class="info-group">
+          <span class="info-label">Contact Mobile</span>
+          <span class="info-val">{{ (tenant.contactPhone | appPhone) || 'Not provided' }}</span>
+        </div>
+
+        <!-- Providers -->
+        <div class="info-group">
+          <span class="info-label">Providers</span>
+          <span class="info-val">{{ tenant.totalProvidersCount || 0 }} Providers</span>
+        </div>
+
+        <!-- Registered Date -->
+        <div class="info-group">
+          <span class="info-label">Registered Date</span>
+          <span class="info-val">{{ tenant.createdAt | appDate }}</span>
+        </div>
+
+        <!-- Status -->
+        <div class="info-group">
+          <span class="info-label">Operational Status</span>
+          <span class="info-val">{{ getStatusLabel(tenant.status) }}</span>
+        </div>
+
+        <!-- Office / Business Address (Span full row) -->
+        <div class="info-group full-width">
+          <span class="info-label">Office / Business Address</span>
+          <span class="info-val address-val">{{ tenant.address || 'Address not specified' }}</span>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Modal Footer -->
+    <div class="modal-footer">
+      <a 
+        *ngIf="tenant.slug || tenant.tenantCode" 
+        [routerLink]="['/organization', tenant.slug || tenant.tenantCode]" 
+        target="_blank"
+        class="btn btn-outline"
+        (click)="onClose()"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+          <polyline points="15 3 21 3 21 9"/>
+          <line x1="10" y1="14" x2="21" y2="3"/>
+        </svg>
+        <span>Public Booking Page</span>
+      </a>
+
+      <button type="button" class="btn btn-primary" (click)="onClose()">
+        Close
+      </button>
+    </div>
+
+  </div>
+</div>

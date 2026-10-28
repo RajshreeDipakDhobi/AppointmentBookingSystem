@@ -32,12 +32,10 @@ public class BookAppointmentRequestDto
     [StringLength(50, ErrorMessage = "CustomerPhone cannot exceed 50 characters.")]
     public string CustomerPhone { get; set; } = string.Empty;
 
+    [Required(ErrorMessage = "Customer address is required")]
     [StringLength(500, ErrorMessage = "CustomerAddress cannot exceed 500 characters.")]
-    public string? CustomerAddress { get; set; }
+    public string CustomerAddress { get; set; } = string.Empty;
 
     [StringLength(500, ErrorMessage = "Reason cannot exceed 500 characters.")]
     public string? Reason { get; set; }
-
-    [StringLength(100, MinimumLength = 6, ErrorMessage = "Password must be at least 6 characters.")]
-    public string? Password { get; set; }
 }

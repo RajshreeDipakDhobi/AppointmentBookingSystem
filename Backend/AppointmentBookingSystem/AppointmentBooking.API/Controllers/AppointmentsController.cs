@@ -30,7 +30,8 @@ public class AppointmentsController : BaseApiController
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetAvailableSlots(
         [FromQuery] int providerId, 
-        [FromQuery] DateTime date)
+        [FromQuery] DateTime date,
+        CancellationToken cancellationToken)
     {
         if (providerId <= 0)
         {
@@ -39,7 +40,7 @@ public class AppointmentsController : BaseApiController
 
         try
         {
-            var result = await _appointmentService.GetAvailableSlotsAsync(providerId, date);
+            var result = await _appointmentService.GetAvailableSlotsAsync(providerId, date, cancellationToken);
             if (result == null)
             {
                 return NotFoundResponse($"Service provider with ID {providerId} was not found.");
@@ -64,7 +65,8 @@ public class AppointmentsController : BaseApiController
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<IActionResult> BookAppointment(
         [FromBody] BookAppointmentRequestDto request, 
-        [FromQuery] int? tenantId)
+        [FromQuery] int? tenantId,
+        CancellationToken cancellationToken)
     {
         if (!ModelState.IsValid)
         {
@@ -74,8 +76,16 @@ public class AppointmentsController : BaseApiController
         var activeTenantId = ResolveTenantId(tenantId);
         // If Admin, SuperAdmin, or ServiceProvider is booking, they are booking on behalf of a customer, so customerId is null
         var customerId = (IsAdmin || IsSuperAdmin || IsServiceProvider) ? null : ResolveCustomerId();
+        // Only Service Provider appointments are auto-approved; Admin bookings require approval
+        bool isBookedByProvider = IsServiceProvider && !IsAdmin && !IsSuperAdmin;
 
-        var result = await _appointmentService.BookAppointmentAsync(activeTenantId, customerId, request);
+        var result = await _appointmentService.BookAppointmentAsync(
+            activeTenantId, 
+            customerId, 
+            request, 
+            isBookedByProvider: isBookedByProvider, 
+            createdByName: CurrentUserName, 
+            cancellationToken: cancellationToken);
 
         if (!result.Success)
         {
@@ -101,7 +111,8 @@ public class AppointmentsController : BaseApiController
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> LookupCustomer(
         [FromQuery] string query, 
-        [FromQuery] int? tenantId)
+        [FromQuery] int? tenantId,
+        CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(query))
         {
@@ -109,7 +120,7 @@ public class AppointmentsController : BaseApiController
         }
 
         var activeTenantId = ResolveTenantId(tenantId);
-        var customer = await _appointmentService.LookupCustomerAsync(activeTenantId, query);
+        var customer = await _appointmentService.LookupCustomerAsync(activeTenantId, query, cancellationToken);
         if (customer == null)
         {
             return NotFoundResponse("Customer not found.");
@@ -126,7 +137,8 @@ public class AppointmentsController : BaseApiController
     [ProducesResponseType(typeof(List<AppointmentBooking.BusinessLayer.Features.Auth.DTOs.UserDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> SearchCustomers(
         [FromQuery] string query, 
-        [FromQuery] int? tenantId)
+        [FromQuery] int? tenantId,
+        CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(query) || query.Trim().Length < 2)
         {
@@ -134,7 +146,7 @@ public class AppointmentsController : BaseApiController
         }
 
         var activeTenantId = ResolveTenantId(tenantId);
-        var customers = await _appointmentService.SearchCustomersAsync(activeTenantId, query);
+        var customers = await _appointmentService.SearchCustomersAsync(activeTenantId, query, cancellationToken);
         return OkResponse(customers);
     }
 
@@ -148,7 +160,8 @@ public class AppointmentsController : BaseApiController
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GetMyAppointments(
         [FromQuery] PaginationParams paginationParams,
-        [FromQuery] AppointmentStatus? status)
+        [FromQuery] AppointmentStatus? status,
+        CancellationToken cancellationToken)
     {
         var customerId = ResolveCustomerId();
         if (!customerId.HasValue)
@@ -156,7 +169,7 @@ public class AppointmentsController : BaseApiController
             return UnauthorizedResponse("Authenticated customer session is required.");
         }
 
-        var result = await _appointmentService.GetMyAppointmentsPagedAsync(customerId.Value, paginationParams, status);
+        var result = await _appointmentService.GetMyAppointmentsPagedAsync(customerId.Value, paginationParams, status, cancellationToken);
         return OkResponse(result);
     }
 
@@ -167,7 +180,7 @@ public class AppointmentsController : BaseApiController
     [Authorize]
     [ProducesResponseType(typeof(AppointmentStatsDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    public async Task<IActionResult> GetMyStats()
+    public async Task<IActionResult> GetMyStats(CancellationToken cancellationToken)
     {
         var customerId = ResolveCustomerId();
         if (!customerId.HasValue)
@@ -175,7 +188,7 @@ public class AppointmentsController : BaseApiController
             return UnauthorizedResponse("Authenticated customer session is required.");
         }
 
-        var stats = await _appointmentService.GetCustomerStatsAsync(customerId.Value);
+        var stats = await _appointmentService.GetCustomerStatsAsync(customerId.Value, cancellationToken);
         return OkResponse(stats);
     }
 
@@ -192,7 +205,8 @@ public class AppointmentsController : BaseApiController
         [FromQuery] DateTime? endDate,
         [FromQuery] AppointmentStatus? status,
         [FromQuery] PaginationParams paginationParams,
-        [FromQuery] int? tenantId)
+        [FromQuery] int? tenantId,
+        CancellationToken cancellationToken)
     {
         var activeTenantId = ResolveTenantId(tenantId);
         if (!activeTenantId.HasValue)
@@ -209,7 +223,8 @@ public class AppointmentsController : BaseApiController
             startDate, 
             endDate, 
             status, 
-            paginationParams);
+            paginationParams,
+            cancellationToken);
 
         return OkResponse(result);
     }
@@ -223,7 +238,8 @@ public class AppointmentsController : BaseApiController
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetAppointmentById(
         int appointmentId, 
-        [FromQuery] int? tenantId)
+        [FromQuery] int? tenantId,
+        CancellationToken cancellationToken)
     {
         var activeTenantId = ResolveTenantId(tenantId);
         if (!activeTenantId.HasValue)
@@ -231,7 +247,7 @@ public class AppointmentsController : BaseApiController
             return ErrorResponse("Tenant context is required.");
         }
 
-        var appointment = await _appointmentService.GetAppointmentByIdAsync(appointmentId, activeTenantId.Value);
+        var appointment = await _appointmentService.GetAppointmentByIdAsync(appointmentId, activeTenantId.Value, cancellationToken);
         if (appointment == null)
         {
             return NotFoundResponse($"Appointment with ID {appointmentId} was not found.");
@@ -251,7 +267,8 @@ public class AppointmentsController : BaseApiController
     public async Task<IActionResult> RescheduleAppointment(
         int appointmentId, 
         [FromBody] RescheduleAppointmentRequestDto request, 
-        [FromQuery] int? tenantId)
+        [FromQuery] int? tenantId,
+        CancellationToken cancellationToken)
     {
         if (!ModelState.IsValid)
         {
@@ -273,7 +290,8 @@ public class AppointmentsController : BaseApiController
             activeTenantId, 
             customerId, 
             isAdmin, 
-            request);
+            request,
+            cancellationToken);
 
         if (!result.Success)
         {
@@ -298,7 +316,8 @@ public class AppointmentsController : BaseApiController
     public async Task<IActionResult> CancelAppointment(
         int appointmentId, 
         [FromBody] CancelAppointmentRequestDto request, 
-        [FromQuery] int? tenantId)
+        [FromQuery] int? tenantId,
+        CancellationToken cancellationToken)
     {
         if (!ModelState.IsValid)
         {
@@ -315,7 +334,8 @@ public class AppointmentsController : BaseApiController
             customerId, 
             isAdmin, 
             request,
-            CurrentUserName);
+            CurrentUserName,
+            cancellationToken);
 
         if (!result.Success)
         {
@@ -337,7 +357,8 @@ public class AppointmentsController : BaseApiController
     public async Task<IActionResult> UpdateStatus(
         int appointmentId, 
         [FromBody] UpdateAppointmentStatusDto request, 
-        [FromQuery] int? tenantId)
+        [FromQuery] int? tenantId,
+        CancellationToken cancellationToken)
     {
         if (!ModelState.IsValid)
         {
@@ -356,7 +377,8 @@ public class AppointmentsController : BaseApiController
             currentUserId, 
             isAdmin, 
             request,
-            CurrentUserName);
+            CurrentUserName,
+            cancellationToken);
 
         if (!result.Success)
         {
@@ -375,15 +397,20 @@ public class AppointmentsController : BaseApiController
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> RespondToRescheduleProposal(
         int appointmentId,
-        [FromQuery] bool accept)
+        [FromQuery] bool accept,
+        CancellationToken cancellationToken)
     {
         var customerId = ResolveCustomerId();
-        if (!customerId.HasValue)
+        if (!customerId.HasValue && !IsAdmin && !IsSuperAdmin && !IsServiceProvider)
         {
-            return UnauthorizedResponse("Authenticated customer session is required.");
+            return UnauthorizedResponse("Authenticated session is required.");
         }
 
-        var result = await _appointmentService.RespondToRescheduleProposalAsync(appointmentId, customerId.Value, accept);
+        var result = await _appointmentService.RespondToRescheduleProposalAsync(
+            appointmentId, 
+            customerId ?? 0, 
+            accept, 
+            cancellationToken);
         if (!result.Success)
         {
             return StatusCode(StatusCodes.Status400BadRequest, result);
@@ -399,7 +426,7 @@ public class AppointmentsController : BaseApiController
     [Authorize(Roles = AppRoles.AllStaff)]
     [ProducesResponseType(typeof(AppointmentStatsDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> GetStats([FromQuery] int? tenantId)
+    public async Task<IActionResult> GetStats([FromQuery] int? tenantId, CancellationToken cancellationToken)
     {
         var activeTenantId = ResolveTenantId(tenantId);
         if (!activeTenantId.HasValue)
@@ -408,7 +435,7 @@ public class AppointmentsController : BaseApiController
         }
 
         var targetProviderId = IsServiceProvider ? CurrentProviderId : (int?)null;
-        var stats = await _appointmentService.GetStatsAsync(activeTenantId.Value, targetProviderId);
+        var stats = await _appointmentService.GetStatsAsync(activeTenantId.Value, targetProviderId, cancellationToken);
         return OkResponse(stats);
     }
 }

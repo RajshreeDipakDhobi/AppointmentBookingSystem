@@ -59,11 +59,8 @@ public class MappingProfile : Profile
         // Tenant Request Mappings
         CreateMap<CreateTenantRequestDto, Tenant>()
             .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.TenantName.Trim()))
-            .ForMember(dest => dest.TenantCode, opt => opt.MapFrom(src => !string.IsNullOrWhiteSpace(src.TenantCode) 
-                ? src.TenantCode.Trim().ToLower() 
-                : System.Text.RegularExpressions.Regex.Replace(src.TenantName.ToLower().Trim(), @"[^a-z0-9]+", "-").Trim('-')))
-            .ForMember(dest => dest.ContactEmail, opt => opt.MapFrom(src => !string.IsNullOrWhiteSpace(src.ContactEmail) ? src.ContactEmail.Trim().ToLower() : src.AdminEmail.Trim().ToLower()))
-            .ForMember(dest => dest.ContactPhone, opt => opt.MapFrom(src => !string.IsNullOrWhiteSpace(src.ContactPhone) ? src.ContactPhone.Trim() : src.AdminPhoneNumber))
+            .ForMember(dest => dest.ContactEmail, opt => opt.MapFrom(src => src.ContactEmail.Trim().ToLower()))
+            .ForMember(dest => dest.ContactPhone, opt => opt.MapFrom(src => !string.IsNullOrWhiteSpace(src.ContactPhone) ? src.ContactPhone.Trim() : null))
             .ForMember(dest => dest.Status, opt => opt.MapFrom(_ => TenantStatus.Active));
 
         CreateMap<UpdateTenantRequestDto, Tenant>()

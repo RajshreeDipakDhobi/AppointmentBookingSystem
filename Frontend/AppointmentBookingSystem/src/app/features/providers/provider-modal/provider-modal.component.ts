@@ -33,7 +33,6 @@ export class ProviderModalComponent implements OnChanges {
   readonly previewAvatarUrl = signal<string | null>(null);
   readonly isUploadingAvatar = signal<boolean>(false);
   readonly avatarError = signal<string | null>(null);
-  readonly showPassword = signal<boolean>(false);
 
   constructor() {
     this.providerForm = this.fb.group({
@@ -41,9 +40,8 @@ export class ProviderModalComponent implements OnChanges {
       serviceType: ['', [Validators.required]],
       email: ['', [Validators.required, Validators.pattern(EMAIL_REGEX)]],
       phoneNumber: ['', [Validators.required, Validators.pattern(PHONE_10_DIGIT_REGEX)]],
-      password: ['', [Validators.required, Validators.minLength(6)]],
       chargesAmount: [0, [Validators.required, Validators.min(0)]],
-      address: ['', [Validators.required, Validators.minLength(2)]],
+      address: [''],
       bio: ['', [Validators.required, Validators.minLength(5)]],
       profilePictureUrl: ['']
     });
@@ -62,18 +60,14 @@ export class ProviderModalComponent implements OnChanges {
     this.avatarError.set(null);
     this.isSubmitting.set(false);
     this.isUploadingAvatar.set(false);
-    this.showPassword.set(false);
 
     if (this.mode === 'edit' && this.providerToEdit) {
       this.previewAvatarUrl.set(this.providerToEdit.profilePictureUrl || null);
-      this.providerForm.get('password')?.clearValidators();
-      this.providerForm.get('password')?.updateValueAndValidity();
       this.providerForm.reset({
         name: this.providerToEdit.name || '',
         serviceType: this.providerToEdit.serviceType || '',
         email: this.providerToEdit.email || '',
         phoneNumber: filter10Digits(this.providerToEdit.phoneNumber) || '',
-        password: '',
         chargesAmount: this.providerToEdit.chargesAmount ?? 0,
         address: this.providerToEdit.address || '',
         bio: this.providerToEdit.bio || '',
@@ -81,14 +75,11 @@ export class ProviderModalComponent implements OnChanges {
       });
     } else {
       this.previewAvatarUrl.set(null);
-      this.providerForm.get('password')?.setValidators([Validators.required, Validators.minLength(6)]);
-      this.providerForm.get('password')?.updateValueAndValidity();
       this.providerForm.reset({
         name: '',
         serviceType: '',
         email: '',
         phoneNumber: '',
-        password: '',
         chargesAmount: 0,
         address: '',
         bio: '',
@@ -152,10 +143,6 @@ export class ProviderModalComponent implements OnChanges {
     this.providerForm.patchValue({ profilePictureUrl: '' });
   }
 
-  togglePasswordVisibility(): void {
-    this.showPassword.update(show => !show);
-  }
-
   onBackdropClick(event: MouseEvent): void {
     if ((event.target as HTMLElement).classList.contains('modal-backdrop')) {
       this.onClose();
@@ -186,7 +173,6 @@ export class ProviderModalComponent implements OnChanges {
         serviceType: val.serviceType.trim(),
         email: val.email.trim(),
         phoneNumber: val.phoneNumber.trim(),
-        password: val.password ? val.password.trim() : '',
         chargesAmount: val.chargesAmount != null ? Number(val.chargesAmount) : 0,
         address: val.address ? val.address.trim() : undefined,
         bio: val.bio ? val.bio.trim() : undefined,

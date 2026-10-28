@@ -29,29 +29,20 @@ export interface TenantDto {
 
 export interface CreateTenantRequestDto {
   tenantName: string;
-  tenantCode?: string;
-  contactEmail?: string;
+  contactEmail: string;
   contactPhone?: string;
   address?: string;
-  logoUrl?: string;
   adminFirstName: string;
   adminLastName: string;
-  adminEmail: string;
-  adminPassword: string;
-  adminPhoneNumber?: string;
 }
 
 export interface UpdateTenantRequestDto {
   tenantName: string;
-  tenantCode?: string;
   contactEmail?: string;
   contactPhone?: string;
   address?: string;
-  logoUrl?: string;
   adminFirstName?: string;
   adminLastName?: string;
-  adminEmail?: string;
-  adminPassword?: string;
 }
 
 export interface UpdateTenantStatusDto {

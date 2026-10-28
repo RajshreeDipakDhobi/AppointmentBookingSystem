@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { TenantService } from '../../core/services/tenant.service';
 import { TenantDto, TenantStatus } from '../../core/models/tenant.models';
 import { TenantModalComponent } from './tenant-modal/tenant-modal.component';
+import { TenantProfileModalComponent } from './tenant-profile-modal/tenant-profile-modal.component';
 import { PaginationComponent } from '../../shared/components/pagination/pagination.component';
 import { AppDatePipe, AppPhonePipe } from '../../shared/pipes';
 import { ConfirmService } from '../../shared/components/confirmation-modal/confirm.service';
@@ -11,7 +12,15 @@ import { ConfirmService } from '../../shared/components/confirmation-modal/confi
 @Component({
   selector: 'app-tenants',
   standalone: true,
-  imports: [CommonModule, FormsModule, TenantModalComponent, PaginationComponent, AppDatePipe, AppPhonePipe],
+  imports: [
+    CommonModule, 
+    FormsModule, 
+    TenantModalComponent, 
+    TenantProfileModalComponent, 
+    PaginationComponent, 
+    AppDatePipe, 
+    AppPhonePipe
+  ],
   templateUrl: './tenants.component.html',
   styleUrls: ['./tenants.component.css']
 })
@@ -34,6 +43,8 @@ export class TenantsComponent implements OnInit {
   readonly isModalOpen = signal<boolean>(false);
   readonly modalMode = signal<'create' | 'edit'>('create');
   readonly selectedTenant = signal<TenantDto | null>(null);
+  readonly isProfileModalOpen = signal<boolean>(false);
+  readonly selectedTenantForView = signal<TenantDto | null>(null);
 
   searchQuery = '';
 
@@ -89,6 +100,16 @@ export class TenantsComponent implements OnInit {
     this.modalMode.set('edit');
     this.selectedTenant.set(tenant);
     this.isModalOpen.set(true);
+  }
+
+  openViewModal(tenant: TenantDto): void {
+    this.selectedTenantForView.set(tenant);
+    this.isProfileModalOpen.set(true);
+  }
+
+  onProfileModalClose(): void {
+    this.isProfileModalOpen.set(false);
+    this.selectedTenantForView.set(null);
   }
 
   onModalClose(): void {

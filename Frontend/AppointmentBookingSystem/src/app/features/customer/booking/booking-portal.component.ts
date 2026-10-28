@@ -120,13 +120,30 @@ export class BookingPortalComponent implements OnInit, OnDestroy {
       }
     });
 
-    // 4. Initialize Auth if needed
-    if (!this.authService.isInitialized()) {
-      this.authService.checkAuth().subscribe(() => {
+    // 4. Initialize Auth if needed and redirect authenticated users away from the public booking portal
+    const handleAuthRedirect = (user: any) => {
+      if (!user) {
         this.checkResumeBooking();
+        return;
+      }
+      const role = user.role;
+      if (role === UserRole.Customer || (role as unknown) === 4 || (role as unknown) === '4') {
+        this.router.navigate(['/my-appointments']);
+        return;
+      }
+      if (role === UserRole.ServiceProvider || (role as unknown) === 3 || (role as unknown) === '3') {
+        this.router.navigate(['/appointments']);
+        return;
+      }
+      this.router.navigate(['/dashboard']);
+    };
+
+    if (!this.authService.isInitialized()) {
+      this.authService.checkAuth().subscribe((user) => {
+        handleAuthRedirect(user);
       });
     } else {
-      this.checkResumeBooking();
+      handleAuthRedirect(this.authService.currentUser());
     }
   }
 
@@ -361,13 +378,26 @@ export class BookingPortalComponent implements OnInit, OnDestroy {
 
   onLoginSuccess(): void {
     this.isLoginDrawerOpen.set(false);
+
+    const user = this.authService.currentUser();
+    const isCustomer = user && (user.role === UserRole.Customer || (user.role as unknown) === 4 || (user.role as unknown) === '4');
+
+    if (isCustomer) {
+      sessionStorage.removeItem('pending_booking_draft');
+      this.router.navigate(['/my-appointments']);
+      return;
+    }
+
     this.checkResumeBooking();
 
-    // If no booking draft to resume, redirect to dashboard if user has management role or no orgs are present
+    // If no booking draft to resume, redirect to role dashboard/appointments
     if (!sessionStorage.getItem('pending_booking_draft')) {
-      const user = this.authService.currentUser();
-      if (user && (user.role !== UserRole.Customer || this.tenants().length === 0)) {
-        this.router.navigate(['/dashboard']);
+      if (user) {
+        if (user.role === UserRole.ServiceProvider || (user.role as unknown) === 3 || (user.role as unknown) === '3') {
+          this.router.navigate(['/appointments']);
+        } else {
+          this.router.navigate(['/dashboard']);
+        }
       }
     }
   }

@@ -7,6 +7,7 @@ using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 using AppointmentBooking.BusinessLayer.Common.Models;
 using Microsoft.Extensions.Logging;
+using System.Text.RegularExpressions;
 
 namespace AppointmentBooking.BusinessLayer.Features.Tenants;
 
@@ -84,37 +85,65 @@ public class TenantService : ITenantService
     {
         try
         {
-            var normalizedEmail = request.AdminEmail.Trim().ToLower();
+            // 1. Single email check (ContactEmail is the official login email)
+            var targetEmail = request.ContactEmail?.Trim().ToLower();
+
+            if (string.IsNullOrWhiteSpace(targetEmail))
+            {
+                return ApiResponse<TenantDto>.Fail("A valid contact email is required.");
+            }
 
             bool emailExists = await _unitOfWork.Repository<User>()
-                .ExistsAsync(u => u.Email.ToLower() == normalizedEmail, cancellationToken);
+                .ExistsAsync(u => u.Email.ToLower() == targetEmail, cancellationToken);
 
             if (emailExists)
             {
-                return ApiResponse<TenantDto>.Fail("A user account with this admin email already exists.");
+                return ApiResponse<TenantDto>.Fail("A user account with this email already exists.");
             }
+
+            // 2. Auto-generate unique TenantCode
+            var baseSlug = Regex.Replace(request.TenantName.ToLower().Trim(), @"[^a-z0-9]+", "-").Trim('-');
+
+            if (string.IsNullOrWhiteSpace(baseSlug))
+            {
+                baseSlug = "tenant";
+            }
+
+            var uniqueTenantCode = baseSlug;
+            int counter = 1;
+            while (await _unitOfWork.Repository<Tenant>().ExistsAsync(t => t.TenantCode == uniqueTenantCode, cancellationToken))
+            {
+                uniqueTenantCode = $"{baseSlug}-{counter}";
+                counter++;
+            }
+
+            // 3. Default password (123456)
+            var rawPassword = "123456";
 
             await _unitOfWork.BeginTransactionAsync(cancellationToken);
 
             try
             {
-                // 1. Create Tenant (Organization)
+                // 4. Create Tenant (Organization)
                 var tenant = _mapper.Map<Tenant>(request);
+                tenant.TenantCode = uniqueTenantCode;
+                tenant.ContactEmail = targetEmail;
+                tenant.ContactPhone = request.ContactPhone?.Trim();
                 tenant.CreatedAt = DateTime.UtcNow;
                 tenant.CreatedBy = createdBy;
 
                 await _unitOfWork.Repository<Tenant>().AddAsync(tenant, cancellationToken);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-                // 2. Create Tenant Admin (User)
+                // 5. Create Tenant Admin (User) with First & Last Name
                 var adminUser = new User
                 {
                     TenantId = tenant.Id,
                     FirstName = request.AdminFirstName.Trim(),
                     LastName = request.AdminLastName.Trim(),
-                    Email = normalizedEmail,
-                    PhoneNumber = request.AdminPhoneNumber?.Trim(),
-                    PasswordHash = _passwordHasher.HashPassword(request.AdminPassword),
+                    Email = targetEmail,
+                    PhoneNumber = tenant.ContactPhone,
+                    PasswordHash = _passwordHasher.HashPassword(rawPassword),
                     Role = UserRole.Admin,
                     IsActive = true,
                     CreatedAt = DateTime.UtcNow,
@@ -165,10 +194,8 @@ public class TenantService : ITenantService
                 adminUser.FirstName = request.AdminFirstName.Trim();
             if (!string.IsNullOrWhiteSpace(request.AdminLastName))
                 adminUser.LastName = request.AdminLastName.Trim();
-            if (!string.IsNullOrWhiteSpace(request.AdminEmail))
-                adminUser.Email = request.AdminEmail.Trim().ToLower();
-            if (!string.IsNullOrWhiteSpace(request.AdminPassword))
-                adminUser.PasswordHash = _passwordHasher.HashPassword(request.AdminPassword);
+            if (!string.IsNullOrWhiteSpace(request.ContactEmail))
+                adminUser.Email = request.ContactEmail.Trim().ToLower();
             adminUser.UpdatedAt = DateTime.UtcNow;
             _unitOfWork.Repository<User>().Update(adminUser);
         }

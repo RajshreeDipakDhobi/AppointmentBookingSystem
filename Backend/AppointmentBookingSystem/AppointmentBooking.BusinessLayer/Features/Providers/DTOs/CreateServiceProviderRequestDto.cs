@@ -26,8 +26,4 @@ public class CreateServiceProviderRequestDto
 
     [Range(0, 1000000, ErrorMessage = "Charges amount must be a positive value")]
     public decimal ChargesAmount { get; set; } = 0.00m;
-
-    [Required(ErrorMessage = "Password is required for Service Provider login account")]
-    [StringLength(100, MinimumLength = 6, ErrorMessage = "Password must be at least 6 characters")]
-    public string Password { get; set; } = string.Empty;
 }

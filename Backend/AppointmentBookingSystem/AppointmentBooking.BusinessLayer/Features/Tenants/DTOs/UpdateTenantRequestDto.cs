@@ -15,11 +15,7 @@ public class UpdateTenantRequestDto
     public string? ContactPhone { get; set; }
 
     public string? Address { get; set; }
-    public string? LogoUrl { get; set; }
 
     public string? AdminFirstName { get; set; }
     public string? AdminLastName { get; set; }
-    [EmailAddress]
-    public string? AdminEmail { get; set; }
-    public string? AdminPassword { get; set; }
 }

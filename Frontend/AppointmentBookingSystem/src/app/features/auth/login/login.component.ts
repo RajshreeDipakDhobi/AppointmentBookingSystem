@@ -59,7 +59,7 @@ export class LoginComponent implements OnInit {
   ngOnInit(): void {
     const qp = this.route.snapshot.queryParamMap;
     const mode = qp.get('mode');
-    const resume = qp.get('resumeBooking') === 'true' || !!sessionStorage.getItem('pending_booking_draft');
+    const resume = qp.get('resumeBooking') === 'true';
 
     if (mode === 'register') {
       this.isRegisterMode = true;
@@ -133,8 +133,19 @@ export class LoginComponent implements OnInit {
       return;
     }
 
+    const user = this.authService.currentUser();
+    const userRole = user?.role;
+    const isCustomer = userRole === UserRole.Customer || (userRole as unknown) === 4 || (userRole as unknown) === '4';
+
+    // Customers must always be directed to their appointments view upon login, never the booking portal
+    if (isCustomer) {
+      sessionStorage.removeItem('pending_booking_draft');
+      this.router.navigate(['/my-appointments']);
+      return;
+    }
+
     const hasPendingDraft = !!sessionStorage.getItem('pending_booking_draft');
-    const isResume = this.isResumingBooking || hasPendingDraft;
+    const isResume = this.isResumingBooking && hasPendingDraft;
 
     if (isResume) {
       this.router.navigate(['/book'], { queryParams: { resumeBooking: 'true' } });
@@ -142,20 +153,14 @@ export class LoginComponent implements OnInit {
     }
 
     const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl');
-    const userRole = this.authService.currentUser()?.role;
 
-    if (returnUrl && !returnUrl.includes('/dashboard')) {
+    if (returnUrl && !returnUrl.includes('/dashboard') && !returnUrl.includes('/book') && !returnUrl.includes('/booking-portal')) {
       this.router.navigateByUrl(returnUrl);
       return;
     }
 
     if (userRole === UserRole.ServiceProvider || (userRole as unknown) === 3 || (userRole as unknown) === '3') {
       this.router.navigate(['/appointments']);
-      return;
-    }
-
-    if (userRole === UserRole.Customer || (userRole as unknown) === 4 || (userRole as unknown) === '4') {
-      this.router.navigate(['/my-appointments']);
       return;
     }
 

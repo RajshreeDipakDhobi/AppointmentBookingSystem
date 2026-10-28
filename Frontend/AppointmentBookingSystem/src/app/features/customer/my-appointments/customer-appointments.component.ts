@@ -251,7 +251,7 @@ export class CustomerAppointmentsComponent implements OnInit, OnDestroy {
     this.appointmentService.respondToProposal(appt.id, false).subscribe({
       next: (res) => {
         this.isRespondingProposal.set(false);
-        this.successMessage.set(`Reschedule proposal declined for appointment #${res.appointmentNumber}. Original schedule retained.`);
+        this.successMessage.set(`Reschedule proposal declined. Appointment #${res.appointmentNumber} has been cancelled.`);
         this.loadStats();
         this.loadAppointments();
         setTimeout(() => this.successMessage.set(''), 5000);
