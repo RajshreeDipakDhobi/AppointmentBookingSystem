@@ -6,6 +6,11 @@
   width: 100%;
 }
 
+:host.has-modal-open,
+:host:has(.modal-backdrop) {
+  z-index: 100050 !important;
+}
+
 .topbar {
   height: 50px;
   background: #ffffff;
@@ -444,6 +449,14 @@
   color: #ffffff;
   box-shadow: 0 4px 12px rgba(30, 81, 66, 0.2);
   flex-shrink: 0;
+  overflow: hidden;
+}
+
+.dropdown-avatar img {
+  width: 100%;
+  height: 100%;
+  border-radius: 12px;
+  object-fit: cover;
 }
 
 .dropdown-user-details {
@@ -564,6 +577,12 @@
   background: rgba(244, 63, 94, 0.12);
   color: #fb7185;
   border: 1px solid rgba(244, 63, 94, 0.22);
+}
+
+.icon-emerald {
+  background: rgba(30, 81, 66, 0.12);
+  color: #1e5142;
+  border: 1px solid rgba(30, 81, 66, 0.22);
 }
 
 .action-label-wrap {

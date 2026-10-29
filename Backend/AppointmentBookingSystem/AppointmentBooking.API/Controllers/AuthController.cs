@@ -10,11 +10,16 @@ public class AuthController : BaseApiController
 {
     private readonly IAuthService _authService;
     private readonly ILogger<AuthController> _logger;
+    private readonly IWebHostEnvironment _env;
 
-    public AuthController(IAuthService authService, ILogger<AuthController> logger)
+    public AuthController(
+        IAuthService authService, 
+        ILogger<AuthController> logger,
+        IWebHostEnvironment env)
     {
         _authService = authService;
         _logger = logger;
+        _env = env;
     }
 
     /// <summary>
@@ -143,6 +148,137 @@ public class AuthController : BaseApiController
         }
 
         return OkResponse(result.Data, result.Message);
+    }
+
+    /// <summary>
+    /// Update profile details (Name, Phone, Address, City, State, PostalCode) for the authenticated user
+    /// </summary>
+    [HttpPut("profile")]
+    [Authorize]
+    [ProducesResponseType(typeof(UserDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> UpdateProfile([FromBody] UpdateProfileRequestDto request, CancellationToken cancellationToken)
+    {
+        if (!CurrentUserId.HasValue)
+        {
+            return UnauthorizedResponse("User session context is invalid.");
+        }
+
+        if (!ModelState.IsValid)
+        {
+            return ValidationResponse();
+        }
+
+        var result = await _authService.UpdateProfileAsync(CurrentUserId.Value, request, cancellationToken);
+        if (!result.Success || result.Data == null)
+        {
+            return ErrorResponse(result.Message);
+        }
+
+        return OkResponse(result.Data, result.Message);
+    }
+
+    /// <summary>
+    /// Change password for the authenticated user by verifying current password
+    /// </summary>
+    [HttpPut("change-password")]
+    [Authorize]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequestDto request, CancellationToken cancellationToken)
+    {
+        if (!CurrentUserId.HasValue)
+        {
+            return UnauthorizedResponse("User session context is invalid.");
+        }
+
+        if (!ModelState.IsValid)
+        {
+            return ValidationResponse();
+        }
+
+        var result = await _authService.ChangePasswordAsync(CurrentUserId.Value, request, cancellationToken);
+        if (!result.Success)
+        {
+            return ErrorResponse(result.Message);
+        }
+
+        return OkResponse(result.Data, result.Message);
+    }
+
+    /// <summary>
+    /// Upload profile picture / avatar image for the authenticated user
+    /// </summary>
+    [HttpPost("upload-avatar")]
+    [Authorize]
+    [Consumes("multipart/form-data")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> UploadAvatar(IFormFile? file, CancellationToken cancellationToken)
+    {
+        if (!CurrentUserId.HasValue)
+        {
+            return UnauthorizedResponse("User session context is invalid.");
+        }
+
+        if (file == null || file.Length == 0)
+        {
+            return ErrorResponse("No image file was provided for upload.");
+        }
+
+        const long maxSizeBytes = 5 * 1024 * 1024;
+        if (file.Length > maxSizeBytes)
+        {
+            return ErrorResponse("Image size exceeds the maximum allowed limit of 5 MB.");
+        }
+
+        var allowedExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ".jpg", ".jpeg", ".png", ".webp", ".gif"
+        };
+        var extension = Path.GetExtension(file.FileName);
+        if (string.IsNullOrEmpty(extension) || !allowedExtensions.Contains(extension))
+        {
+            return ErrorResponse("Invalid image format. Allowed formats: .jpg, .jpeg, .png, .webp, .gif");
+        }
+
+        var allowedContentTypes = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "image/jpeg", "image/png", "image/webp", "image/gif", "image/pjpeg"
+        };
+        if (!allowedContentTypes.Contains(file.ContentType))
+        {
+            return ErrorResponse("Invalid file content type. Must be an image file.");
+        }
+
+        var webRoot = _env.WebRootPath ?? Path.Combine(_env.ContentRootPath, "wwwroot");
+        var uploadsDir = Path.Combine(webRoot, "uploads", "avatars");
+        if (!Directory.Exists(uploadsDir))
+        {
+            Directory.CreateDirectory(uploadsDir);
+        }
+
+        var uniqueFileName = $"{Guid.NewGuid():N}{extension.ToLowerInvariant()}";
+        var filePath = Path.Combine(uploadsDir, uniqueFileName);
+
+        await using (var stream = new FileStream(filePath, FileMode.Create))
+        {
+            await file.CopyToAsync(stream, cancellationToken);
+        }
+
+        var relativePath = $"/uploads/avatars/{uniqueFileName}";
+        var fullUrl = $"{Request.Scheme}://{Request.Host}{relativePath}";
+
+        return OkResponse(new
+        {
+            url = fullUrl,
+            relativeUrl = relativePath,
+            fileName = uniqueFileName,
+            size = file.Length
+        }, "Avatar uploaded successfully.");
     }
 
     private void SetTokenCookies(string accessToken, string refreshToken, DateTime accessExpiresAt)

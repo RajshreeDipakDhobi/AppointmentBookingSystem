@@ -268,6 +268,51 @@
   gap: 0.75rem;
 }
 
+@media (max-width: 600px) {
+  .modal-backdrop {
+    padding: 0.5rem !important;
+  }
+
+  .modal-dialog,
+  .modal-card {
+    max-height: 94vh !important;
+    border-radius: 14px !important;
+  }
+
+  .modal-header {
+    padding: 0.75rem 1rem !important;
+  }
+
+  .modal-title {
+    font-size: 1.05rem !important;
+  }
+
+  .modal-subtitle {
+    font-size: 0.75rem !important;
+  }
+
+  .modal-body {
+    padding: 0.85rem 1rem !important;
+  }
+
+  .modal-footer {
+    padding: 0.75rem 1rem !important;
+  }
+
+  .footer-actions-row {
+    width: 100%;
+  }
+
+  .footer-actions-row .btn.btn-primary {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .calendar-panel {
+    padding: 0.85rem !important;
+  }
+}
+
 /* Error Banner */
 .alert-error {
   display: flex;
@@ -469,11 +514,11 @@
 .service-select-anchor .custom-dropdown-popover {
   position: absolute;
   top: calc(100% + 6px);
-  right: 0;
-  left: auto;
+  left: 0;
+  right: auto;
   width: 320px;
-  min-width: 300px;
-  max-width: 360px;
+  min-width: 280px;
+  max-width: min(360px, calc(100vw - 2.5rem));
   background: #ffffff !important;
   border: 1px solid #dce8e1 !important;
   border-radius: 14px;
@@ -481,6 +526,7 @@
   z-index: 1000 !important;
   overflow: hidden;
   padding: 0;
+  box-sizing: border-box !important;
 }
 
 .service-select-anchor .popover-header {
@@ -831,8 +877,55 @@
 }
 
 @media (max-width: 680px) {
+  .provider-filters-row {
+    gap: 0.6rem;
+  }
+
+  .provider-search-box {
+    width: 100% !important;
+    min-width: 100% !important;
+    flex: 1 1 100% !important;
+  }
+
+  .service-select-anchor {
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
+  }
+
+  .service-select-anchor .custom-select-trigger {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .service-select-anchor .custom-dropdown-popover {
+    left: 0 !important;
+    right: auto !important;
+    width: min(340px, calc(100vw - 2.5rem)) !important;
+    min-width: 0 !important;
+    max-width: calc(100vw - 2.5rem) !important;
+    box-sizing: border-box !important;
+  }
+
+  .providers-count-pill {
+    flex-shrink: 0 !important;
+    font-size: 0.76rem !important;
+    padding: 0 0.65rem !important;
+  }
+
   .provider-cards-grid {
     grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+
+  .provider-select-card {
+    padding: 0.95rem 1rem !important;
+  }
+
+  .btn-select-provider {
+    white-space: nowrap !important;
+    padding: 0.4rem 0.85rem !important;
+    font-size: 0.78rem !important;
   }
 }
 

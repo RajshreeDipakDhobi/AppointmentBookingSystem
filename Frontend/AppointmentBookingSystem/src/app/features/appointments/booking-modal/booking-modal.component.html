@@ -38,7 +38,8 @@
             <ng-container [ngSwitch]="currentStep">
               <span *ngSwitchCase="1">Choose an active provider for your appointment</span>
               <span *ngSwitchCase="2">Choose an appointment date and available time slot</span>
-              <span *ngSwitchCase="3">{{ isStaffOrAdmin() ? 'Search existing customer to auto-fill or enter walk-in details' : 'Provide contact details for booking confirmation' }}</span>
+              <span *ngSwitchCase="3">{{ isStaffOrAdmin() ? 'Search existing customer to auto-fill or enter walk-in
+                details' : 'Provide contact details for booking confirmation' }}</span>
               <span *ngSwitchCase="4">Please review your appointment summary before booking</span>
               <span *ngSwitchCase="5">Your reservation has been confirmed. Save or print your official booking pass
                 below.</span>
@@ -200,7 +201,8 @@
                   </div>
                   <div class="option-info">
                     <span class="option-title">{{ st }}</span>
-                    <span class="option-desc">{{ getProviderCountForService(st) }} {{ getProviderCountForService(st) === 1 ? 'specialist' : 'specialists' }}</span>
+                    <span class="option-desc">{{ getProviderCountForService(st) }} {{ getProviderCountForService(st) ===
+                      1 ? 'specialist' : 'specialists' }}</span>
                   </div>
 
                   <div class="option-checkbox-indicator" [class.is-checked]="selectedServiceType() === st">
@@ -347,7 +349,8 @@
               <span class="summary-role">{{ selectedProvider?.serviceType || 'Provider' }}</span>
               <div class="summary-name-row">
                 <h4 class="summary-name">{{ selectedProvider?.name }}</h4>
-                <span *ngIf="selectedProvider?.chargesAmount" class="card-charges-badge">₹{{ selectedProvider?.chargesAmount | number }}</span>
+                <span *ngIf="selectedProvider?.chargesAmount" class="card-charges-badge">₹{{
+                  selectedProvider?.chargesAmount | number }}</span>
               </div>
             </div>
           </div>
@@ -382,10 +385,7 @@
             </div>
 
             <div class="modal-calendar-embed">
-              <mat-calendar
-                [selected]="selectedDateObject"
-                [minDate]="minDateObject"
-                [maxDate]="maxDateObject"
+              <mat-calendar [selected]="selectedDateObject" [minDate]="minDateObject" [maxDate]="maxDateObject"
                 (selectedChange)="onMaterialDateSelected($event)">
               </mat-calendar>
             </div>
@@ -477,7 +477,8 @@
               </div>
               <span class="context-text font-bold">{{ selectedProvider.name }}</span>
               <span class="context-tag">{{ selectedProvider.serviceType || 'Provider' }}</span>
-              <span *ngIf="selectedProvider.chargesAmount" class="card-charges-badge">₹{{ selectedProvider.chargesAmount | number }}</span>
+              <span *ngIf="selectedProvider.chargesAmount" class="card-charges-badge">₹{{ selectedProvider.chargesAmount
+                | number }}</span>
             </div>
           </div>
 
@@ -521,10 +522,13 @@
               </div>
               <div>
                 <h4 class="card-title">{{ isStaffOrAdmin() ? 'Customer Contact Details' : 'Your Contact Details' }}</h4>
-                <p class="card-subtitle">{{ isStaffOrAdmin() ? 'Search registered customer to auto-fill, or enter new walk-in details below.' : 'Booking notifications and official appointment ticket will be issued to this customer.' }}</p>
+                <p class="card-subtitle">{{ isStaffOrAdmin() ? 'Search registered customer to auto-fill, or enter new
+                  walk-in details below.' : 'Booking notifications and official appointment ticket will be issued to
+                  this customer.' }}</p>
               </div>
             </div>
-            <button *ngIf="isStaffOrAdmin() && (customerName || customerPhone || customerEmail)" type="button" class="btn-clear-fields" (click)="clearLinkedCustomer()" title="Reset customer fields">
+            <button *ngIf="isStaffOrAdmin() && (customerName || customerPhone || customerEmail)" type="button"
+              class="btn-clear-fields" (click)="clearLinkedCustomer()" title="Reset customer fields">
               ✕ Clear Fields
             </button>
           </div>
@@ -532,83 +536,71 @@
           <!-- Staff / Admin: Sleek Integrated Customer Search Bar -->
           <div *ngIf="isStaffOrAdmin()" class="customer-quick-search-box">
             <div class="quick-search-input-wrap">
-              <svg class="search-lead-ico" xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="11" cy="11" r="8"/>
-                <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              <svg class="search-lead-ico" xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24"
+                fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
               </svg>
 
-              <input
-                type="text"
-                [ngModel]="customerSearchQuery()"
+              <input type="text" [ngModel]="customerSearchQuery()"
                 (input)="onCustomerSearchInput($any($event.target).value)"
                 (focus)="showSearchDropdown.set(customerSearchResults().length > 0)"
-                placeholder="Search customer by Name, Mobile (+91), or Email to auto-fill..."
-                class="quick-search-field"
-                autocomplete="off"
-              />
+                placeholder="Search customer by Name, Mobile (+91), or Email to auto-fill..." class="quick-search-field"
+                autocomplete="off" />
 
               <div *ngIf="isSearchingCustomers()" class="search-spinner-inline">
                 <div class="spinner-small"></div>
               </div>
 
-              <button
-                *ngIf="customerSearchQuery()"
-                type="button"
-                class="btn-clear-search-pill"
+              <button *ngIf="customerSearchQuery()" type="button" class="btn-clear-search-pill"
                 (click)="customerSearchQuery.set(''); customerSearchResults.set([]); showSearchDropdown.set(false)"
-                title="Clear search"
-              >✕</button>
+                title="Clear search">✕</button>
             </div>
 
             <!-- Autocomplete Dropdown List -->
             <div
               *ngIf="showSearchDropdown() && (customerSearchResults().length > 0 || (!isSearchingCustomers() && customerSearchQuery().length >= 2))"
-              class="customer-dropdown-menu custom-scrollbar animate-scale-up"
-            >
+              class="customer-dropdown-menu custom-scrollbar animate-scale-up">
               <div *ngIf="customerSearchResults().length > 0" class="dropdown-results-list">
                 <div class="dropdown-header">
-                  <span>Found {{ customerSearchResults().length }} customer{{ customerSearchResults().length > 1 ? 's' : '' }}</span>
+                  <span>Found {{ customerSearchResults().length }} customer{{ customerSearchResults().length > 1 ? 's' :
+                    '' }}</span>
                   <span class="dropdown-tip">Click to 1-click auto-fill</span>
                 </div>
-                <button
-                  *ngFor="let cust of customerSearchResults()"
-                  type="button"
-                  class="dropdown-customer-item"
-                  (click)="selectCustomerFromSearch(cust)"
-                >
-                  <div class="cust-avatar-badge" [style.background]="getAvatarGradient(cust.fullName || cust.firstName || '')">
+                <button *ngFor="let cust of customerSearchResults()" type="button" class="dropdown-customer-item"
+                  (click)="selectCustomerFromSearch(cust)">
+                  <div class="cust-avatar-badge"
+                    [style.background]="getAvatarGradient(cust.fullName || cust.firstName || '')">
                     {{ getInitials(cust.fullName || cust.firstName || 'C') }}
                   </div>
                   <div class="cust-item-details">
                     <div class="cust-name-row">
-                      <span class="cust-item-name">{{ cust.fullName || (cust.firstName + ' ' + (cust.lastName || '')) }}</span>
+                      <span class="cust-item-name">{{ cust.fullName || (cust.firstName + ' ' + (cust.lastName || ''))
+                        }}</span>
                       <span class="cust-role-tag" *ngIf="cust.phoneNumber">+91 {{ cust.phoneNumber }}</span>
                     </div>
                     <div class="cust-contact-row">
                       <span class="cust-meta-item" *ngIf="cust.email">{{ cust.email }}</span>
-                      <span class="cust-meta-item" *ngIf="cust.address || cust.city">• {{ cust.address || cust.city }}</span>
+                      <span class="cust-meta-item" *ngIf="cust.address || cust.city">• {{ cust.address || cust.city
+                        }}</span>
                     </div>
                   </div>
                   <div class="cust-select-badge">Select</div>
                 </button>
               </div>
 
-              <div *ngIf="!isSearchingCustomers() && customerSearchResults().length === 0 && customerSearchQuery().length >= 2" class="dropdown-no-results">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <circle cx="12" cy="12" r="10"/>
-                  <line x1="12" y1="8" x2="12" y2="12"/>
-                  <line x1="12" y1="16" x2="12.01" y2="16"/>
+              <div
+                *ngIf="!isSearchingCustomers() && customerSearchResults().length === 0 && customerSearchQuery().length >= 2"
+                class="dropdown-no-results">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="12" y1="8" x2="12" y2="12" />
+                  <line x1="12" y1="16" x2="12.01" y2="16" />
                 </svg>
                 <span>No registered customer found. Fill below for new walk-in.</span>
               </div>
             </div>
-          </div>
-
-          <!-- New Customer Notice (when phone typed but not found) -->
-          <div *ngIf="isStaffOrAdmin() && !linkedCustomer && isCustomerNotFound() && customerPhone.length === 10"
-            class="customer-link-alert info animate-fade-in">
-            <span class="link-badge-dot dot-cyan"></span>
-            <span>New customer profile will be created with mobile number as initial password.</span>
           </div>
 
           <!-- Row 1: Full Name & Email Address -->

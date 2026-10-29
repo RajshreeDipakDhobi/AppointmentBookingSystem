@@ -1236,13 +1236,11 @@ body.is-panning-grid * {
   cursor: not-allowed;
   z-index: 14;
   background: #fbfdfc;
-  background-image: repeating-linear-gradient(
-    -45deg,
-    rgba(220, 232, 225, 0.4),
-    rgba(220, 232, 225, 0.4) 12px,
-    rgba(244, 248, 245, 0.6) 12px,
-    rgba(244, 248, 245, 0.6) 24px
-  );
+  background-image: repeating-linear-gradient(-45deg,
+      rgba(220, 232, 225, 0.4),
+      rgba(220, 232, 225, 0.4) 12px,
+      rgba(244, 248, 245, 0.6) 12px,
+      rgba(244, 248, 245, 0.6) 24px);
 }
 
 .day-off-center-card {
@@ -1656,9 +1654,9 @@ full-calendar {
   background: #f8faf9 !important;
 }
 
-::ng-deep .fc .fc-scrollgrid-section-header > th,
-::ng-deep .fc .fc-scrollgrid-section-header > td,
-::ng-deep .fc .fc-scrollgrid-section-sticky > * {
+::ng-deep .fc .fc-scrollgrid-section-header>th,
+::ng-deep .fc .fc-scrollgrid-section-header>td,
+::ng-deep .fc .fc-scrollgrid-section-sticky>* {
   position: sticky !important;
   top: 0 !important;
   z-index: 25 !important;
@@ -2971,19 +2969,23 @@ full-calendar {
 
   .schedule-header-bar {
     flex-wrap: wrap;
-    padding: 10px 12px;
+    padding: 8px 12px;
     gap: 8px;
   }
 
   .header-center-title {
     order: -1;
     width: 100%;
-    text-align: left;
+    text-align: center;
     margin-bottom: 2px;
   }
 
   .date-title-heading {
-    font-size: 0.92rem;
+    font-size: 0.95rem;
+  }
+
+  .date-subtitle-week {
+    font-size: 0.72rem;
   }
 
   .tab-item {
@@ -3025,6 +3027,86 @@ full-calendar {
 
   .mobile-fab-btn {
     display: inline-flex;
+  }
+}
+
+@media (max-width: 600px) {
+  .schedule-header-bar {
+    padding: 6px 8px;
+    gap: 6px;
+  }
+
+  .header-left-controls {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 4px;
+    flex-wrap: wrap;
+  }
+
+  .btn-nav-arrow {
+    width: 30px;
+    height: 30px;
+  }
+
+  .btn-date-pill {
+    height: 30px;
+    padding: 0 8px;
+    font-size: 0.76rem;
+    gap: 4px;
+  }
+
+  .date-pill-text {
+    font-size: 0.76rem;
+  }
+
+  .btn-today-pill {
+    height: 30px;
+    padding: 0 8px;
+    font-size: 0.74rem;
+  }
+
+  .view-segmented-tabs {
+    height: 30px;
+  }
+
+  .tab-item {
+    padding: 2px 7px;
+    font-size: 0.74rem;
+  }
+
+  .header-right-controls {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .provider-select-anchor {
+    flex: 1;
+    min-width: 0;
+    max-width: none;
+  }
+
+  .provider-select-anchor .custom-select-trigger {
+    width: 100%;
+    height: 32px;
+    padding: 0 8px;
+  }
+
+  .provider-select-anchor .custom-dropdown-popover {
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+
+  .btn-reload-schedule {
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
   }
 }
 

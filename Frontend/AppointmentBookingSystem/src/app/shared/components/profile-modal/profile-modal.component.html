@@ -1,0 +1,338 @@
+<div class="modal-backdrop animate-fade-in" (click)="onBackdropClick($event)" role="dialog" aria-modal="true">
+  <div class="modal-dialog glass-card animate-scale-up" (click)="$event.stopPropagation()">
+
+    <!-- Modal Header (Matching provider-modal / tenant-modal) -->
+    <div class="modal-header">
+      <div class="modal-title-wrap">
+        <div class="title-row">
+          <h3 class="modal-title">Account Settings</h3>
+          <span class="role-badge">{{ userRoleBadge }}</span>
+        </div>
+        <p class="modal-subtitle">Manage your personal profile details and login security.</p>
+      </div>
+
+      <button type="button" class="btn-close" (click)="close.emit()" aria-label="Close dialog">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18" />
+          <line x1="6" y1="6" x2="18" y2="18" />
+        </svg>
+      </button>
+    </div>
+
+    <!-- Modern Segmented Pill Switcher -->
+    <div class="tabs-wrapper">
+      <div class="tabs-segmented">
+        <button type="button" class="tab-pill" [class.active]="activeTab() === 'profile'" (click)="setTab('profile')">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path>
+            <circle cx="12" cy="7" r="4"></circle>
+          </svg>
+          <span>Profile Details</span>
+        </button>
+
+        <button type="button" class="tab-pill" [class.active]="activeTab() === 'security'" (click)="setTab('security')">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+          </svg>
+          <span>Password & Security</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Modal Body -->
+    <div class="modal-body">
+
+      <!-- Alert Banner -->
+      <div *ngIf="alertMessage()" class="alert-banner" [ngClass]="'alert-' + alertMessage()!.type">
+        <svg *ngIf="alertMessage()!.type === 'success'" xmlns="http://www.w3.org/2000/svg" width="15" height="15"
+          viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+          stroke-linejoin="round">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+        <svg *ngIf="alertMessage()!.type === 'error'" xmlns="http://www.w3.org/2000/svg" width="15" height="15"
+          viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+          stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="8" x2="12" y2="12"></line>
+          <line x1="12" y1="16" x2="12.01" y2="16"></line>
+        </svg>
+        <span>{{ alertMessage()!.text }}</span>
+      </div>
+
+      <!-- TAB 1: PROFILE DETAILS -->
+      <form *ngIf="activeTab() === 'profile'" id="profileForm" [formGroup]="profileForm" (ngSubmit)="onSaveProfile()"
+        class="modal-form" autocomplete="off">
+
+        <!-- Compact Avatar Bar (Matching provider-modal) -->
+        <div class="avatar-compact-bar">
+          <div class="avatar-mini-wrapper" (click)="avatarFileInput.click()"
+            [style.background]="previewAvatarUrl() ? 'transparent' : (currentUser()?.fullName?.trim() ? getAvatarGradient(currentUser()?.fullName) : '')"
+            [title]="previewAvatarUrl() ? 'Click to change photo' : 'Click to upload photo'">
+            <img *ngIf="previewAvatarUrl()" [src]="previewAvatarUrl()" (error)="removeAvatar()" alt="Avatar"
+              class="avatar-mini-img" />
+            <div *ngIf="!previewAvatarUrl()" class="avatar-mini-placeholder"
+              [class.has-initials]="currentUser()?.fullName?.trim()">
+              <span *ngIf="currentUser()?.fullName?.trim()" class="avatar-initials-text">{{ (currentUser()?.fullName ||
+                currentUser()?.firstName) | appInitials }}</span>
+              <svg *ngIf="!currentUser()?.fullName?.trim()" xmlns="http://www.w3.org/2000/svg" width="18" height="18"
+                viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+                stroke-linejoin="round">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                <circle cx="12" cy="7" r="4" />
+              </svg>
+            </div>
+
+            <!-- Camera Badge -->
+            <div class="avatar-camera-badge" [title]="previewAvatarUrl() ? 'Change photo' : 'Upload photo'">
+              <svg xmlns="http://www.w3.org/2000/svg" width="9" height="9" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                <circle cx="12" cy="13" r="4" />
+              </svg>
+            </div>
+
+            <!-- Uploading Spinner Overlay -->
+            <div *ngIf="isUploadingAvatar()" class="avatar-mini-spinner">
+              <span class="spinner-small"></span>
+            </div>
+          </div>
+
+          <div class="avatar-compact-info">
+            <div class="avatar-compact-title">
+              <span class="avatar-compact-label">Profile Photo</span>
+              <span class="avatar-compact-tag">Optional</span>
+            </div>
+            <div class="avatar-compact-actions">
+              <span class="avatar-compact-hint">Click avatar to {{ previewAvatarUrl() ? 'change' : 'upload' }}
+                photo</span>
+
+              <button *ngIf="previewAvatarUrl()" type="button" class="btn-compact-remove" (click)="removeAvatar()"
+                [disabled]="isUploadingAvatar() || isSubmittingProfile()">
+                Remove
+              </button>
+            </div>
+          </div>
+
+          <!-- Hidden File Input -->
+          <input #avatarFileInput type="file" accept="image/png,image/jpeg,image/webp,image/gif"
+            (change)="onAvatarFileSelected($event)" class="hidden-file-input" />
+        </div>
+
+        <!-- Row 1: First Name & Last Name -->
+        <div class="form-row">
+          <div class="form-group flex-1">
+            <label class="form-label">First Name <span class="required-star">*</span></label>
+            <input type="text" formControlName="firstName" class="form-input" placeholder="Enter first name" />
+            <div *ngIf="profileForm.get('firstName')?.touched && profileForm.get('firstName')?.invalid"
+              class="form-error">
+              First name is required (min 2 chars).
+            </div>
+          </div>
+
+          <div class="form-group flex-1">
+            <label class="form-label">Last Name</label>
+            <input type="text" formControlName="lastName" class="form-input" placeholder="Enter last name" />
+          </div>
+        </div>
+
+        <!-- Row 2: Email (Readonly) & Mobile Number -->
+        <div class="form-row">
+          <div class="form-group flex-1">
+            <div class="label-with-tag">
+              <label class="form-label">Email Address</label>
+              <span class="primary-id-tag">Primary ID</span>
+            </div>
+            <div class="readonly-input-group">
+              <input type="email" [value]="currentUser()?.email" class="form-input readonly-input" readonly
+                title="Primary login email cannot be changed" />
+              <span class="lock-icon" title="Email locked">
+                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                </svg>
+              </span>
+            </div>
+          </div>
+
+          <div class="form-group flex-1">
+            <label class="form-label">Phone Number <span class="required-star">*</span></label>
+            <div class="phone-input-group">
+              <span class="phone-prefix">+91</span>
+              <input type="tel" appOnlyDigits inputmode="numeric" maxlength="10" formControlName="phoneNumber"
+                class="form-input" placeholder="10-digit mobile number" />
+            </div>
+            <div *ngIf="profileForm.get('phoneNumber')?.touched && profileForm.get('phoneNumber')?.invalid"
+              class="form-error">
+              Valid 10-digit mobile number is required.
+            </div>
+          </div>
+        </div>
+
+        <!-- Row 3: Street Address -->
+        <div class="form-group">
+          <label class="form-label">Street Address</label>
+          <input type="text" formControlName="address" class="form-input" placeholder="House/Flat, Street name, Area" />
+        </div>
+
+        <!-- Row 4: City, State, Postal Code in 3 columns -->
+        <div class="form-row mb-0">
+          <div class="form-group flex-1">
+            <label class="form-label">City</label>
+            <input type="text" formControlName="city" class="form-input" placeholder="City" />
+          </div>
+
+          <div class="form-group flex-1">
+            <label class="form-label">State</label>
+            <input type="text" formControlName="state" class="form-input" placeholder="State" />
+          </div>
+
+          <div class="form-group flex-1">
+            <label class="form-label">Postal Code</label>
+            <input type="text" formControlName="postalCode" class="form-input" placeholder="PIN Code" />
+          </div>
+        </div>
+
+      </form>
+
+      <!-- TAB 2: PASSWORD & SECURITY -->
+      <form *ngIf="activeTab() === 'security'" id="passwordForm" [formGroup]="passwordForm"
+        (ngSubmit)="onChangePassword()" class="modal-form" autocomplete="off">
+
+        <!-- Security Auto-Generated Password Notice (Only shown if user has temporary password) -->
+        <div *ngIf="currentUser()?.isPasswordAutoGenerated" class="security-required-notice animate-fade-in">
+          <div class="security-required-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+              <line x1="12" y1="8" x2="12" y2="12"></line>
+              <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+          </div>
+          <div class="security-required-text">
+            <strong>Set password for security reasons</strong>
+            <p>Your account was created with an auto-generated temporary password. For security reasons, please create
+              your private permanent password below.</p>
+          </div>
+        </div>
+
+        <!-- Current Password -->
+        <div class="form-group">
+          <label class="form-label">Current Password <span class="required-star">*</span></label>
+          <div class="password-input-group">
+            <input [type]="showCurrentPassword() ? 'text' : 'password'" formControlName="currentPassword"
+              class="form-input" placeholder="Enter current password" />
+            <button type="button" class="btn-eye-toggle" (click)="showCurrentPassword.set(!showCurrentPassword())"
+              tabindex="-1">
+              <svg *ngIf="!showCurrentPassword()" xmlns="http://www.w3.org/2000/svg" width="15" height="15"
+                viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+              <svg *ngIf="showCurrentPassword()" xmlns="http://www.w3.org/2000/svg" width="15" height="15"
+                viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round">
+                <path
+                  d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24">
+                </path>
+                <line x1="1" y1="1" x2="23" y2="23"></line>
+              </svg>
+            </button>
+          </div>
+          <div *ngIf="passwordForm.get('currentPassword')?.touched && passwordForm.get('currentPassword')?.invalid"
+            class="form-error">
+            Current password is required to verify identity.
+          </div>
+        </div>
+
+        <!-- Row: New Password & Confirm Password -->
+        <div class="form-row mb-0">
+          <div class="form-group flex-1">
+            <label class="form-label">New Password <span class="required-star">*</span></label>
+            <div class="password-input-group">
+              <input [type]="showNewPassword() ? 'text' : 'password'" formControlName="newPassword" class="form-input"
+                placeholder="Min. 6 characters" />
+              <button type="button" class="btn-eye-toggle" (click)="showNewPassword.set(!showNewPassword())"
+                tabindex="-1">
+                <svg *ngIf="!showNewPassword()" xmlns="http://www.w3.org/2000/svg" width="15" height="15"
+                  viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                  stroke-linejoin="round">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                  <circle cx="12" cy="12" r="3"></circle>
+                </svg>
+                <svg *ngIf="showNewPassword()" xmlns="http://www.w3.org/2000/svg" width="15" height="15"
+                  viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                  stroke-linejoin="round">
+                  <path
+                    d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24">
+                  </path>
+                  <line x1="1" y1="1" x2="23" y2="23"></line>
+                </svg>
+              </button>
+            </div>
+            <div *ngIf="passwordForm.get('newPassword')?.touched && passwordForm.get('newPassword')?.invalid"
+              class="form-error">
+              Password must be at least 6 characters.
+            </div>
+          </div>
+
+          <div class="form-group flex-1">
+            <label class="form-label">Confirm Password <span class="required-star">*</span></label>
+            <div class="password-input-group">
+              <input [type]="showConfirmPassword() ? 'text' : 'password'" formControlName="confirmPassword"
+                class="form-input" placeholder="Re-type new password" />
+              <button type="button" class="btn-eye-toggle" (click)="showConfirmPassword.set(!showConfirmPassword())"
+                tabindex="-1">
+                <svg *ngIf="!showConfirmPassword()" xmlns="http://www.w3.org/2000/svg" width="15" height="15"
+                  viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                  stroke-linejoin="round">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                  <circle cx="12" cy="12" r="3"></circle>
+                </svg>
+                <svg *ngIf="showConfirmPassword()" xmlns="http://www.w3.org/2000/svg" width="15" height="15"
+                  viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                  stroke-linejoin="round">
+                  <path
+                    d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24">
+                  </path>
+                  <line x1="1" y1="1" x2="23" y2="23"></line>
+                </svg>
+              </button>
+            </div>
+            <div *ngIf="passwordForm.hasError('passwordMismatch') && passwordForm.get('confirmPassword')?.touched"
+              class="form-error">
+              Passwords do not match.
+            </div>
+          </div>
+        </div>
+
+      </form>
+
+    </div>
+
+    <!-- Modal Footer (Fixed at bottom - matching provider-modal & tenant-modal) -->
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary" (click)="close.emit()">
+        Cancel
+      </button>
+
+      <button type="button" class="btn btn-primary"
+        (click)="activeTab() === 'profile' ? onSaveProfile() : onChangePassword()"
+        [disabled]="activeTab() === 'profile' ? (profileForm.invalid || isSubmittingProfile() || isUploadingAvatar()) : (passwordForm.invalid || isSubmittingPassword())">
+        <span *ngIf="!isSubmittingProfile() && !isSubmittingPassword()">
+          {{ activeTab() === 'profile' ? 'Save Changes' : 'Update Password' }}
+        </span>
+        <span *ngIf="isSubmittingProfile() || isSubmittingPassword()" class="spinner-inline">
+          <span class="spinner-small"></span>
+          <span>Saving...</span>
+        </span>
+      </button>
+    </div>
+
+  </div>
+</div>

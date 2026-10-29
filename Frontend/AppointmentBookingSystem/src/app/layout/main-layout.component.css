@@ -26,6 +26,11 @@ app-sidebar {
   background: #f7faf8;
 }
 
+.main-wrapper:has(.has-modal-open),
+.main-wrapper:has(.modal-backdrop) {
+  z-index: 100050 !important;
+}
+
 .main-wrapper:has(app-calendar) {
   height: 100vh;
   max-height: 100vh;
@@ -52,16 +57,31 @@ app-sidebar {
 
 @media (max-width: 900px) {
   app-sidebar {
-    width: 0;
+    width: 0 !important;
+    position: static !important;
+    z-index: auto !important;
+  }
+
+  app-sidebar:has(.sidebar.open) {
+    position: relative !important;
+    z-index: 99995 !important;
   }
 
   .page-content {
     padding: 0.5rem 0.65rem 1rem;
+  }
+
+  .page-content:has(app-calendar) {
+    padding: 0.35rem 0.5rem;
   }
 }
 
 @media (max-width: 480px) {
   .page-content {
     padding: 0.4rem 0.5rem 0.75rem;
+  }
+
+  .page-content:has(app-calendar) {
+    padding: 0.2rem 0.35rem;
   }
 }

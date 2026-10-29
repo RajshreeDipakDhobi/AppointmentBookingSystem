@@ -27,7 +27,10 @@
         <div *ngIf="isAuthenticated()" class="user-menu-wrapper">
           <button type="button" class="user-profile-trigger" (click)="toggleUserMenu($event)"
             [class.is-open]="isUserMenuOpen()" aria-haspopup="true" [attr.aria-expanded]="isUserMenuOpen()">
-            <div class="avatar-box">{{ initials }}</div>
+            <div class="avatar-box">
+              <img *ngIf="user?.profilePictureUrl" [src]="user?.profilePictureUrl" alt="Avatar" class="topbar-avatar-img" />
+              <span *ngIf="!user?.profilePictureUrl">{{ initials }}</span>
+            </div>
             <span class="user-fullname">{{ userFullName }}</span>
             <svg class="chevron-icon" [class.rotated]="isUserMenuOpen()" xmlns="http://www.w3.org/2000/svg" width="13"
               height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
@@ -40,7 +43,10 @@
           <div *ngIf="isUserMenuOpen()" class="user-dropdown-card animate-scale-up" (click)="$event.stopPropagation()">
             <!-- User Header Inside Dropdown -->
             <div class="dropdown-header">
-              <div class="dropdown-avatar">{{ initials }}</div>
+              <div class="dropdown-avatar">
+                <img *ngIf="user?.profilePictureUrl" [src]="user?.profilePictureUrl" alt="Avatar" class="topbar-avatar-img" />
+                <span *ngIf="!user?.profilePictureUrl">{{ initials }}</span>
+              </div>
               <div class="dropdown-user-details">
                 <span class="dropdown-fullname">{{ userFullName }}</span>
                 <span class="dropdown-email">{{ user?.email }}</span>
@@ -56,6 +62,25 @@
 
             <!-- Menu Navigation Links -->
             <div class="dropdown-items-group">
+              <!-- Profile & Security (All Users) -->
+              <button type="button" class="dropdown-action-btn" (click)="openProfileModal()">
+                <div class="action-icon icon-emerald">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="12" cy="7" r="4"></circle>
+                  </svg>
+                </div>
+                <div class="action-label-wrap">
+                  <span class="action-label">Profile & Security</span>
+                  <span class="action-subtext">Manage personal info & password</span>
+                </div>
+                <svg class="action-arrow" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="9 18 15 12 9 6"></polyline>
+                </svg>
+              </button>
+
               <!-- View Appointments (Customer) -->
               <button *ngIf="isCustomer()" type="button" class="dropdown-action-btn" (click)="goToMyAppointments()">
                 <div class="action-icon icon-blue">
@@ -148,7 +173,10 @@
       <div *ngIf="isAuthenticated()" class="user-menu-wrapper">
         <button type="button" class="user-profile-trigger" (click)="toggleUserMenu($event)"
           [class.is-open]="isUserMenuOpen()" aria-haspopup="true" [attr.aria-expanded]="isUserMenuOpen()">
-          <div class="avatar-box">{{ initials }}</div>
+          <div class="avatar-box">
+            <img *ngIf="user?.profilePictureUrl" [src]="user?.profilePictureUrl" alt="Avatar" class="topbar-avatar-img" />
+            <span *ngIf="!user?.profilePictureUrl">{{ initials }}</span>
+          </div>
           <span class="user-fullname">{{ userFullName }}</span>
           <svg class="chevron-icon" [class.rotated]="isUserMenuOpen()" xmlns="http://www.w3.org/2000/svg" width="13"
             height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
@@ -161,7 +189,10 @@
         <div *ngIf="isUserMenuOpen()" class="user-dropdown-card animate-scale-up" (click)="$event.stopPropagation()">
           <!-- User Header Inside Dropdown -->
           <div class="dropdown-header">
-            <div class="dropdown-avatar">{{ initials }}</div>
+            <div class="dropdown-avatar">
+              <img *ngIf="user?.profilePictureUrl" [src]="user?.profilePictureUrl" alt="Avatar" class="topbar-avatar-img" />
+              <span *ngIf="!user?.profilePictureUrl">{{ initials }}</span>
+            </div>
             <div class="dropdown-user-details">
               <span class="dropdown-fullname">{{ userFullName }}</span>
               <span class="dropdown-email">{{ user?.email }}</span>
@@ -175,7 +206,29 @@
 
           <div class="dropdown-separator"></div>
 
+          <!-- Menu Navigation Links -->
+          <div class="dropdown-items-group">
+            <!-- Profile & Security Option -->
+            <button type="button" class="dropdown-action-btn" (click)="openProfileModal()">
+              <div class="action-icon icon-emerald">
+                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path>
+                  <circle cx="12" cy="7" r="4"></circle>
+                </svg>
+              </div>
+              <div class="action-label-wrap">
+                <span class="action-label">Profile & Security</span>
+                <span class="action-subtext">Manage personal info & password</span>
+              </div>
+              <svg class="action-arrow" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="9 18 15 12 9 6"></polyline>
+              </svg>
+            </button>
+          </div>
 
+          <div class="dropdown-separator"></div>
 
           <!-- Logout Option -->
           <button type="button" class="dropdown-action-btn btn-dropdown-logout" (click)="onLogout()">
@@ -202,3 +255,7 @@
 <!-- Global Booking Modal accessible from Topbar -->
 <app-booking-modal *ngIf="isBookingModalOpen()" (close)="isBookingModalOpen.set(false)">
 </app-booking-modal>
+
+<!-- Profile & Security Modal -->
+<app-profile-modal *ngIf="isProfileModalOpen()" [initialTab]="profileInitialTab()" (close)="isProfileModalOpen.set(false)">
+</app-profile-modal>

@@ -47,6 +47,11 @@ if (string.IsNullOrWhiteSpace(jwtSettings.Secret))
 
 builder.Services.AddSingleton(jwtSettings);
 
+// 2.1 Email Settings Configuration
+var emailSettings = new EmailSettings();
+builder.Configuration.GetSection(EmailSettings.SectionName).Bind(emailSettings);
+builder.Services.AddSingleton(emailSettings);
+
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -167,6 +172,7 @@ builder.Services.AddScoped<ITenantService, TenantService>();
 builder.Services.AddScoped<IServiceProviderService, ServiceProviderService>();
 builder.Services.AddScoped<IAvailabilityService, AvailabilityService>();
 builder.Services.AddScoped<IAppointmentService, AppointmentService>();
+builder.Services.AddScoped<IEmailService, MailKitEmailService>();
 builder.Services.AddSingleton<IDateTimeProvider, DateTimeProvider>();
 
 // AutoMapper Configuration

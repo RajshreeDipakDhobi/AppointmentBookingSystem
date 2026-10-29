@@ -6,6 +6,7 @@ using AppointmentBooking.DomainLayer.Enums;
 using AppointmentBooking.InfrastructureLayer.Repositories;
 using AutoMapper;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace AppointmentBooking.BusinessLayer.Features.Auth;
 
@@ -15,17 +16,23 @@ public class AuthService : IAuthService
     private readonly IPasswordHasher _passwordHasher;
     private readonly IJwtTokenService _jwtTokenService;
     private readonly IMapper _mapper;
+    private readonly IEmailService _emailService;
+    private readonly ILogger<AuthService> _logger;
 
     public AuthService(
         IUnitOfWork unitOfWork,
         IPasswordHasher passwordHasher,
         IJwtTokenService jwtTokenService,
-        IMapper mapper)
+        IMapper mapper,
+        IEmailService emailService,
+        ILogger<AuthService> logger)
     {
         _unitOfWork = unitOfWork;
         _passwordHasher = passwordHasher;
         _jwtTokenService = jwtTokenService;
         _mapper = mapper;
+        _emailService = emailService;
+        _logger = logger;
     }
 
     public async Task<ApiResponse<AuthResponseDto>> LoginAsync(LoginRequestDto request, CancellationToken cancellationToken = default)
@@ -125,6 +132,21 @@ public class AuthService : IAuthService
                     existingUser.FirstName = namePartsUpdate[0];
                     existingUser.LastName = namePartsUpdate.Length > 1 ? namePartsUpdate[1] : string.Empty;
                     await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+                    // Dispatch Welcome & Credentials Email to upgraded Customer
+                    try
+                    {
+                        await _emailService.SendAccountCreatedEmailAsync(
+                            existingUser.Email,
+                            request.FullName.Trim(),
+                            request.Password,
+                            cancellationToken);
+                    }
+                    catch (Exception emailEx)
+                    {
+                        _logger.LogError(emailEx, "Failed to send welcome email to Customer {Email}", existingUser.Email);
+                    }
+
                     var updatedAuthDto = await GenerateAuthResponseAsync(existingUser, cancellationToken);
                     return ApiResponse<AuthResponseDto>.Ok(updatedAuthDto, "Registration successful.");
                 }
@@ -151,6 +173,20 @@ public class AuthService : IAuthService
 
             await _unitOfWork.Repository<User>().AddAsync(newUser, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            // Dispatch Welcome & Credentials Email to newly registered Customer
+            try
+            {
+                await _emailService.SendAccountCreatedEmailAsync(
+                    newUser.Email,
+                    request.FullName.Trim(),
+                    request.Password,
+                    cancellationToken);
+            }
+            catch (Exception emailEx)
+            {
+                _logger.LogError(emailEx, "Failed to send welcome credentials email to Customer {Email}", newUser.Email);
+            }
 
             var authDto = await GenerateAuthResponseAsync(newUser, cancellationToken);
             return ApiResponse<AuthResponseDto>.Ok(authDto, "Registration successful.");
@@ -235,6 +271,96 @@ public class AuthService : IAuthService
         catch (Exception ex)
         {
             return ApiResponse<UserDto>.Fail(ex.Message);
+        }
+    }
+
+    public async Task<ApiResponse<UserDto>> UpdateProfileAsync(int userId, UpdateProfileRequestDto request, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var user = await _unitOfWork.Repository<User>()
+                .Query()
+                .Include(u => u.Tenant)
+                .Include(u => u.ServiceProvider)
+                .FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
+
+            if (user == null)
+            {
+                return ApiResponse<UserDto>.Fail("User account not found.");
+            }
+
+            user.FirstName = request.FirstName.Trim();
+            user.LastName = request.LastName?.Trim() ?? string.Empty;
+            user.PhoneNumber = request.PhoneNumber.Trim();
+            user.ProfilePictureUrl = string.IsNullOrWhiteSpace(request.ProfilePictureUrl) ? null : request.ProfilePictureUrl.Trim();
+            user.Address = request.Address?.Trim();
+            user.City = request.City?.Trim();
+            user.State = request.State?.Trim();
+            user.PostalCode = request.PostalCode?.Trim();
+
+            _unitOfWork.Repository<User>().Update(user);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            _logger.LogInformation("Profile updated successfully for User #{UserId} ({Email})", user.Id, user.Email);
+            return ApiResponse<UserDto>.Ok(_mapper.Map<UserDto>(user), "Profile updated successfully.");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating profile for User #{UserId}", userId);
+            return ApiResponse<UserDto>.Fail(ex.Message);
+        }
+    }
+
+    public async Task<ApiResponse<bool>> ChangePasswordAsync(int userId, ChangePasswordRequestDto request, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var user = await _unitOfWork.Repository<User>()
+                .GetByIdAsync(userId, cancellationToken);
+
+            if (user == null)
+            {
+                return ApiResponse<bool>.Fail("User account not found.");
+            }
+
+            // Verify current password if user has a password hash set
+            if (!string.IsNullOrEmpty(user.PasswordHash))
+            {
+                var isCurrentPasswordValid = _passwordHasher.VerifyPassword(request.CurrentPassword, user.PasswordHash);
+                
+                // Allow fallback for digits-only migration if applicable
+                if (!isCurrentPasswordValid && request.CurrentPassword.Length >= 6)
+                {
+                    var digitsOnly = new string(request.CurrentPassword.Where(char.IsDigit).ToArray());
+                    if (digitsOnly.Length == 6 && _passwordHasher.VerifyPassword(digitsOnly, user.PasswordHash))
+                    {
+                        isCurrentPasswordValid = true;
+                    }
+                }
+
+                if (!isCurrentPasswordValid)
+                {
+                    return ApiResponse<bool>.Fail("The current password you entered is incorrect.");
+                }
+            }
+
+            if (request.CurrentPassword == request.NewPassword)
+            {
+                return ApiResponse<bool>.Fail("Your new password cannot be the same as your current password.");
+            }
+
+            user.PasswordHash = _passwordHasher.HashPassword(request.NewPassword);
+            user.IsPasswordAutoGenerated = false;
+            _unitOfWork.Repository<User>().Update(user);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            _logger.LogInformation("Password successfully updated for User #{UserId} ({Email})", user.Id, user.Email);
+            return ApiResponse<bool>.Ok(true, "Password changed successfully.");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error changing password for User #{UserId}", userId);
+            return ApiResponse<bool>.Fail(ex.Message);
         }
     }
 
