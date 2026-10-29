@@ -39,9 +39,7 @@ export class OrganizationDetailComponent implements OnInit {
   readonly errorMessage = signal<string | null>(null);
 
   // Filters
-  searchQuery: string = '';
-  selectedCategory: string = 'all';
-  readonly serviceCategories = signal<string[]>([]);
+  readonly searchQuery = signal<string>('');
 
   // Modals
   readonly isBookingModalOpen = signal<boolean>(false);
@@ -49,13 +47,8 @@ export class OrganizationDetailComponent implements OnInit {
   readonly toastMessage = signal<string | null>(null);
 
   readonly filteredProviders = computed(() => {
-    const q = (this.searchQuery || '').trim().toLowerCase();
-    const cat = this.selectedCategory;
+    const q = this.searchQuery().trim().toLowerCase();
     let list = this.providers();
-
-    if (cat && cat !== 'all') {
-      list = list.filter(p => p.serviceType === cat);
-    }
 
     if (q) {
       list = list.filter(p =>
@@ -116,9 +109,6 @@ export class OrganizationDetailComponent implements OnInit {
         const tenantSpecific = (list || []).filter(p => !tenantId || p.tenantId === tenantId);
         this.providers.set(tenantSpecific);
         this.isLoadingProviders.set(false);
-
-        const cats = Array.from(new Set(tenantSpecific.map(p => p.serviceType).filter(Boolean))) as string[];
-        this.serviceCategories.set(cats);
       },
       error: () => {
         this.isLoadingProviders.set(false);
@@ -126,13 +116,12 @@ export class OrganizationDetailComponent implements OnInit {
     });
   }
 
-  selectCategory(cat: string): void {
-    this.selectedCategory = cat;
+  onSearchInput(value: string): void {
+    this.searchQuery.set(value || '');
   }
 
-  clearFilters(): void {
-    this.searchQuery = '';
-    this.selectedCategory = 'all';
+  clearSearch(): void {
+    this.searchQuery.set('');
   }
 
   backToDirectory(): void {

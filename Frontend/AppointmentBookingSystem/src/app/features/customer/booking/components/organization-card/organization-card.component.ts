@@ -23,13 +23,6 @@ export class OrganizationCardComponent {
     return this.tenant.serviceTypes || [];
   }
 
-  getRating(): string {
-    const r = this.tenant.rating ? this.tenant.rating.toFixed(1) : '5.0';
-    const rev = this.tenant.totalReviewsCount ?? 0;
-    const revText = rev >= 1000 ? (rev / 1000).toFixed(1) + 'k' : rev.toString();
-    return `${r} (${revText} reviews)`;
-  }
-
   getProviderCountText(): string {
     const count = this.tenant.totalProvidersCount ?? 0;
     return `${count} Specialists`;

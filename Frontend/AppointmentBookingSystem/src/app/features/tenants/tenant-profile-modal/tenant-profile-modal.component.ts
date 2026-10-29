@@ -1,13 +1,12 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
 import { TenantDto, TenantStatus } from '../../../core/models/tenant.models';
 import { AppDatePipe, AppPhonePipe } from '../../../shared/pipes';
 
 @Component({
   selector: 'app-tenant-profile-modal',
   standalone: true,
-  imports: [CommonModule, RouterModule, AppDatePipe, AppPhonePipe],
+  imports: [CommonModule, AppDatePipe, AppPhonePipe],
   templateUrl: './tenant-profile-modal.component.html',
   styleUrls: ['./tenant-profile-modal.component.css']
 })
@@ -40,10 +39,8 @@ export class TenantProfileModalComponent {
     this.close.emit();
   }
 
-  onBackdropClick(event: MouseEvent): void {
-    if ((event.target as HTMLElement).classList.contains('modal-backdrop')) {
-      this.onClose();
-    }
+  onBackdropClick(_event: MouseEvent): void {
+    // Modal only closes via explicit close button
   }
 
   getStatusClass(status?: TenantStatus): string {

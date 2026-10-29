@@ -20,13 +20,7 @@ export class ConfirmationModalComponent {
     this.confirmService.handleCancel();
   }
 
-  onBackdropClick(event: MouseEvent): void {
-    const opts = this.confirmService.options();
-    // Allow closing by clicking backdrop only if it's an alert or optional dismiss
-    if (opts?.isAlertOnly) {
-      this.confirmService.handleConfirm();
-    } else {
-      this.confirmService.handleCancel();
-    }
+  onBackdropClick(_event: MouseEvent): void {
+    // Modal only closes via explicit action buttons
   }
 }

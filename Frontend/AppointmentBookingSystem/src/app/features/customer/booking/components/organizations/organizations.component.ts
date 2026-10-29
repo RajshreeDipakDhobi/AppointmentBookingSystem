@@ -2,7 +2,6 @@ import { Component, EventEmitter, Input, OnInit, Output, computed, inject, signa
 import { CommonModule } from '@angular/common';
 import { TenantDto } from '../../../../../core/models/tenant.models';
 import { TenantService } from '../../../../../core/services/tenant.service';
-
 import { AppPhonePipe } from '../../../../../shared/pipes';
 
 @Component({
@@ -15,8 +14,12 @@ import { AppPhonePipe } from '../../../../../shared/pipes';
 export class OrganizationsComponent implements OnInit {
   private readonly tenantService = inject(TenantService);
 
-  @Input() searchQuery: string = '';
-  
+  @Input() set searchQuery(val: string) {
+    if (val !== undefined && val !== null) {
+      this.searchTerm.set(val);
+    }
+  }
+
   @Input() set organizations(list: TenantDto[] | null) {
     if (list && list.length > 0) {
       this.tenants.set(list);
@@ -30,9 +33,12 @@ export class OrganizationsComponent implements OnInit {
   readonly isLoading = signal<boolean>(true);
   readonly errorMessage = signal<string | null>(null);
 
+  readonly searchTerm = signal<string>('');
+
   readonly filteredTenants = computed(() => {
-    const q = (this.searchQuery || '').trim().toLowerCase();
+    const q = this.searchTerm().trim().toLowerCase();
     const list = this.tenants();
+
     if (!q) return list;
     return list.filter(t =>
       t.name.toLowerCase().includes(q) ||
@@ -68,12 +74,50 @@ export class OrganizationsComponent implements OnInit {
     this.selectOrganization.emit(tenant);
   }
 
+  onSearchChange(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    this.searchTerm.set(input?.value || '');
+  }
+
+  clearSearch(): void {
+    this.searchTerm.set('');
+  }
+
   getInitials(name: string): string {
-    if (!name) return 'ORG';
-    const parts = name.trim().split(/\s+/);
-    if (parts.length >= 2) {
-      return (parts[0][0] + parts[1][0]).toUpperCase();
-    }
-    return name.slice(0, 2).toUpperCase();
+    if (!name) return 'O';
+    const trimmed = name.trim();
+    return trimmed.charAt(0).toUpperCase();
+  }
+
+  isSalon(name: string): boolean {
+    if (!name) return false;
+    const n = name.toLowerCase();
+    return n.includes('salon') || n.includes('hair') || n.includes('apex') || n.includes('beauty') || n.includes('barber');
+  }
+
+  isDental(name: string): boolean {
+    if (!name) return false;
+    const n = name.toLowerCase();
+    return n.includes('dental') || n.includes('dent') || n.includes('appollo') || n.includes('tooth') || n.includes('teeth');
+  }
+
+  isWellness(name: string): boolean {
+    if (!name) return false;
+    const n = name.toLowerCase();
+    return n.includes('wellness') || n.includes('spa') || n.includes('yoga') || n.includes('massage') || n.includes('lotus');
+  }
+
+  isClinic(name: string): boolean {
+    if (!name) return false;
+    const n = name.toLowerCase();
+    return n.includes('clinic') || n.includes('health') || n.includes('hospital') || n.includes('medical');
+  }
+
+  getAvatarThemeClass(name: string): string {
+    if (this.isDental(name)) return 'avatar-sage';
+    if (this.isWellness(name)) return 'avatar-wellness';
+    if (this.isClinic(name)) return 'avatar-clinic';
+    if (this.isSalon(name)) return 'avatar-emerald';
+    return 'avatar-dark-emerald';
   }
 }

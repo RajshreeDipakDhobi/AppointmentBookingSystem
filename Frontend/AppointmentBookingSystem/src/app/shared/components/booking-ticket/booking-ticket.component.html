@@ -50,17 +50,20 @@
         </div>
         <span class="qr-label">DIGITAL VERIFIED</span>
       </div>
-      <div *ngIf="appointment.status === AppointmentStatus.Cancelled" class="qr-mock" title="Cancelled Booking" style="border-color: rgba(244,63,94,0.4); background: rgba(244,63,94,0.1);">
-        <span class="qr-label" style="color: #fb7185; font-weight: 700; letter-spacing: 0.05em;">CANCELLED</span>
+      <div *ngIf="appointment.status === AppointmentStatus.Cancelled" class="qr-mock" title="Cancelled Booking" style="border-color: #fecaca; background: #fef2f2;">
+        <span class="qr-label" style="color: #991b1b; font-weight: 700; letter-spacing: 0.05em;">CANCELLED</span>
       </div>
-      <div *ngIf="appointment.status === AppointmentStatus.Rejected" class="qr-mock" title="Declined Booking" style="border-color: rgba(239,68,68,0.4); background: rgba(239,68,68,0.1);">
-        <span class="qr-label" style="color: #f87171; font-weight: 700; letter-spacing: 0.05em;">DECLINED</span>
+      <div *ngIf="appointment.status === AppointmentStatus.Rejected" class="qr-mock" title="Declined Booking" style="border-color: #fecaca; background: #fef2f2;">
+        <span class="qr-label" style="color: #991b1b; font-weight: 700; letter-spacing: 0.05em;">DECLINED</span>
       </div>
-      <div *ngIf="appointment.status === AppointmentStatus.Completed" class="qr-mock" title="Completed Booking" style="border-color: rgba(16,185,129,0.4); background: rgba(16,185,129,0.1);">
-        <span class="qr-label" style="color: #34d399; font-weight: 700; letter-spacing: 0.05em;">FULFILLED</span>
+      <div *ngIf="appointment.status === AppointmentStatus.Completed" class="qr-mock" title="Completed Booking" style="border-color: #bbe5cb; background: #ebf7f0;">
+        <span class="qr-label" style="color: #166534; font-weight: 700; letter-spacing: 0.05em;">FULFILLED</span>
       </div>
-      <div *ngIf="appointment.status === AppointmentStatus.Booked" class="qr-mock" title="Pending Approval" style="border-color: rgba(99,102,241,0.4); background: rgba(99,102,241,0.1);">
-        <span class="qr-label" style="color: #a5b4fc; font-weight: 700; letter-spacing: 0.05em;">PENDING</span>
+      <div *ngIf="appointment.status === AppointmentStatus.Booked" class="qr-mock" title="Pending Approval" style="border-color: #bfdbfe; background: #eff6ff;">
+        <span class="qr-label" style="color: #1d4ed8; font-weight: 700; letter-spacing: 0.05em;">PENDING</span>
+      </div>
+      <div *ngIf="appointment.status === AppointmentStatus.RescheduleProposed" class="qr-mock" title="Reschedule Proposed" style="border-color: #fde68a; background: #fffbeb;">
+        <span class="qr-label" style="color: #92400e; font-weight: 700; letter-spacing: 0.05em;">PROPOSED</span>
       </div>
     </div>
 
@@ -140,9 +143,9 @@
 
       <!-- Cancellation Details (If cancelled) -->
       <div *ngIf="appointment.status === AppointmentStatus.Cancelled" class="info-cell cell-cancellation">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
-          <span class="cell-label" style="margin-bottom: 0;">Cancellation Reason</span>
-          <span *ngIf="appointment.cancelledByName" style="color: #fb7185; font-size: 0.73rem; font-weight: 600;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+          <span class="cell-label label-cancellation">Cancellation Reason</span>
+          <span *ngIf="appointment.cancelledByName" class="cancelled-by-tag">
             Cancelled by: {{ appointment.cancelledByName }}
           </span>
         </div>
@@ -151,20 +154,20 @@
       </div>
 
       <!-- Rejection Details (If rejected) -->
-      <div *ngIf="appointment.status === AppointmentStatus.Rejected" class="info-cell cell-cancellation">
-        <span class="cell-label" style="color: #fb7185;">Rejection Reason</span>
-        <p class="cancellation-text" style="color: #fda4af;">{{ appointment.rejectionReason || 'Declined by service
-          provider' }}</p>
+      <div *ngIf="appointment.status === AppointmentStatus.Rejected" class="info-cell cell-rejection">
+        <span class="cell-label label-rejection">Rejection Reason</span>
+        <p class="rejection-text">{{ appointment.rejectionReason || 'Declined by service provider' }}</p>
       </div>
 
       <!-- Reschedule Proposal Pending Notice -->
       <div *ngIf="appointment.status === AppointmentStatus.RescheduleProposed && appointment.proposedDate"
-        class="info-cell cell-cancellation"
-        style="background: rgba(245, 158, 11, 0.08); border-color: rgba(245, 158, 11, 0.25);">
-        <span class="cell-label" style="color: #fbbf24;">Reschedule Proposed</span>
-        <p class="cancellation-text" style="color: #fef3c7;">
-          Provider proposed: {{ appointment.proposedDate | appDate }} at {{ appointment.proposedStartTime | appTime }} –
-          {{ appointment.proposedEndTime | appTime }}
+        class="info-cell cell-proposal">
+        <span class="cell-label label-proposal">Reschedule Proposed</span>
+        <p class="proposal-text">
+          Provider proposed: <strong>{{ appointment.proposedDate | appDate }}</strong> at <strong>{{ appointment.proposedStartTime | appTime }} – {{ appointment.proposedEndTime | appTime }}</strong>
+        </p>
+        <p *ngIf="appointment.rescheduleNotes" class="proposal-notes">
+          Reason: <em>"{{ appointment.rescheduleNotes }}"</em>
         </p>
       </div>
 

@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, OnInit, Output, computed, inject, signal, ChangeDetectorRef } from '@angular/core';
+import { Component, EventEmitter, Input, OnInit, Output, computed, inject, signal, ChangeDetectorRef, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule, Router } from '@angular/router';
@@ -18,6 +18,8 @@ import { formatDatePretty, formatTo12Hour, getInitials } from '../../../shared/u
 import { OnlyDigitsDirective, CopyToClipboardDirective } from '../../../shared/directives';
 import { isValidEmail, isValidPhone, filter10Digits } from '../../../core/constants/app.constants';
 import { ConfirmService } from '../../../shared/components/confirmation-modal/confirm.service';
+import { MatDatepickerModule } from '@angular/material/datepicker';
+import { provideNativeDateAdapter } from '@angular/material/core';
 
 export interface CalendarDay {
   date: Date;
@@ -37,8 +39,12 @@ export interface CalendarDay {
     CommonModule,
     FormsModule,
     RouterModule,
+    MatDatepickerModule,
     OnlyDigitsDirective,
     CopyToClipboardDirective
+  ],
+  providers: [
+    provideNativeDateAdapter()
   ],
   templateUrl: './booking-modal.component.html',
   styleUrls: ['./booking-modal.component.css']
@@ -77,6 +83,7 @@ export class BookingModalComponent implements OnInit {
   // 4 = Review & Confirmation
   // 5 = Success / Confirmed Ticket
   currentStep: 1 | 2 | 3 | 4 | 5 = 1;
+  returnToStep: number | null = null;
 
   // Selected Specialist State
   selectedProviderId: number | null = null;
@@ -117,8 +124,10 @@ export class BookingModalComponent implements OnInit {
   readonly showSearchDropdown = signal<boolean>(false);
   private searchDebounceTimer: any = null;
 
-  // Service Type Filtering
+  // Service Type Filtering (Custom Dropdown matching Calendar)
   selectedServiceType = signal<string>('ALL');
+  isServiceDropdownOpen = false;
+  serviceSearchQuery = signal<string>('');
 
   readonly serviceTypes = computed<string[]>(() => {
     const types = new Set<string>();
@@ -128,6 +137,18 @@ export class BookingModalComponent implements OnInit {
       }
     });
     return Array.from(types).sort();
+  });
+
+  readonly filteredServiceTypes = computed<string[]>(() => {
+    const query = this.serviceSearchQuery().trim().toLowerCase();
+    const list = this.serviceTypes();
+    if (!query) return list;
+    return list.filter(t => t.toLowerCase().includes(query));
+  });
+
+  readonly selectedServiceLabel = computed<string>(() => {
+    const selected = this.selectedServiceType();
+    return selected === 'ALL' ? 'All Services' : selected;
   });
 
   // Computed Filtered Providers (Search + Service Type Dropdown)
@@ -272,6 +293,39 @@ export class BookingModalComponent implements OnInit {
     return days;
   }
 
+  // --- Material Calendar Integrations ---
+  get minDateObject(): Date {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }
+
+  get maxDateObject(): Date {
+    const d = new Date();
+    d.setDate(d.getDate() + 15);
+    d.setHours(23, 59, 59, 999);
+    return d;
+  }
+
+  get selectedDateObject(): Date {
+    if (!this.selectedDate) return new Date();
+    const parts = this.selectedDate.split('-').map(Number);
+    if (parts.length === 3) {
+      return new Date(parts[0], parts[1] - 1, parts[2], 12, 0, 0);
+    }
+    return new Date();
+  }
+
+  onMaterialDateSelected(date: Date | null): void {
+    if (!date) return;
+    const dateStr = this.formatDateIso(date);
+    if (dateStr < this.minDate || dateStr > this.maxDate) return;
+    this.selectedDate = dateStr;
+    this.selectedSlot = null;
+    this.errorMessage.set('');
+    this.fetchSlots();
+  }
+
   formatDateIso(d: Date): string {
     const year = d.getFullYear();
     const month = String(d.getMonth() + 1).padStart(2, '0');
@@ -295,7 +349,11 @@ export class BookingModalComponent implements OnInit {
     maxDateObj.setDate(maxDateObj.getDate() + 15);
     this.maxDate = this.formatDateIso(maxDateObj);
 
-    this.selectedDate = this.initialDate ? this.initialDate : this.minDate;
+    if (this.initialDate && this.initialDate >= this.minDate && this.initialDate <= this.maxDate) {
+      this.selectedDate = this.initialDate;
+    } else {
+      this.selectedDate = this.minDate;
+    }
     const dateObj = this.initialDate ? new Date(this.initialDate) : today;
     this.currentMonthDate = new Date(dateObj.getFullYear(), dateObj.getMonth(), 1);
 
@@ -548,6 +606,48 @@ export class BookingModalComponent implements OnInit {
   clearProviderSearch(): void {
     this.providerSearchQuery.set('');
     this.selectedServiceType.set('ALL');
+    this.serviceSearchQuery.set('');
+    this.isServiceDropdownOpen = false;
+  }
+
+  toggleServiceDropdown(event: Event): void {
+    event.stopPropagation();
+    this.isServiceDropdownOpen = !this.isServiceDropdownOpen;
+  }
+
+  closeServiceDropdown(): void {
+    this.isServiceDropdownOpen = false;
+  }
+
+  selectService(st: string, event?: Event): void {
+    if (event) event.stopPropagation();
+    this.selectedServiceType.set(st);
+    this.isServiceDropdownOpen = false;
+  }
+
+  clearServiceSelection(event: Event): void {
+    event.stopPropagation();
+    this.selectService('ALL', event);
+  }
+
+  onServiceSearchInput(event: Event): void {
+    const val = (event.target as HTMLInputElement).value || '';
+    this.serviceSearchQuery.set(val);
+  }
+
+  clearServiceSearch(event: Event): void {
+    event.stopPropagation();
+    this.serviceSearchQuery.set('');
+  }
+
+  getProviderCountForService(st: string): number {
+    return this.providers().filter(p => p.serviceType?.toLowerCase() === st.toLowerCase()).length;
+  }
+
+  @HostListener('document:click')
+  onDocumentClick(): void {
+    this.isServiceDropdownOpen = false;
+    this.showSearchDropdown.set(false);
   }
 
   goToStep2(): void {
@@ -622,6 +722,7 @@ export class BookingModalComponent implements OnInit {
       return;
     }
 
+    this.returnToStep = null;
     this.currentStep = 3;
   }
 
@@ -676,15 +777,30 @@ export class BookingModalComponent implements OnInit {
     this.currentStep = 4;
   }
 
+  changeSlot(): void {
+    this.returnToStep = 3;
+    this.errorMessage.set('');
+    this.currentStep = 2;
+  }
+
   // --- Back Navigation ---
   goBack(): void {
-    if (this.currentStep === 2) this.backToStep1();
+    if (this.currentStep === 2) {
+      if (this.returnToStep) {
+        const dest = this.returnToStep;
+        this.returnToStep = null;
+        this.currentStep = dest as (1 | 2 | 3 | 4 | 5);
+      } else {
+        this.backToStep1();
+      }
+    }
     else if (this.currentStep === 3) this.backToStep2();
     else if (this.currentStep === 4) this.backToStep3();
   }
 
   backToStep1(): void {
     this.errorMessage.set('');
+    this.returnToStep = null;
     this.currentStep = 1;
   }
 

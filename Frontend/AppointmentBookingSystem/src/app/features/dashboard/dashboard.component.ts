@@ -91,6 +91,47 @@ export class DashboardComponent implements OnInit, OnDestroy {
   );
   readonly recentTenants = computed(() => this.tenants().slice(0, 5));
 
+  // --- Tenant Admin Operational Summary (Directly Above Calendar) ---
+  readonly adminTotalAppointments = computed(() => {
+    const stats = this.tenantStats();
+    if (stats && stats.totalAppointments !== undefined) {
+      return stats.totalAppointments;
+    }
+    return this.recentAppointments().length;
+  });
+
+  readonly adminTodayAppointments = computed(() => {
+    const stats = this.tenantStats();
+    if (stats && stats.todayAppointments !== undefined) {
+      return stats.todayAppointments;
+    }
+    const todayStr = new Date().toISOString().slice(0, 10);
+    return this.recentAppointments().filter(a => {
+      const d = a.appointmentDate?.slice(0, 10);
+      return d === todayStr && a.status !== AppointmentStatus.Cancelled;
+    }).length;
+  });
+
+  readonly adminUpcomingAppointments = computed(() => {
+    const stats = this.tenantStats();
+    if (stats && stats.upcomingAppointments !== undefined) {
+      return stats.upcomingAppointments;
+    }
+    const todayStr = new Date().toISOString().slice(0, 10);
+    return this.recentAppointments().filter(a => {
+      const d = a.appointmentDate?.slice(0, 10);
+      return d >= todayStr && (a.status === AppointmentStatus.Booked || a.status === AppointmentStatus.Approved);
+    }).length;
+  });
+
+  readonly adminCancelledAppointments = computed(() => {
+    const stats = this.tenantStats();
+    if (stats && stats.cancelledAppointments !== undefined) {
+      return stats.cancelledAppointments;
+    }
+    return this.recentAppointments().filter(a => a.status === AppointmentStatus.Cancelled).length;
+  });
+
   // --- Customer Portal Specific Signals ---
   readonly customerAppointments = signal<AppointmentDto[]>([]);
   readonly activeCustomerTab = signal<'upcoming' | 'history'>('upcoming');

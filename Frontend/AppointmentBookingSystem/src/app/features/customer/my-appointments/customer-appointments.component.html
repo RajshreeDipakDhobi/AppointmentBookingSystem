@@ -363,8 +363,8 @@
   </div>
 
   <!-- MODAL 1: Digital Ticket Pass Modal -->
-  <div *ngIf="selectedTicket()" class="modal-backdrop animate-fade-in" (click)="closeTicket()">
-    <div class="modal-card modal-ticket-compact" (click)="$event.stopPropagation()">
+  <div *ngIf="selectedTicket()" class="modal-backdrop animate-fade-in">
+    <div class="modal-card modal-ticket-compact">
       <div class="modal-header">
         <h3 class="modal-title">{{ selectedTicket()?.status === AppointmentStatus.Approved ? 'Digital Appointment Pass'
           : 'Appointment Details' }}</h3>
@@ -379,6 +379,25 @@
       <div class="modal-body custom-scrollbar">
         <app-booking-ticket [appointment]="selectedTicket()" [showActions]="true" [allowReschedule]="false"
           [allowCancel]="false"></app-booking-ticket>
+      </div>
+
+      <!-- Optional Proposal Actions Footer if viewing a Reschedule Proposed appointment -->
+      <div *ngIf="selectedTicket()?.status === AppointmentStatus.RescheduleProposed" class="modal-footer proposal-modal-footer">
+        <div class="proposal-footer-actions">
+          <button type="button" class="btn-modal-decline" (click)="declineProposal(selectedTicket()!); closeTicket();" [disabled]="isRespondingProposal()">
+            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+            <span>Decline Proposal</span>
+          </button>
+          <button type="button" class="btn-modal-accept" (click)="acceptProposal(selectedTicket()!); closeTicket();" [disabled]="isRespondingProposal()">
+            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+            <span>Accept New Slot</span>
+          </button>
+        </div>
       </div>
     </div>
   </div>

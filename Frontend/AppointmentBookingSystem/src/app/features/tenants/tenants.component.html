@@ -63,7 +63,7 @@
             <th>Contact Details</th>
             <th>Administrator</th>
             <th>Status</th>
-            <th>Created At</th>
+            <th class="col-created-at">Created At</th>
             <th class="text-right">Actions</th>
           </tr>
         </thead>
@@ -98,7 +98,6 @@
             <td>
               <div class="admin-cell">
                 <span class="admin-name">{{ tenant.adminFullName || ((tenant.adminFirstName || tenant.adminLastName) ? (tenant.adminFirstName + ' ' + (tenant.adminLastName || '')).trim() : 'Primary Admin') }}</span>
-                <span class="admin-email" *ngIf="tenant.adminEmail">{{ tenant.adminEmail }}</span>
               </div>
             </td>
             <td>
@@ -121,7 +120,7 @@
                   </svg>
                 </button>
 
-                <!-- Floating Dropdown Menu -->
+                <!-- Floating Dropdown Menu (Active & Inactive Only) -->
                 <div 
                   *ngIf="activeStatusMenuId() === tenant.id" 
                   class="status-menu animate-fade-in"
@@ -151,23 +150,10 @@
                       <polyline points="20 6 9 17 4 12"/>
                     </svg>
                   </button>
-
-                  <button 
-                    type="button" 
-                    class="status-menu-item" 
-                    [class.selected]="tenant.status === 3"
-                    (click)="changeStatus(tenant, 3, $event)"
-                  >
-                    <span class="dot-sm dot-red"></span>
-                    <span class="menu-label">Suspended</span>
-                    <svg *ngIf="tenant.status === 3" class="check-icon" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                      <polyline points="20 6 9 17 4 12"/>
-                    </svg>
-                  </button>
                 </div>
               </div>
             </td>
-            <td>
+            <td class="col-created-at">
               <span class="date-text">{{ tenant.createdAt | appDate }}</span>
             </td>
             <td class="text-right">

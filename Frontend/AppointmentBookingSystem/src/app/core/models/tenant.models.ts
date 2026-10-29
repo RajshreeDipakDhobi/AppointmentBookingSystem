@@ -21,8 +21,6 @@ export interface TenantDto {
   adminLastName?: string;
   adminEmail?: string;
   adminFullName?: string;
-  rating?: number;
-  totalReviewsCount?: number;
   serviceTypes?: string[];
   slug?: string;
 }

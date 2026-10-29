@@ -1,6 +1,6 @@
-<div class="modal-backdrop animate-fade-in" (click)="onClose()">
-  <div class="modal-card glass-card animate-scale-up" (click)="$event.stopPropagation()">
-    
+<div class="modal-backdrop animate-fade-in">
+  <div class="modal-card glass-card animate-scale-up">
+
     <!-- Modal Header -->
     <div class="modal-header">
       <div class="header-content">
@@ -9,77 +9,76 @@
       </div>
 
       <button type="button" class="btn-close" (click)="onClose()" aria-label="Close modal">
-        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="18" y1="6" x2="6" y2="18"/>
-          <line x1="6" y1="6" x2="18" y2="18"/>
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18" />
+          <line x1="6" y1="6" x2="18" y2="18" />
         </svg>
       </button>
     </div>
 
     <!-- Error Banner -->
     <div *ngIf="errorMessage()" class="alert alert-error">
-      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="12" cy="12" r="10"/>
-        <line x1="12" y1="8" x2="12" y2="12"/>
-        <line x1="12" y1="16" x2="12.01" y2="16"/>
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10" />
+        <line x1="12" y1="8" x2="12" y2="12" />
+        <line x1="12" y1="16" x2="12.01" y2="16" />
       </svg>
       <span>{{ errorMessage() }}</span>
     </div>
 
     <!-- Cancellation Policy Locked Banner -->
     <div *ngIf="!canCancel(appointment)" class="alert alert-error">
-      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="12" cy="12" r="10"/>
-        <line x1="12" y1="8" x2="12" y2="12"/>
-        <line x1="12" y1="16" x2="12.01" y2="16"/>
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10" />
+        <line x1="12" y1="8" x2="12" y2="12" />
+        <line x1="12" y1="16" x2="12.01" y2="16" />
       </svg>
-      <span><strong>Cancellation Locked:</strong> Appointments can only be cancelled at least 1 hour prior to their scheduled start time. Cancellation is no longer permitted for this appointment.</span>
+      <span><strong>Cancellation Locked:</strong> Appointments can only be cancelled at least 1 hour prior to their
+        scheduled start time. Cancellation is no longer permitted for this appointment.</span>
     </div>
 
     <!-- Body -->
     <div class="modal-body">
 
       <!-- Appointment Details Card -->
-      <div class="appointment-summary">
-        <div class="summary-row">
-          <span class="s-label">Appointment ID</span>
-          <span class="s-val monospace">{{ appointment.appointmentNumber }}</span>
+      <div class="current-schedule-strip">
+        <div class="strip-item">
+          <span class="strip-label">Appointment ID</span>
+          <span class="strip-val monospace">{{ appointment.appointmentNumber }}</span>
         </div>
-        <div class="summary-row">
-          <span class="s-label">Customer</span>
-          <span class="s-val">{{ appointment.customerName }} ({{ appointment.customerPhone | appPhone }})</span>
+        <div class="strip-item">
+          <span class="strip-label">Customer</span>
+          <span class="strip-val">{{ appointment.customerName }} ({{ appointment.customerPhone | appPhone }})</span>
         </div>
-        <div class="summary-row">
-          <span class="s-label">Provider</span>
+        <div class="strip-item">
+          <span class="strip-label">Provider</span>
           <div class="provider-flex-sm">
-            <div class="provider-avatar-mini" [style.background]="appointment.serviceProviderProfilePictureUrl ? 'transparent' : ''">
-              <img 
-                *ngIf="appointment.serviceProviderProfilePictureUrl" 
-                [src]="appointment.serviceProviderProfilePictureUrl" 
-                alt="" 
-                class="avatar-img"
-                (error)="appointment.serviceProviderProfilePictureUrl = undefined" 
-              />
-              <span *ngIf="!appointment.serviceProviderProfilePictureUrl">{{ appointment.serviceProviderName | appInitials }}</span>
+            <div class="provider-avatar-mini"
+              [style.background]="appointment.serviceProviderProfilePictureUrl ? 'transparent' : ''">
+              <img *ngIf="appointment.serviceProviderProfilePictureUrl"
+                [src]="appointment.serviceProviderProfilePictureUrl" alt="" class="avatar-img"
+                (error)="appointment.serviceProviderProfilePictureUrl = undefined" />
+              <span *ngIf="!appointment.serviceProviderProfilePictureUrl">{{ appointment.serviceProviderName |
+                appInitials }}</span>
             </div>
-            <span class="s-val">{{ appointment.serviceProviderName }}</span>
+            <span class="strip-val">{{ appointment.serviceProviderName }}</span>
           </div>
         </div>
-        <div class="summary-row">
-          <span class="s-label">Date & Slot</span>
-          <span class="s-val">{{ appointment.formattedDate }} at {{ appointment.timeSlotText }}</span>
+        <div class="strip-item">
+          <span class="strip-label">Scheduled Time</span>
+          <span class="strip-val current-highlight">{{ appointment.formattedDate }} at {{ appointment.timeSlotText
+            }}</span>
         </div>
       </div>
 
       <!-- Optional Cancellation Reason -->
       <div class="form-group">
         <label class="form-label">Cancellation Reason <span class="optional">(Optional)</span></label>
-        <textarea 
-          [(ngModel)]="cancellationReason" 
-          placeholder="Client called to cancel, emergency, etc." 
-          rows="2" 
-          class="form-control textarea"
-        ></textarea>
+        <textarea [(ngModel)]="cancellationReason" placeholder="Client called to cancel, emergency, etc." rows="2"
+          class="form-control textarea"></textarea>
       </div>
     </div>
 
@@ -89,13 +88,9 @@
         Keep Appointment
       </button>
 
-      <button 
-        type="button" 
-        class="btn btn-danger" 
-        [disabled]="isSubmitting() || !canCancel(appointment)" 
+      <button type="button" class="btn btn-danger" [disabled]="isSubmitting() || !canCancel(appointment)"
         [title]="!canCancel(appointment) ? 'Appointments can only be cancelled at least 1 hour prior to scheduled time' : 'Cancel this appointment'"
-        (click)="confirmCancel()"
-      >
+        (click)="confirmCancel()">
         <span *ngIf="!isSubmitting()">Yes, Cancel Slot</span>
         <span *ngIf="isSubmitting()" class="spinner-inline">
           <span class="spinner-small"></span>

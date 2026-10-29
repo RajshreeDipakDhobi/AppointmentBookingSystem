@@ -1,20 +1,20 @@
 /* ==========================================================================
-   Generic Action Confirmation Modal - Luxury Dark Glassmorphism
+   Generic Action Confirmation Modal - Organic Sage & Forest Emerald Luxury
    ========================================================================== */
 
 :host {
   display: block;
 }
 
-/* Fullscreen Centered Backdrop (Clean dark overlay without blur) */
+/* Fullscreen Centered Backdrop (Clean soft overlay without blur) */
 .confirm-backdrop {
   position: fixed;
   inset: 0;
   width: 100vw;
   height: 100vh;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
+  background: rgba(18, 43, 37, 0.45);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -28,11 +28,11 @@
   position: relative;
   width: 100%;
   max-width: 440px;
-  background: #0f172a;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: #ffffff;
+  border: 1px solid #e2ece6;
   border-radius: 16px;
   padding: 1.6rem;
-  box-shadow: 0 25px 65px -12px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  box-shadow: 0 25px 65px -12px rgba(24, 59, 50, 0.2), 0 0 0 1px rgba(24, 59, 50, 0.05);
   display: flex;
   flex-direction: column;
   gap: 1.15rem;
@@ -51,18 +51,15 @@
 
 .glow-warning {
   background: linear-gradient(90deg, #f59e0b, #ea580c);
-  box-shadow: 0 0 12px rgba(245, 158, 11, 0.6);
 }
 
 .glow-danger {
   background: linear-gradient(90deg, #f43f5e, #e11d48);
-  box-shadow: 0 0 12px rgba(244, 63, 94, 0.6);
 }
 
 .glow-primary,
 .glow-info {
-  background: linear-gradient(90deg, #6366f1, #8b5cf6);
-  box-shadow: 0 0 12px rgba(99, 102, 241, 0.6);
+  background: #1e5142;
 }
 
 /* Header & Close */
@@ -84,35 +81,32 @@
 }
 
 .confirm-icon-wrap.icon-danger {
-  background: rgba(244, 63, 94, 0.12);
-  border: 1px solid rgba(244, 63, 94, 0.35);
-  color: #fb7185;
-  box-shadow: 0 0 24px rgba(244, 63, 94, 0.25);
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #dc2626;
 }
 
 .confirm-icon-wrap.icon-warning {
-  background: rgba(245, 158, 11, 0.12);
-  border: 1px solid rgba(245, 158, 11, 0.35);
-  color: #fbbf24;
-  box-shadow: 0 0 24px rgba(245, 158, 11, 0.25);
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  color: #d97706;
 }
 
 .confirm-icon-wrap.icon-primary,
 .confirm-icon-wrap.icon-info {
-  background: rgba(99, 102, 241, 0.12);
-  border: 1px solid rgba(99, 102, 241, 0.35);
-  color: #818cf8;
-  box-shadow: 0 0 24px rgba(99, 102, 241, 0.25);
+  background: #e8f3ee;
+  border: 1px solid #b8dacb;
+  color: #1e5142;
 }
 
 .btn-dialog-close {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: #94a3b8;
+  background: #f4f8f5;
+  border: 1px solid #e2ece6;
+  color: #5b756c;
   cursor: pointer;
-  width: 34px;
-  height: 34px;
-  border-radius: 9px;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -121,11 +115,10 @@
 }
 
 .btn-dialog-close:hover {
-  color: #ffffff;
-  background: rgba(244, 63, 94, 0.2);
-  border-color: rgba(244, 63, 94, 0.4);
+  color: #dc2626;
+  background: #fef2f2;
+  border-color: #fecaca;
   transform: rotate(90deg);
-  box-shadow: 0 0 16px rgba(244, 63, 94, 0.3);
 }
 
 .btn-dialog-close:active {
@@ -140,16 +133,17 @@
 }
 
 .confirm-title {
-  font-size: 1.15rem;
+  font-family: 'Playfair Display', serif;
+  font-size: 1.2rem;
   font-weight: 700;
-  color: #ffffff;
+  color: #183b32;
   margin: 0;
   letter-spacing: -0.01em;
 }
 
 .confirm-message {
   font-size: 0.88rem;
-  color: #94a3b8;
+  color: #5b756c;
   line-height: 1.55;
   margin: 0;
 }
@@ -157,7 +151,7 @@
 /* Rich Message with Entity Badge */
 .confirm-message-rich .message-text {
   font-size: 0.88rem;
-  color: #94a3b8;
+  color: #5b756c;
   line-height: 1.55;
   margin: 0;
 }
@@ -167,10 +161,10 @@
   align-items: center;
   gap: 0.35rem;
   padding: 0.15rem 0.55rem;
-  background: rgba(255, 255, 255, 0.07);
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: #e8f3ee;
+  border: 1px solid #b8dacb;
   border-radius: 6px;
-  color: #f8fafc;
+  color: #1e5142;
   font-weight: 600;
   font-size: 0.84rem;
   vertical-align: middle;
@@ -178,15 +172,15 @@
 }
 
 .target-entity-chip svg {
-  color: #818cf8;
+  color: #1e5142;
 }
 
 .variant-warning .target-entity-chip svg {
-  color: #fbbf24;
+  color: #d97706;
 }
 
 .variant-danger .target-entity-chip svg {
-  color: #f87171;
+  color: #dc2626;
 }
 
 /* Consequence / Impact Note Banner */
@@ -207,22 +201,22 @@
 }
 
 .confirm-notice-banner.notice-warning {
-  background: rgba(245, 158, 11, 0.08);
-  border: 1px solid rgba(245, 158, 11, 0.25);
-  color: #fde68a;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  color: #92400e;
 }
 
 .confirm-notice-banner.notice-danger {
-  background: rgba(244, 63, 94, 0.08);
-  border: 1px solid rgba(244, 63, 94, 0.25);
-  color: #fecdd3;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
 }
 
 .confirm-notice-banner.notice-primary,
 .confirm-notice-banner.notice-info {
-  background: rgba(99, 102, 241, 0.08);
-  border: 1px solid rgba(99, 102, 241, 0.25);
-  color: #c7d2fe;
+  background: #e8f3ee;
+  border: 1px solid #b8dacb;
+  color: #1e5142;
 }
 
 /* Action Buttons */
@@ -235,14 +229,14 @@
 }
 
 .btn-cancel {
-  height: 40px !important;
-  min-height: 40px !important;
+  height: 38px !important;
+  min-height: 38px !important;
   padding: 0 1.25rem !important;
-  border-radius: 10px !important;
-  border: 1px solid rgba(255, 255, 255, 0.16) !important;
-  background: rgba(255, 255, 255, 0.08) !important;
-  color: #f1f5f9 !important;
-  font-size: 0.88rem !important;
+  border-radius: 8px !important;
+  border: 1px solid #e2ece6 !important;
+  background: #f4f8f5 !important;
+  color: #183b32 !important;
+  font-size: 0.85rem !important;
   font-weight: 600 !important;
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
@@ -253,19 +247,18 @@
 }
 
 .btn-cancel:hover {
-  background: rgba(255, 255, 255, 0.15) !important;
-  border-color: rgba(255, 255, 255, 0.3) !important;
-  color: #ffffff !important;
+  background: #e8f3ee !important;
+  border-color: #b8dacb !important;
+  color: #1e5142 !important;
   transform: translateY(-1px);
 }
 
 .btn-action {
-  height: 40px !important;
-  min-height: 40px !important;
+  height: 38px !important;
+  min-height: 38px !important;
   padding: 0 1.35rem !important;
-  border-radius: 10px !important;
-  border: 1px solid rgba(255, 255, 255, 0.18) !important;
-  font-size: 0.88rem !important;
+  border-radius: 8px !important;
+  font-size: 0.85rem !important;
   font-weight: 600 !important;
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
@@ -275,41 +268,39 @@
   gap: 0.45rem;
   color: #ffffff;
   outline: none;
+  border: none;
 }
 
 .btn-action.btn-warning {
-  background: linear-gradient(135deg, #f59e0b 0%, #ea580c 100%);
-  box-shadow: 0 4px 16px rgba(245, 158, 11, 0.35);
+  background: #d97706;
+  box-shadow: 0 4px 14px rgba(217, 119, 6, 0.3);
 }
 
 .btn-action.btn-warning:hover {
-  background: linear-gradient(135deg, #d97706 0%, #c2410c 100%);
+  background: #b45309;
   transform: translateY(-1px);
-  box-shadow: 0 6px 22px rgba(245, 158, 11, 0.5);
 }
 
 .btn-action.btn-danger {
-  background: linear-gradient(135deg, #f43f5e 0%, #e11d48 100%);
-  box-shadow: 0 4px 16px rgba(244, 63, 94, 0.35);
+  background: #dc2626;
+  box-shadow: 0 4px 14px rgba(220, 38, 38, 0.3);
 }
 
 .btn-action.btn-danger:hover {
-  background: linear-gradient(135deg, #e11d48 0%, #be123c 100%);
+  background: #b91c1c;
   transform: translateY(-1px);
-  box-shadow: 0 6px 22px rgba(244, 63, 94, 0.5);
 }
 
 .btn-action.btn-primary,
 .btn-action.btn-info {
-  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.35);
+  background: #1e5142;
+  box-shadow: 0 4px 14px rgba(30, 81, 66, 0.25);
 }
 
 .btn-action.btn-primary:hover,
 .btn-action.btn-info:hover {
-  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+  background: #164034;
   transform: translateY(-1px);
-  box-shadow: 0 6px 22px rgba(99, 102, 241, 0.5);
 }
 
 /* Animations */

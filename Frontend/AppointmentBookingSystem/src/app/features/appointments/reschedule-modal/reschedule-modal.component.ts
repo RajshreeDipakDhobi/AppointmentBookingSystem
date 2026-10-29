@@ -15,6 +15,8 @@ import { UserRole } from '../../../core/models/auth.models';
 import { TimeSlotPickerComponent } from '../../../shared/components/time-slot-picker/time-slot-picker.component';
 import { ConfirmService } from '../../../shared/components/confirmation-modal/confirm.service';
 import { canRescheduleAppointment } from '../../../core/constants/app.constants';
+import { MatDatepickerModule } from '@angular/material/datepicker';
+import { provideNativeDateAdapter } from '@angular/material/core';
 
 export interface CalendarDay {
   date: Date;
@@ -29,7 +31,8 @@ export interface CalendarDay {
 @Component({
   selector: 'app-reschedule-modal',
   standalone: true,
-  imports: [CommonModule, FormsModule, TimeSlotPickerComponent],
+  imports: [CommonModule, FormsModule, MatDatepickerModule, TimeSlotPickerComponent],
+  providers: [provideNativeDateAdapter()],
   templateUrl: './reschedule-modal.component.html',
   styleUrls: ['./reschedule-modal.component.css']
 })
@@ -52,6 +55,7 @@ export class RescheduleModalComponent implements OnInit {
 
   newDate = '';
   minDate = '';
+  maxDate = '';
   availableSlots: AvailableSlotDto[] = [];
   selectedSlot: AvailableSlotDto | null = null;
   rescheduleReason = '';
@@ -148,6 +152,39 @@ export class RescheduleModalComponent implements OnInit {
     return days;
   }
 
+  // --- Material Calendar Integrations ---
+  get minDateObject(): Date {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }
+
+  get maxDateObject(): Date {
+    const d = new Date();
+    d.setDate(d.getDate() + 15);
+    d.setHours(23, 59, 59, 999);
+    return d;
+  }
+
+  get selectedDateObject(): Date {
+    if (!this.newDate) return new Date();
+    const parts = this.newDate.split('-').map(Number);
+    if (parts.length === 3) {
+      return new Date(parts[0], parts[1] - 1, parts[2], 12, 0, 0);
+    }
+    return new Date();
+  }
+
+  onMaterialDateSelected(date: Date | null): void {
+    if (!date) return;
+    const dateStr = this.formatDateToYMD(date);
+    const maxDateStr = this.formatDateToYMD(this.maxDateObject);
+    if (dateStr < this.minDate || dateStr > maxDateStr) return;
+    this.newDate = dateStr;
+    this.isDatePickerOpen = false;
+    this.onDateChange();
+  }
+
   toggleDatePicker(event?: Event): void {
     if (event) event.stopPropagation();
     this.isDatePickerOpen = !this.isDatePickerOpen;
@@ -188,6 +225,9 @@ export class RescheduleModalComponent implements OnInit {
   ngOnInit(): void {
     const today = new Date();
     this.minDate = this.formatDateToYMD(today);
+    const maxDateObj = new Date(today);
+    maxDateObj.setDate(maxDateObj.getDate() + 15);
+    this.maxDate = this.formatDateToYMD(maxDateObj);
     this.newDate = this.minDate;
     this.currentMonthDate = new Date(today.getFullYear(), today.getMonth(), 1);
 

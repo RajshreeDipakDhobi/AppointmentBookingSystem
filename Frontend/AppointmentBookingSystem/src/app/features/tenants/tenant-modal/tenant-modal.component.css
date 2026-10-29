@@ -1,17 +1,21 @@
-/* Tenant Modal Specific Styles */
+/* ==========================================================================
+   Tenant Modal - Organic Sage & Forest Emerald Luxury
+   ========================================================================== */
+
 :host {
   display: block;
 }
 
 .form-section-title {
-  font-size: 0.8rem;
+  font-family: 'Playfair Display', serif;
+  font-size: 0.92rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: #818cf8;
+  color: #1e5142;
   margin: 1.25rem 0 0.75rem 0;
   padding-bottom: 0.4rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid #e2ece6;
 }
 
 .form-section-title:first-of-type {
@@ -28,22 +32,22 @@
 }
 
 .required-star {
-  color: #f43f5e !important;
+  color: #dc2626 !important;
   font-weight: 700;
   margin-left: 2px;
 }
 
-/* Form Inputs & Textarea dark styling */
+/* Form Inputs & Textarea Light Styling */
 .form-input,
 .form-textarea,
 textarea.form-input,
 textarea.form-textarea,
 textarea {
   width: 100% !important;
-  background-color: rgba(15, 23, 42, 0.75) !important;
-  background: rgba(15, 23, 42, 0.75) !important;
-  color: #f8fafc !important;
-  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  background-color: #ffffff !important;
+  background: #ffffff !important;
+  color: #183b32 !important;
+  border: 1px solid #e2ece6 !important;
   border-radius: 8px !important;
   padding: 0.58rem 0.85rem !important;
   font-size: 0.88rem !important;
@@ -53,7 +57,7 @@ textarea {
   box-sizing: border-box !important;
 }
 
-/* Chrome/Safari Autofill Dark Mode Fix */
+/* Chrome/Safari Autofill Light Fix */
 input:-webkit-autofill,
 input:-webkit-autofill:hover, 
 input:-webkit-autofill:focus, 
@@ -62,26 +66,26 @@ textarea:-webkit-autofill,
 textarea:-webkit-autofill:hover,
 textarea:-webkit-autofill:focus,
 textarea:-webkit-autofill:active {
-  -webkit-box-shadow: 0 0 0 1000px #0f172a inset !important;
-  box-shadow: 0 0 0 1000px #0f172a inset !important;
-  -webkit-text-fill-color: #f8fafc !important;
+  -webkit-box-shadow: 0 0 0 1000px #ffffff inset !important;
+  box-shadow: 0 0 0 1000px #ffffff inset !important;
+  -webkit-text-fill-color: #183b32 !important;
   transition: background-color 5000s ease-in-out 0s;
-  caret-color: #ffffff !important;
+  caret-color: #183b32 !important;
 }
 
 .form-input:focus,
 .form-textarea:focus,
 textarea.form-input:focus {
-  border-color: #6366f1 !important;
-  background: rgba(30, 41, 59, 0.85) !important;
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.25) !important;
-  color: #ffffff !important;
+  border-color: #1e5142 !important;
+  background: #ffffff !important;
+  box-shadow: 0 0 0 3px rgba(30, 81, 66, 0.12) !important;
+  color: #183b32 !important;
 }
 
 .form-input::placeholder,
 .form-textarea::placeholder,
 textarea.form-input::placeholder {
-  color: #64748b !important;
+  color: #94a3b8 !important;
   font-size: 0.85rem !important;
 }
 
@@ -97,17 +101,17 @@ textarea.form-input {
 }
 
 .form-textarea::-webkit-scrollbar-track {
-  background: rgba(15, 23, 42, 0.5);
+  background: #f4f8f5;
   border-radius: 4px;
 }
 
 .form-textarea::-webkit-scrollbar-thumb {
-  background: rgba(99, 102, 241, 0.3);
+  background: #b8dacb;
   border-radius: 4px;
 }
 
 .form-textarea::-webkit-scrollbar-thumb:hover {
-  background: rgba(99, 102, 241, 0.6);
+  background: #1e5142;
 }
 
 .phone-input-group .form-input {
@@ -139,7 +143,7 @@ textarea.form-input {
   border: none !important;
   box-shadow: none !important;
   outline: none !important;
-  color: #94a3b8 !important;
+  color: #5b756c !important;
   cursor: pointer !important;
   padding: 0.3rem !important;
   border-radius: 6px !important;
@@ -153,8 +157,8 @@ textarea.form-input {
 
 .btn-toggle-eye:hover,
 .btn-toggle-visibility:hover {
-  color: #f8fafc !important;
-  background: rgba(255, 255, 255, 0.1) !important;
+  color: #183b32 !important;
+  background: #f4f8f5 !important;
 }
 
 .btn-submit:disabled {
@@ -162,7 +166,6 @@ textarea.form-input {
   cursor: not-allowed !important;
   transform: none !important;
   box-shadow: none !important;
-  filter: grayscale(0.2);
 }
 
 .spinner-inline {

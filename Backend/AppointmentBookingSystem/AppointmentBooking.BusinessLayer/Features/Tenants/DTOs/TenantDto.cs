@@ -20,8 +20,6 @@ public class TenantDto
     public string? AdminLastName { get; set; }
     public string? AdminEmail { get; set; }
     public string? AdminFullName => string.IsNullOrWhiteSpace(AdminLastName) ? AdminFirstName : $"{AdminFirstName} {AdminLastName}".Trim();
-    public double Rating { get; set; } = 4.8;
-    public int TotalReviewsCount { get; set; } = 1200;
     public IReadOnlyList<string> ServiceTypes { get; set; } = new List<string>();
     public string Slug { get; set; } = string.Empty;
 }

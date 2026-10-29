@@ -1,6 +1,6 @@
 <div *ngIf="confirmService.isOpen() && confirmService.options() as opts" class="confirm-backdrop animate-fade-in"
-  (click)="onBackdropClick($event)" role="dialog" aria-modal="true" [attr.aria-labelledby]="'confirmModalTitle'">
-  <div class="confirm-dialog animate-scale-up" (click)="$event.stopPropagation()">
+  role="dialog" aria-modal="true" [attr.aria-labelledby]="'confirmModalTitle'">
+  <div class="confirm-dialog animate-scale-up">
 
     <!-- Header with Icon & Close Button -->
     <div class="confirm-header">

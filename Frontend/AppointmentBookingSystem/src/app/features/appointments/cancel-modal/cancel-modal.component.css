@@ -1,25 +1,26 @@
-/* Cancel Modal Specific Overrides */
+/* Cancel Modal Specific Overrides - Organic Sage & Forest Emerald Luxury */
 :host {
   display: block;
 }
 
 .text-danger {
-  color: #f43f5e;
+  color: #dc2626;
+  font-family: 'Playfair Display', serif;
 }
 
 .warning-box {
   display: flex;
   align-items: flex-start;
   gap: 0.85rem;
-  background: rgba(244, 63, 94, 0.1);
-  border: 1px solid rgba(244, 63, 94, 0.25);
+  background: #fef2f2;
+  border: 1px solid #fecaca;
   border-radius: 10px;
   padding: 1rem;
   margin-bottom: 1.25rem;
 }
 
 .warning-icon {
-  color: #f43f5e;
+  color: #dc2626;
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -27,67 +28,99 @@
 }
 
 .warning-text h5 {
-  color: #fda4af;
+  color: #991b1b;
   font-size: 0.88rem;
-  font-weight: 600;
+  font-weight: 700;
   margin: 0 0 0.25rem 0;
 }
 
 .warning-text p {
-  color: #cbd5e1;
+  color: #7f1d1d;
   font-size: 0.82rem;
   margin: 0;
   line-height: 1.4;
 }
 
-.appointment-summary {
-  background: rgba(15, 23, 42, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 10px;
-  padding: 0.85rem 1rem;
-  margin-bottom: 1.25rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
+.current-schedule-strip {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 0.75rem !important;
+  background: #f8faf9 !important;
+  border: 1px solid #e2ece6 !important;
+  border-radius: 12px !important;
+  padding: 1rem 1.15rem !important;
+  margin-bottom: 1.15rem !important;
 }
 
-.summary-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-size: 0.85rem;
+.strip-item {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  font-size: 0.88rem !important;
+  padding-bottom: 0.6rem !important;
+  border-bottom: 1px solid #edf4f0 !important;
 }
 
-.s-label {
-  color: #94a3b8;
-  font-weight: 500;
+.strip-item:last-child {
+  border-bottom: none !important;
+  padding-bottom: 0 !important;
 }
 
-.s-val {
-  color: #f8fafc;
-  font-weight: 600;
+.strip-label {
+  color: #5b756c !important;
+  font-weight: 500 !important;
+  font-size: 0.82rem !important;
+}
+
+.strip-val {
+  color: #183b32 !important;
+  font-weight: 600 !important;
+  font-size: 0.88rem !important;
+}
+
+.strip-val.current-highlight {
+  color: #1e5142 !important;
+  background: #e8f3ee !important;
+  border: 1px solid #b8dacb !important;
+  padding: 0.2rem 0.6rem !important;
+  border-radius: 6px !important;
+  font-weight: 600 !important;
+  font-size: 0.84rem !important;
+  display: inline-flex !important;
+  align-items: center !important;
+}
+
+.strip-val.monospace {
+  font-family: var(--font-mono, monospace) !important;
+  font-size: 0.82rem !important;
+  color: #1e5142 !important;
+  background: #e8f3ee !important;
+  border: 1px solid #b8dacb !important;
+  padding: 0.18rem 0.55rem !important;
+  border-radius: 6px !important;
+  font-weight: 700 !important;
 }
 
 .provider-flex-sm {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 0.5rem !important;
 }
 
 .provider-avatar-mini {
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
-  color: #ffffff;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
-  font-size: 0.72rem;
-  overflow: hidden;
-  flex-shrink: 0;
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  width: 24px !important;
+  height: 24px !important;
+  border-radius: 50% !important;
+  background: #1e5142 !important;
+  color: #ffffff !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-weight: 700 !important;
+  font-size: 0.7rem !important;
+  overflow: hidden !important;
+  flex-shrink: 0 !important;
+  border: 1px solid #b8dacb !important;
 }
 
 .provider-avatar-mini .avatar-img {
@@ -97,13 +130,8 @@
   object-fit: cover;
 }
 
-.monospace {
-  font-family: var(--font-mono, monospace);
-  color: #818cf8;
-}
-
 .optional {
-  color: #64748b;
+  color: #5b756c;
   font-weight: 400;
   font-size: 0.8rem;
 }
@@ -124,5 +152,7 @@
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }

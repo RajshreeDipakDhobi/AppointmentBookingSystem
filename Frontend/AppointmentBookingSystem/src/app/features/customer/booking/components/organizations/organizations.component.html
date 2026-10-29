@@ -1,16 +1,33 @@
-<section class="organizations-container" aria-label="Featured Organizations">
-  
-  <!-- Header -->
-  <div class="orgs-header">
-    <div class="orgs-header-title-wrap">
-      <h2 class="orgs-title">Featured Organizations</h2>
-      <span class="orgs-count-pill" *ngIf="!isLoading() && filteredTenants().length > 0">
-        <span class="count-pulse-dot"></span>
-        {{ filteredTenants().length }} Available
+<section class="organizations-unified-card" aria-label="Partner Organizations">
+
+  <!-- Header Bar: Title, Count Badge & Modern Search Bar (Filters completely removed) -->
+  <header class="orgs-card-header">
+    <div class="header-left-title-group">
+      <h2 class="orgs-main-title">Partner Organizations</h2>
+      <span class="orgs-count-badge" *ngIf="!isLoading()">
+        {{ filteredTenants().length }}+
       </span>
     </div>
-    <p class="orgs-subtitle">Top rated and verified partner organizations ready for instant bookings</p>
-  </div>
+
+    <!-- Modern Sleek Search Capsule -->
+    <div class="search-capsule" [class.has-value]="searchTerm().length > 0">
+      <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24"
+        fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="8" />
+        <line x1="21" y1="21" x2="16.65" y2="16.65" />
+      </svg>
+      <input type="text" [value]="searchTerm()" (input)="onSearchChange($event)"
+        placeholder="Search organizations..." class="search-input" aria-label="Search partner organizations" />
+      <button *ngIf="searchTerm()" type="button" class="btn-clear-search" (click)="clearSearch()"
+        title="Clear search" aria-label="Clear search">
+        <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18" />
+          <line x1="6" y1="6" x2="18" y2="18" />
+        </svg>
+      </button>
+    </div>
+  </header>
 
   <!-- Loading State -->
   <div *ngIf="isLoading()" class="orgs-loading-state">
@@ -20,121 +37,141 @@
 
   <!-- Error Alert -->
   <div *ngIf="errorMessage()" class="orgs-error-banner">
-    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <circle cx="12" cy="12" r="10"/>
-      <line x1="12" y1="8" x2="12" y2="12"/>
-      <line x1="12" y1="16" x2="12.01" y2="16"/>
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="10" />
+      <line x1="12" y1="8" x2="12" y2="12" />
+      <line x1="12" y1="16" x2="12.01" y2="16" />
     </svg>
     <span>{{ errorMessage() }}</span>
   </div>
 
-  <!-- Organizations List -->
+  <!-- Organizations Scrollable List (NO PAGINATION - Pure Smooth Luxury Scroll) -->
   <div *ngIf="!isLoading() && filteredTenants().length > 0" class="orgs-cards-list">
-    <article 
-      *ngFor="let t of filteredTenants(); let i = index" 
-      class="org-card glass-card animate-card-in"
-      [style.animation-delay]="(i * 60) + 'ms'"
-      (click)="onSelect(t)"
-      role="button"
-      tabindex="0"
+    <article *ngFor="let t of filteredTenants(); let i = index" class="org-row-card animate-card-in"
+      [style.animation-delay]="(i * 35) + 'ms'" (click)="onSelect(t)" role="button" tabindex="0"
       (keydown.enter)="onSelect(t)">
 
-      <!-- Card Top Section -->
-      <div class="org-card-top">
-        <div class="org-avatar-box">
+      <!-- Left Group: Squircle Avatar + Details -->
+      <div class="org-row-left">
+        <div class="org-avatar-box" [ngClass]="getAvatarThemeClass(t.name)">
           <img *ngIf="t.logoUrl" [src]="t.logoUrl" [alt]="t.name" class="org-avatar-img" />
-          <div *ngIf="!t.logoUrl" class="org-avatar-fallback">{{ getInitials(t.name) }}</div>
+
+          <!-- Thematic SVGs matching mockup reference -->
+          <ng-container *ngIf="!t.logoUrl">
+            <!-- Scissors for Salon -->
+            <svg *ngIf="isSalon(t.name)" class="org-icon-svg" xmlns="http://www.w3.org/2000/svg" width="22"
+              height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1"
+              stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="6" cy="6" r="3" />
+              <path d="M8.12 8.12 12 12" />
+              <path d="M20 4 8.12 15.88" />
+              <circle cx="6" cy="18" r="3" />
+              <path d="M14.8 14.8 20 20" />
+            </svg>
+
+            <!-- Tooth for Dental -->
+            <svg *ngIf="isDental(t.name)" class="org-icon-svg" xmlns="http://www.w3.org/2000/svg" width="22"
+              height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1"
+              stroke-linecap="round" stroke-linejoin="round">
+              <path
+                d="M12 2C8.5 2 6 4.5 6 8c0 3.5 1 6.5 2 10 1 3.5 2 4 4 4s3-.5 4-4c1-3.5 2-6.5 2-10 0-3.5-2.5-6-6-6z" />
+              <path d="M10 7c.5-1 1-1.5 2-1.5s1.5.5 2 1.5" />
+            </svg>
+
+            <!-- Lotus for Wellness -->
+            <svg *ngIf="isWellness(t.name)" class="org-icon-svg" xmlns="http://www.w3.org/2000/svg" width="22"
+              height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 21c-4.418 0-8-3.582-8-8 0-4 4-9 8-11 4 2 8 7 8 11 0 4.418-3.582 8-8 8Z" />
+              <path d="M12 21c2.5-3 4-7 4-11" />
+              <path d="M12 21c-2.5-3-4-7-4-11" />
+            </svg>
+
+            <!-- Plus for Health / Clinic -->
+            <svg *ngIf="isClinic(t.name) && !isDental(t.name)" class="org-icon-svg"
+              xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 6v12M6 12h12" />
+            </svg>
+
+            <!-- Letter Inside Circle Avatar for Generic Orgs -->
+            <div *ngIf="!isSalon(t.name) && !isDental(t.name) && !isWellness(t.name) && !isClinic(t.name)"
+              class="org-avatar-fallback">
+              <span class="fallback-circle-letter">{{ getInitials(t.name) }}</span>
+            </div>
+          </ng-container>
         </div>
 
-        <div class="org-identity-wrap">
-          <div class="org-headline-row">
-            <h3 class="org-name" [title]="t.name">{{ t.name }}</h3>
-            <span class="badge-verified">
-              <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-                <path d="m9 12 2 2 4-4"/>
+        <div class="org-info-col">
+          <h3 class="org-name-text" [title]="t.name">{{ t.name }}</h3>
+
+          <div class="org-meta-group">
+            <div *ngIf="t.address" class="meta-row address-row">
+              <svg class="meta-icon" xmlns="http://www.w3.org/2000/svg" width="12" height="12"
+                viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
+                <circle cx="12" cy="10" r="3" />
               </svg>
-              <span>Verified Partner</span>
-            </span>
+              <span class="meta-text" [title]="t.address">{{ t.address }}</span>
+            </div>
+
+            <div *ngIf="t.contactPhone" class="meta-row phone-row">
+              <svg class="meta-icon" xmlns="http://www.w3.org/2000/svg" width="12" height="12"
+                viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path
+                  d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+              </svg>
+              <span class="meta-text">{{ t.contactPhone | appPhone }}</span>
+            </div>
           </div>
         </div>
       </div>
 
-      <!-- Card Info Details -->
-      <div class="org-card-body">
-        <div *ngIf="t.address" class="org-info-item">
-          <svg class="info-icon icon-location" xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/>
-            <circle cx="12" cy="10" r="3"/>
+      <!-- Right Group: Verified Partner Badge + Chevron Arrow -->
+      <div class="org-row-right">
+        <span class="badge-verified">
+          <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+            <path d="m9 12 2 2 4-4" />
           </svg>
-          <span class="info-text" [title]="t.address">{{ t.address }}</span>
-        </div>
+          <span>Verified Partner</span>
+        </span>
 
-        <div *ngIf="t.contactPhone" class="org-info-item">
-          <svg class="info-icon icon-phone" xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+        <span class="row-chevron-box" aria-hidden="true">
+          <svg class="chevron-right-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
+            stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="9 18 15 12 9 6" />
           </svg>
-          <span class="info-text">{{ t.contactPhone | appPhone }}</span>
-        </div>
-      </div>
-
-      <!-- Card Footer Bar -->
-      <div class="org-card-footer">
-        <div class="org-stats-group">
-          <!-- Rating -->
-          <div class="stat-pill rating-pill" *ngIf="t.rating">
-            <svg class="star-icon" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="#f59e0b" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-            </svg>
-            <span>{{ t.rating }} <span *ngIf="t.totalReviewsCount">({{ t.totalReviewsCount | number }})</span></span>
-          </div>
-
-          <!-- Specialists: When count > 0 -->
-          <div class="stat-pill specialists-pill" *ngIf="(t.totalProvidersCount || 0) > 0">
-            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
-              <circle cx="9" cy="7" r="4"/>
-              <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
-              <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-            </svg>
-            <span>{{ t.totalProvidersCount }} {{ t.totalProvidersCount === 1 ? 'Specialist' : 'Specialists' }}</span>
-          </div>
-
-          <!-- Specialists: When count === 0 (Modern Amber Pill) -->
-          <div class="stat-pill no-specialists-pill" *ngIf="!t.totalProvidersCount || t.totalProvidersCount === 0">
-            <svg class="no-provider-icon" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
-              <circle cx="9" cy="7" r="4"/>
-              <line x1="17" y1="8" x2="22" y2="13"/>
-              <line x1="22" y1="8" x2="17" y2="13"/>
-            </svg>
-            <span>No Service Providers</span>
-          </div>
-        </div>
-
-        <button type="button" class="btn-org-cta" (click)="$event.stopPropagation(); onSelect(t)">
-          <span>View Details</span>
-          <svg class="cta-arrow" xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="9 18 15 12 9 6"/>
-          </svg>
-        </button>
+        </span>
       </div>
 
     </article>
   </div>
 
-  <!-- Empty Results State (when search query matches nothing) -->
-  <div *ngIf="!isLoading() && filteredTenants().length === 0" class="orgs-empty-box glass-card">
+  <!-- Empty Results State -->
+  <div *ngIf="!isLoading() && filteredTenants().length === 0" class="orgs-empty-box">
     <div class="empty-icon-circle">
-      <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="11" cy="11" r="8"/>
-        <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none"
+        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="8" />
+        <line x1="21" y1="21" x2="16.65" y2="16.65" />
       </svg>
     </div>
-    <h3 class="empty-title">No Organizations Found</h3>
-    <p class="empty-desc">
-      {{ searchQuery ? 'No registered organization matches "' + searchQuery + '".' : 'No partner organizations available at this moment.' }}
+    <h4 class="empty-title">No organizations found</h4>
+    <p class="empty-desc" *ngIf="searchTerm()">
+      No results matching "<strong class="highlight-query">{{ searchTerm() }}</strong>".
     </p>
+    <p class="empty-desc" *ngIf="!searchTerm()">
+      No partner organizations are available at this moment.
+    </p>
+    <button *ngIf="searchTerm()" type="button" class="btn-reset-search" (click)="clearSearch()">
+      Clear Search
+    </button>
   </div>
 
 </section>

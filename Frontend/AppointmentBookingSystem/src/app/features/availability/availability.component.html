@@ -133,16 +133,17 @@
 
               <!-- Weekly Slots -->
               <td>
-                <span class="count-badge count-purple" *ngIf="p.isConfigured">
+                <span class="count-badge count-slots" *ngIf="p.isConfigured">
                   {{ p.totalWeeklySlots }} Slots/wk
                 </span>
                 <span class="text-dim" *ngIf="!p.isConfigured">—</span>
               </td>
 
-              <!-- Status (Standard ACTIVE / INACTIVE) -->
+              <!-- Status (Standard Active / Inactive) -->
               <td>
-                <span class="badge" [ngClass]="p.isConfigured ? 'badge-booked' : 'badge-cancelled'">
-                  {{ p.isConfigured ? 'ACTIVE' : 'INACTIVE' }}
+                <span class="badge" [ngClass]="p.isConfigured ? 'badge-active' : 'badge-inactive'">
+                  <span class="dot"></span>
+                  <span>{{ p.isConfigured ? 'Active' : 'Inactive' }}</span>
                 </span>
               </td>
 
@@ -264,8 +265,8 @@
   <!-- ======================================================== -->
   <!-- VIEW BOOKABLE SLOTS MODAL (INSPECT DAY-WISE SLOTS)      -->
   <!-- ======================================================== -->
-  <div *ngIf="isViewSlotsModalOpen()" class="modal-backdrop animate-fade-in" (click)="closeViewSlotsModal()">
-    <div class="modal-dialog view-slots-dialog glass-card animate-scale-up" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
+  <div *ngIf="isViewSlotsModalOpen()" class="modal-backdrop animate-fade-in">
+    <div class="modal-dialog view-slots-dialog glass-card animate-scale-up" role="dialog" aria-modal="true">
       
       <!-- Modal Header -->
       <div class="modal-header">

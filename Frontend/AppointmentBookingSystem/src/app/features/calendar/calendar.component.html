@@ -295,7 +295,7 @@
         </div>
 
         <!-- Provider Columns Headers -->
-        <div class="provider-headers-container" #providerHeadersContainer>
+        <div class="provider-headers-container" #providerHeadersContainer (scroll)="onHeaderScroll($event)">
           <ng-container *ngIf="displayedProviders().length > 0; else noProvidersTpl">
             <div *ngFor="let provider of displayedProviders(); trackBy: trackByProviderId" class="provider-col-header"
               [class.mobile-hidden]="currentMobileProvider()?.id !== provider.id"
@@ -385,7 +385,9 @@
                 (dblclick)="resetColumnWidth(provider.id, $event)" title="Drag to resize column"></div>
 
               <!-- Day Off Centered Indicator if Provider is not available today (matches screenshot) -->
-              <div *ngIf="!isProviderAvailableToday(provider.id)" class="provider-day-off-container">
+              <div *ngIf="!isProviderAvailableToday(provider.id)" class="provider-day-off-container"
+                (click)="onDayOffClick(provider, $event)"
+                [title]="provider.name + ' is on Day Off today (' + getSelectedDayName() + ') - Booking unavailable'">
                 <div class="day-off-center-card">
                   <div class="day-off-icon-circle">
                     <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none"
@@ -405,10 +407,12 @@
               <div *ngFor="let slot of slotsList(); trackBy: trackBySlotRaw" class="slot-hour-block"
                 [class.lunch-break-slot]="isSlotBreakForProvider(provider.id, slot.raw)"
                 [class.off-hours-slot]="isSlotOutsideWorkingHours(provider.id, slot.raw)"
+                [class.past-slot]="isSlotInPast(slot.raw)"
+                [class.slot-booking-disabled]="isSlotInPast(slot.raw) || !isDateWithinBookingWindow(selectedDate()) || !isProviderAvailableToday(provider.id) || isSlotOutsideWorkingHours(provider.id, slot.raw) || isSlotBreakForProvider(provider.id, slot.raw)"
                 [class.hour-boundary]="slot.isHourMark" [style.height.px]="slotHeight"
                 (click)="onSlotClick(provider, slot.raw, $event)" [title]="getSlotTooltip(provider, slot)">
 
-                <div class="slot-hover-hint">
+                <div class="slot-hover-hint" *ngIf="!isSlotInPast(slot.raw) && isDateWithinBookingWindow(selectedDate()) && isProviderAvailableToday(provider.id) && !isSlotOutsideWorkingHours(provider.id, slot.raw) && !isSlotBreakForProvider(provider.id, slot.raw)">
                   <span class="plus-icon">+</span>
                   <span>{{ slot.rangeText }}</span>
                 </div>
@@ -494,9 +498,8 @@
 <!-- ========================================================================= -->
 <!-- SCREEN-CENTERED MODALS & DETAILS DRAWER (OUTSIDE schedule-app-container)  -->
 <!-- ========================================================================= -->
-<div *ngIf="selectedAppointmentForDetail() as apt" class="modal-backdrop screen-centered-backdrop animate-fade-in"
-  (click)="closeDetails()">
-  <div class="appointment-detail-sheet animate-scale-up" (click)="$event.stopPropagation()">
+<div *ngIf="selectedAppointmentForDetail() as apt" class="modal-backdrop screen-centered-backdrop animate-fade-in">
+  <div class="appointment-detail-sheet animate-scale-up">
     <!-- Decorative Luxury Top Gradient Shimmer -->
     <div class="sheet-top-accent"></div>
 

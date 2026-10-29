@@ -27,8 +27,6 @@ public class MappingProfile : Profile
             .ForMember(dest => dest.AdminLastName, opt => opt.MapFrom(src => src.Users.Where(u => u.Role == UserRole.Admin).Select(u => u.LastName).FirstOrDefault()))
             .ForMember(dest => dest.AdminEmail, opt => opt.MapFrom(src => src.Users.Where(u => u.Role == UserRole.Admin).Select(u => u.Email).FirstOrDefault()))
             .ForMember(dest => dest.ServiceTypes, opt => opt.MapFrom(_ => new List<string>()))
-            .ForMember(dest => dest.Rating, opt => opt.MapFrom(_ => 4.8))
-            .ForMember(dest => dest.TotalReviewsCount, opt => opt.MapFrom(_ => 1200))
             .ForMember(dest => dest.Slug, opt => opt.MapFrom(src => 
                 !string.IsNullOrWhiteSpace(src.TenantCode) 
                     ? src.TenantCode 

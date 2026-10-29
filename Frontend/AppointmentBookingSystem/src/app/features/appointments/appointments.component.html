@@ -640,8 +640,8 @@
     (close)="selectedAppointmentForCancel = null" (cancelled)="onAppointmentCancelled($event)"></app-cancel-modal>
 
   <!-- 4. Quick Details Modal (Revamped & Formatted) -->
-  <div *ngIf="selectedAppointmentForDetail" class="modal-backdrop" (click)="closeDetails()">
-    <div class="modal-card glass-card modal-detail-card" (click)="$event.stopPropagation()">
+  <div *ngIf="selectedAppointmentForDetail" class="modal-backdrop">
+    <div class="modal-card glass-card modal-detail-card">
       <!-- Header -->
       <div class="modal-header">
         <div class="header-content">
@@ -827,7 +827,7 @@
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
             <span class="memo-title text-rose">Cancellation Reason</span>
             <span *ngIf="selectedAppointmentForDetail.cancelledByName" class="badge-role"
-              style="font-size: 0.72rem; padding: 2px 8px; border-radius: 999px; background: rgba(244,63,94,0.15); color: #fb7185; border: 1px solid rgba(244,63,94,0.25); font-weight: 600;">
+              style="font-size: 0.72rem; padding: 2px 8px; border-radius: 999px; background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; font-weight: 600;">
               Cancelled by: {{ selectedAppointmentForDetail.cancelledByName }}
             </span>
           </div>
@@ -841,22 +841,21 @@
         <!-- Reschedule Proposal Pending Review -->
         <div
           *ngIf="selectedAppointmentForDetail.status === AppointmentStatus.RescheduleProposed && selectedAppointmentForDetail.proposedDate"
-          class="detail-memo-card"
-          style="background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.25);">
+          class="detail-memo-card" style="background: #fffbeb; border: 1px solid #fde68a;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-            <span class="memo-title" style="color: #fbbf24;">Reschedule Proposed (Awaiting Customer Response)</span>
+            <span class="memo-title" style="color: #b45309;">Reschedule Proposed (Awaiting Customer Response)</span>
             <span class="badge-role"
-              style="font-size: 0.72rem; padding: 2px 8px; border-radius: 999px; background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.25); font-weight: 600;">
+              style="font-size: 0.72rem; padding: 2px 8px; border-radius: 999px; background: #fef3c7; color: #92400e; border: 1px solid #fde68a; font-weight: 600;">
               Proposed Slot
             </span>
           </div>
-          <p class="memo-text" style="color: #fef3c7; font-weight: 600;">
+          <p class="memo-text" style="color: #78350f; font-weight: 600;">
             {{ selectedAppointmentForDetail.proposedDate | appDate }} at {{
             selectedAppointmentForDetail.proposedStartTime | appTime }} – {{
             selectedAppointmentForDetail.proposedEndTime | appTime }}
           </p>
           <p *ngIf="selectedAppointmentForDetail.rescheduleNotes" class="memo-text"
-            style="color: #94a3b8; font-size: 0.8rem; margin-top: 4px;">
+            style="color: #5b756c; font-size: 0.8rem; margin-top: 4px;">
             Provider Note: "{{ selectedAppointmentForDetail.rescheduleNotes }}"
           </p>
         </div>
@@ -867,8 +866,8 @@
   </div>
 
   <!-- Complete Confirmation Modal (Action Modal matching Reschedule UI) -->
-  <div *ngIf="selectedAppointmentForComplete" class="modal-backdrop animate-fade-in" (click)="closeCompleteModal()">
-    <div class="modal-card modal-confirm-card glass-card animate-scale-up" (click)="$event.stopPropagation()">
+  <div *ngIf="selectedAppointmentForComplete" class="modal-backdrop animate-fade-in">
+    <div class="modal-card modal-confirm-card glass-card animate-scale-up">
       <!-- Modal Header -->
       <div class="modal-header">
         <div class="header-content">
@@ -939,8 +938,8 @@
   </div>
 
   <!-- Reject Confirmation Modal (Inline matching design) -->
-  <div *ngIf="selectedAppointmentForReject" class="modal-backdrop animate-fade-in" (click)="closeRejectModal()">
-    <div class="modal-card modal-confirm-card glass-card animate-scale-up" (click)="$event.stopPropagation()">
+  <div *ngIf="selectedAppointmentForReject" class="modal-backdrop animate-fade-in">
+    <div class="modal-card modal-confirm-card glass-card animate-scale-up">
       <!-- Modal Header -->
       <div class="modal-header">
         <div class="header-content">
@@ -968,9 +967,24 @@
             <span class="strip-val">{{ selectedAppointmentForReject.customerName }}</span>
           </div>
           <div class="strip-item">
+            <span class="strip-label">Provider</span>
+            <div class="provider-flex-sm">
+              <div class="provider-avatar-mini"
+                [style.background]="selectedAppointmentForReject.serviceProviderProfilePictureUrl ? 'transparent' : ''">
+                <img *ngIf="selectedAppointmentForReject.serviceProviderProfilePictureUrl"
+                  [src]="selectedAppointmentForReject.serviceProviderProfilePictureUrl" alt="" class="avatar-img"
+                  (error)="selectedAppointmentForReject.serviceProviderProfilePictureUrl = undefined" />
+                <span *ngIf="!selectedAppointmentForReject.serviceProviderProfilePictureUrl">{{
+                  selectedAppointmentForReject.serviceProviderName | appInitials }}</span>
+              </div>
+              <span class="strip-val">{{ selectedAppointmentForReject.serviceProviderName }}</span>
+            </div>
+          </div>
+          <div class="strip-item">
             <span class="strip-label">Scheduled Time</span>
             <span class="strip-val current-highlight">{{ selectedAppointmentForReject.appointmentDate | appDate }} at {{
-              selectedAppointmentForReject.startTime | appTime }}</span>
+              selectedAppointmentForReject.startTime | appTime }} – {{ selectedAppointmentForReject.endTime | appTime
+              }}</span>
           </div>
         </div>
 

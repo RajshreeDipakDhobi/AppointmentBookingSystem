@@ -877,10 +877,8 @@ export class AvailabilityModalComponent implements OnChanges {
     this.isProviderMenuOpen = false;
   }
 
-  onBackdropClick(event: MouseEvent): void {
-    if ((event.target as HTMLElement).classList.contains('modal-backdrop')) {
-      this.onClose();
-    }
+  onBackdropClick(_event: MouseEvent): void {
+    // Modal only closes via explicit close button
   }
 
   onClose(): void {

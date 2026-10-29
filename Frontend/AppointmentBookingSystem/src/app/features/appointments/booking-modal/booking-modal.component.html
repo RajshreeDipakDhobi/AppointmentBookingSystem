@@ -1,13 +1,14 @@
-<div class="modal-backdrop animate-fade-in" (click)="onModalClose()">
+<div class="modal-backdrop animate-fade-in">
   <div class="modal-dialog modal-card glass-card animate-scale-up" [class.modal-step-5]="currentStep === 5"
-    role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
+    role="dialog" aria-modal="true">
 
     <!-- Modal Header: Aligned with standard modals -->
     <div class="modal-header">
       <div class="header-left">
         <!-- Back Arrow Button (Visible after Step 1) -->
         <button *ngIf="currentStep > 1 && currentStep < 5" type="button" class="btn-back-header" (click)="goBack()"
-          aria-label="Go to previous step" title="Back">
+          [attr.aria-label]="(currentStep === 2 && returnToStep === 3) ? 'Back to Customer Details' : 'Go to previous step'"
+          [title]="(currentStep === 2 && returnToStep === 3) ? 'Back to Customer Details' : 'Back'">
           <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
             stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
             <line x1="19" y1="12" x2="5" y2="12"></line>
@@ -89,18 +90,139 @@
               (click)="providerSearchQuery.set('')" title="Clear search">✕</button>
           </div>
 
-          <!-- Service Type Dropdown Filter -->
-          <div class="service-type-dropdown-wrap">
-            <select [ngModel]="selectedServiceType()" (ngModelChange)="selectedServiceType.set($event)"
-              class="service-type-select">
-              <option value="ALL">All Services</option>
-              <option *ngFor="let st of serviceTypes()" [value]="st">{{ st }}</option>
-            </select>
-            <svg class="dropdown-chevron-icon" xmlns="http://www.w3.org/2000/svg" width="14" height="14"
-              viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"
-              stroke-linejoin="round">
-              <polyline points="6 9 12 15 18 9" />
-            </svg>
+          <!-- Custom Glassmorphism Service Dropdown Filter (Matching Calendar Component) -->
+          <div class="custom-select-anchor service-select-anchor" [class.menu-open]="isServiceDropdownOpen"
+            [class.has-selection]="selectedServiceType() !== 'ALL'">
+            <button type="button" class="custom-select-trigger" (click)="toggleServiceDropdown($event)"
+              [title]="'Filter by service: ' + selectedServiceLabel()" aria-haspopup="listbox"
+              [attr.aria-expanded]="isServiceDropdownOpen">
+              <!-- Left Icon -->
+              <div class="trigger-icon-wrap">
+                <span class="trigger-default-icon">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
+                    <line x1="7" y1="7" x2="7.01" y2="7" />
+                  </svg>
+                </span>
+              </div>
+
+              <!-- Label Display -->
+              <div class="trigger-label-group">
+                <span class="trigger-main-text">{{ selectedServiceLabel() }}</span>
+              </div>
+
+              <!-- Inline Clear Button (Reset service filter) -->
+              <span *ngIf="selectedServiceType() !== 'ALL'" class="trigger-clear-btn"
+                (click)="clearServiceSelection($event)" title="Reset to All Services" role="button">✕</span>
+
+              <!-- Chevron Indicator -->
+              <svg class="trigger-chevron" [class.rotated]="isServiceDropdownOpen" xmlns="http://www.w3.org/2000/svg"
+                width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </button>
+
+            <!-- Glassmorphism Dropdown Popover Menu -->
+            <div *ngIf="isServiceDropdownOpen" class="custom-dropdown-popover animate-scale-up"
+              (click)="$event.stopPropagation()">
+              <div class="popover-header">
+                <span class="popover-header-title">Filter by Service</span>
+                <div class="popover-header-right">
+                  <span class="popover-count-pill" *ngIf="selectedServiceType() === 'ALL'">
+                    {{ serviceTypes().length }} Total
+                  </span>
+
+                  <ng-container *ngIf="selectedServiceType() !== 'ALL'">
+                    <span class="popover-selected-pill">1 selected</span>
+                    <button type="button" class="btn-popover-reset" (click)="selectService('ALL', $event)"
+                      title="Reset to all services">
+                      Reset
+                    </button>
+                  </ng-container>
+                </div>
+              </div>
+
+              <!-- Service Search Input Box (Shown if more than 3 services) -->
+              <div class="popover-search-container" *ngIf="serviceTypes().length > 3">
+                <div class="popover-search-box">
+                  <svg class="popover-search-icon" xmlns="http://www.w3.org/2000/svg" width="13" height="13"
+                    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"
+                    stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                  </svg>
+                  <input type="text" class="popover-search-input" placeholder="Search service or specialty..."
+                    [value]="serviceSearchQuery()" (input)="onServiceSearchInput($event)"
+                    (click)="$event.stopPropagation()" autocomplete="off" spellcheck="false" />
+                  <button *ngIf="serviceSearchQuery()" type="button" class="popover-search-clear"
+                    (click)="clearServiceSearch($event)" title="Clear search">✕</button>
+                </div>
+              </div>
+
+              <div class="popover-items-list">
+                <!-- All Services Option -->
+                <button *ngIf="!serviceSearchQuery().trim()" type="button" class="popover-option-item all-services-item"
+                  [class.option-selected]="selectedServiceType() === 'ALL'" (click)="selectService('ALL', $event)">
+                  <div class="option-icon-box">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none"
+                      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <rect x="3" y="3" width="7" height="7"></rect>
+                      <rect x="14" y="3" width="7" height="7"></rect>
+                      <rect x="14" y="14" width="7" height="7"></rect>
+                      <rect x="3" y="14" width="7" height="7"></rect>
+                    </svg>
+                  </div>
+                  <div class="option-info">
+                    <span class="option-title">All Services</span>
+                    <span class="option-desc">Show specialists across all specialties</span>
+                  </div>
+
+                  <div class="option-checkbox-indicator" [class.is-checked]="selectedServiceType() === 'ALL'">
+                    <svg *ngIf="selectedServiceType() === 'ALL'" class="checkbox-check-svg"
+                      xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none"
+                      stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                  </div>
+                </button>
+
+                <!-- Individual Services List -->
+                <button *ngFor="let st of filteredServiceTypes()" type="button" class="popover-option-item"
+                  [class.option-selected]="selectedServiceType() === st" (click)="selectService(st, $event)">
+                  <div class="option-icon-box service-type-icon-box">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
+                      <line x1="7" y1="7" x2="7.01" y2="7" />
+                    </svg>
+                  </div>
+                  <div class="option-info">
+                    <span class="option-title">{{ st }}</span>
+                    <span class="option-desc">{{ getProviderCountForService(st) }} {{ getProviderCountForService(st) === 1 ? 'specialist' : 'specialists' }}</span>
+                  </div>
+
+                  <div class="option-checkbox-indicator" [class.is-checked]="selectedServiceType() === st">
+                    <svg *ngIf="selectedServiceType() === st" class="checkbox-check-svg"
+                      xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none"
+                      stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                  </div>
+                </button>
+
+                <!-- No Results State -->
+                <div *ngIf="filteredServiceTypes().length === 0" class="popover-no-results">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                  </svg>
+                  <span>No service found matching "{{ serviceSearchQuery() }}"</span>
+                </div>
+              </div>
+            </div>
           </div>
 
           <span class="providers-count-pill" *ngIf="!isLoadingProviders()">
@@ -243,46 +365,30 @@
         <!-- SIDE-BY-SIDE CONTAINER: Calendar (Left) + Available Slots (Right) -->
         <div class="booking-split-container">
 
-          <!-- LEFT COLUMN: Month Calendar Grid -->
-          <div class="calendar-panel">
-
-            <!-- Month Nav Header -->
-            <div class="calendar-nav-bar">
-              <h4 class="calendar-month-title">{{ currentMonthLabel }}</h4>
-
-              <div class="calendar-nav-buttons">
-                <button type="button" class="btn-cal-nav" [disabled]="!canGoPrevMonth" (click)="prevMonth()"
-                  title="Previous month">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none"
-                    stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                    <polyline points="15 18 9 12 15 6" />
-                  </svg>
-                </button>
-
-                <button type="button" class="btn-cal-nav" [disabled]="!canGoNextMonth" (click)="nextMonth()" title="Next month">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none"
-                    stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                    <polyline points="9 18 15 12 9 6" />
-                  </svg>
-                </button>
+          <!-- LEFT COLUMN: Mat Calendar Grid -->
+          <div class="calendar-panel luxury-mat-calendar-card">
+            <div class="calendar-panel-header">
+              <div class="header-title-badge">
+                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                  <line x1="16" y1="2" x2="16" y2="6" />
+                  <line x1="8" y1="2" x2="8" y2="6" />
+                  <line x1="3" y1="10" x2="21" y2="10" />
+                </svg>
+                <span class="panel-heading-text">Select Date</span>
               </div>
+              <span class="calendar-limit-pill">15 Days Bookable</span>
             </div>
 
-            <!-- Weekday Headers (Mon Tue Wed Thu Fri Sat Sun) -->
-            <div class="calendar-weekdays-grid">
-              <span *ngFor="let dayName of weekdays" class="cal-weekday-label">{{ dayName }}</span>
+            <div class="modal-calendar-embed">
+              <mat-calendar
+                [selected]="selectedDateObject"
+                [minDate]="minDateObject"
+                [maxDate]="maxDateObject"
+                (selectedChange)="onMaterialDateSelected($event)">
+              </mat-calendar>
             </div>
-
-            <!-- Days Grid -->
-            <div class="calendar-days-grid">
-              <button *ngFor="let day of calendarDays" type="button" class="calendar-day-btn"
-                [class.not-current-month]="!day.isCurrentMonth" [class.past-day]="day.isPast || day.isBeyondLimit"
-                [class.today-day]="day.isToday" [class.selected-day]="day.isSelected"
-                [disabled]="day.isPast || day.isBeyondLimit || !day.isCurrentMonth" (click)="selectCalendarDay(day)">
-                <span class="day-num">{{ day.dayNumber }}</span>
-              </button>
-            </div>
-
           </div>
 
           <!-- RIGHT COLUMN: Available Time Slots + Next Action -->
@@ -338,7 +444,7 @@
             <!-- Prominent Next Button (Bottom Right) -->
             <div class="slots-action-wrap">
               <button type="button" class="btn-next-action" [disabled]="!selectedSlot" (click)="goToStep3()">
-                <span>Next: Customer Details</span>
+                <span>{{ returnToStep === 3 ? 'Continue to Customer Details' : 'Next: Customer Details' }}</span>
                 <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none"
                   stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                   <line x1="5" y1="12" x2="19" y2="12"></line>
@@ -397,7 +503,7 @@
             </div>
           </div>
 
-          <button type="button" class="btn-change-slot" (click)="goBack()" title="Change slot">
+          <button type="button" class="btn-change-slot" (click)="changeSlot()" title="Change slot">
             Change
           </button>
         </div>
@@ -851,7 +957,7 @@
       <!-- Step 3 Actions (Customer Info) -->
       <div *ngIf="currentStep === 3" class="footer-actions-row flex-end">
         <button type="button" class="btn btn-primary" (click)="goToStep4()">
-          <span>Review Booking</span>
+          <span>Proceed to Booking</span>
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
             stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <line x1="5" y1="12" x2="19" y2="12"></line>

@@ -378,8 +378,15 @@ export class CalendarComponent implements OnInit, OnDestroy {
 
   onGridScroll(event: Event): void {
     const target = event.target as HTMLElement;
-    if (this.providerHeadersContainer?.nativeElement) {
+    if (this.providerHeadersContainer?.nativeElement && Math.abs(this.providerHeadersContainer.nativeElement.scrollLeft - target.scrollLeft) > 1) {
       this.providerHeadersContainer.nativeElement.scrollLeft = target.scrollLeft;
+    }
+  }
+
+  onHeaderScroll(event: Event): void {
+    const target = event.target as HTMLElement;
+    if (this.gridScrollArea?.nativeElement && Math.abs(this.gridScrollArea.nativeElement.scrollLeft - target.scrollLeft) > 1) {
+      this.gridScrollArea.nativeElement.scrollLeft = target.scrollLeft;
     }
   }
 
@@ -512,63 +519,63 @@ export class CalendarComponent implements OnInit, OnDestroy {
   readonly providerThemes: ProviderTheme[] = [
     {
       name: 'Rose',
-      dot: '#f43f5e',
-      cardBg: 'rgba(244, 63, 94, 0.16)',
-      cardBorder: 'rgba(244, 63, 94, 0.45)',
-      textColor: '#ffffff',
-      serviceColor: '#fda4af',
-      timeTagBg: 'rgba(244, 63, 94, 0.28)',
-      timeTagText: '#ffe4e6'
+      dot: '#e11d48',
+      cardBg: '#fff1f2',
+      cardBorder: '#fecdd3',
+      textColor: '#183b32',
+      serviceColor: '#be123c',
+      timeTagBg: 'transparent',
+      timeTagText: '#4c0519'
     },
     {
       name: 'Emerald',
-      dot: '#10b981',
-      cardBg: 'rgba(16, 185, 129, 0.16)',
-      cardBorder: 'rgba(16, 185, 129, 0.45)',
-      textColor: '#ffffff',
-      serviceColor: '#6ee7b7',
-      timeTagBg: 'rgba(16, 185, 129, 0.28)',
-      timeTagText: '#d1fae5'
+      dot: '#1e5142',
+      cardBg: '#eef7f2',
+      cardBorder: '#c3ded1',
+      textColor: '#183b32',
+      serviceColor: '#2d6a56',
+      timeTagBg: 'transparent',
+      timeTagText: '#5b756c'
     },
     {
       name: 'Sky',
-      dot: '#0ea5e9',
-      cardBg: 'rgba(14, 165, 233, 0.16)',
-      cardBorder: 'rgba(14, 165, 233, 0.45)',
-      textColor: '#ffffff',
-      serviceColor: '#7dd3fc',
-      timeTagBg: 'rgba(14, 165, 233, 0.28)',
-      timeTagText: '#e0f2fe'
+      dot: '#0284c7',
+      cardBg: '#f0f7ff',
+      cardBorder: '#bae6fd',
+      textColor: '#183b32',
+      serviceColor: '#0369a1',
+      timeTagBg: 'transparent',
+      timeTagText: '#5b756c'
     },
     {
       name: 'Purple',
-      dot: '#a855f7',
-      cardBg: 'rgba(168, 85, 247, 0.16)',
-      cardBorder: 'rgba(168, 85, 247, 0.45)',
-      textColor: '#ffffff',
-      serviceColor: '#d8b4fe',
-      timeTagBg: 'rgba(168, 85, 247, 0.28)',
-      timeTagText: '#f3e8ff'
+      dot: '#7c3aed',
+      cardBg: '#f5f3ff',
+      cardBorder: '#ddd6fe',
+      textColor: '#183b32',
+      serviceColor: '#6d28d9',
+      timeTagBg: 'transparent',
+      timeTagText: '#5b756c'
     },
     {
       name: 'Amber',
-      dot: '#f59e0b',
-      cardBg: 'rgba(245, 158, 11, 0.16)',
-      cardBorder: 'rgba(245, 158, 11, 0.45)',
-      textColor: '#ffffff',
-      serviceColor: '#fde047',
-      timeTagBg: 'rgba(245, 158, 11, 0.28)',
-      timeTagText: '#fef3c7'
+      dot: '#d97706',
+      cardBg: '#fffdf5',
+      cardBorder: '#fde68a',
+      textColor: '#183b32',
+      serviceColor: '#b45309',
+      timeTagBg: 'transparent',
+      timeTagText: '#78350f'
     },
     {
-      name: 'Indigo',
-      dot: '#6366f1',
-      cardBg: 'rgba(99, 102, 241, 0.16)',
-      cardBorder: 'rgba(99, 102, 241, 0.45)',
-      textColor: '#ffffff',
-      serviceColor: '#a5b4fc',
-      timeTagBg: 'rgba(99, 102, 241, 0.28)',
-      timeTagText: '#e0e7ff'
+      name: 'Teal',
+      dot: '#0d9488',
+      cardBg: '#f0fdfa',
+      cardBorder: '#99f6e4',
+      textColor: '#183b32',
+      serviceColor: '#0f766e',
+      timeTagBg: 'transparent',
+      timeTagText: '#5b756c'
     }
   ];
 
@@ -599,6 +606,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
     },
     height: 'auto',
     contentHeight: 'auto',
+    stickyHeaderDates: true,
     expandRows: true,
     nowIndicator: true,
     fixedWeekCount: false,
@@ -941,12 +949,14 @@ export class CalendarComponent implements OnInit, OnDestroy {
   }
 
   renderWeekCardHtml(apt: AppointmentDto, isStacked: boolean = false): string {
-    const theme = this.getProviderTheme(apt.serviceProviderId);
-    const themeDot = theme.dot || '#6366f1';
+    const theme = this.getAppointmentTheme(apt);
+    const themeDot = theme.dot || '#1e5142';
+    const cardBg = theme.cardBg || '#ffffff';
+    const cardBorder = theme.cardBorder || '#dce8e1';
     const customer = apt.customerName || 'Client';
     const providerName = apt.serviceProviderName || 'Specialist';
     const service = apt.serviceName || apt.reason || apt.serviceProviderType || 'Consultation';
-    const statusText = this.getAppointmentStatusLabel(apt);
+    const statusLabel = this.getAppointmentStatusLabel(apt);
     const startTimeFormatted = this.formatTimeTo12Hour(apt.startTime);
     const endTimeFormatted = this.formatTimeTo12Hour(apt.endTime);
     const timeDisplay = (startTimeFormatted && endTimeFormatted)
@@ -956,22 +966,25 @@ export class CalendarComponent implements OnInit, OnDestroy {
     const providerAvatar = this.getProviderAvatarHtml(apt, 16);
 
     return `
-      <div class="fc-week-clean-card ${isStacked ? 'is-stacked-card' : ''}" data-apt-id="${apt.id}" style="border-left: 3.5px solid ${themeDot};" title="${customer} • Specialist: ${providerName} • ${service} • ${timeDisplay} • ${statusText}">
+      <div class="fc-week-clean-card ${isStacked ? 'is-stacked-card' : ''}" data-apt-id="${apt.id}"
+        style="background: ${cardBg}; border-color: ${cardBorder}; border-left: 3.5px solid ${themeDot};"
+        title="${customer} • Specialist: ${providerName} • ${service} • ${timeDisplay} • ${statusLabel}">
         <!-- Line 1: Customer Name with Customer Icon -->
         <div class="fc-clean-row fc-customer-row">
           <div class="fc-cust-icon-badge">
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
               <circle cx="12" cy="7" r="4"></circle>
             </svg>
           </div>
-          <span class="fc-clean-customer-name">${customer}</span>
+          <span class="fc-clean-customer-name" title="${customer}">${customer}</span>
         </div>
 
-        <!-- Line 2: Service Provider with Provider Icon (thoda right shift) -->
+        <!-- Line 2: Service Provider with Avatar + Service Title -->
         <div class="fc-clean-row fc-provider-row">
           ${providerAvatar}
-          <span class="fc-clean-provider-name">${providerName}</span>
+          <span class="fc-clean-provider-name" title="${providerName}">${providerName}</span>
+          <span class="fc-clean-service-tag" title="${service}">• ${service}</span>
         </div>
       </div>
     `;
@@ -1172,7 +1185,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
 
   isProviderAvailableToday(providerId: number): boolean {
     const sched = this.currentDaySchedules().get(providerId);
-    return sched ? sched.isAvailable : true;
+    return sched ? sched.isAvailable : false;
   }
 
   isSlotBreakForProvider(providerId: number, slotRaw: string): boolean {
@@ -1194,15 +1207,58 @@ export class CalendarComponent implements OnInit, OnDestroy {
     return sched ? sched.workingHoursText : '—';
   }
 
+  // Check if a date string is within the booking window (Today to Today + 15 days)
+  isDateWithinBookingWindow(dateStr: string): boolean {
+    if (!dateStr) return false;
+    const todayStr = this.getIndianToday();
+    const [y1, m1, d1] = todayStr.split('-').map(Number);
+    const [y2, m2, d2] = dateStr.split('-').map(Number);
+    const todayMidnight = new Date(y1, m1 - 1, d1).getTime();
+    const targetMidnight = new Date(y2, m2 - 1, d2).getTime();
+    const diffDays = Math.round((targetMidnight - todayMidnight) / (1000 * 60 * 60 * 24));
+    return diffDays >= 0 && diffDays <= 15;
+  }
+
+  // Check if a time slot is in the past (past date OR earlier today than current IST time)
+  isSlotInPast(slotRaw: string): boolean {
+    const todayStr = this.getIndianToday();
+    const selected = this.selectedDate();
+
+    if (selected < todayStr) {
+      return true;
+    }
+    if (selected > todayStr) {
+      return false;
+    }
+
+    // On today's date: compare slot start time with current Indian time in minutes
+    const currentMins = this.getIndianCurrentMinutes();
+    const parts = slotRaw.split(':').map(Number);
+    const slotStartMins = parts[0] * 60 + parts[1];
+
+    return slotStartMins <= currentMins;
+  }
+
   getSlotTooltip(provider: ServiceProviderDto, slot: ScheduleSlot): string {
+    if (this.isSlotInPast(slot.raw)) {
+      return `${slot.rangeText} – Past time slot (Booking closed)`;
+    }
+    if (!this.isDateWithinBookingWindow(this.selectedDate())) {
+      const today = this.getIndianToday();
+      if (this.selectedDate() < today) {
+        return `Booking closed (past date)`;
+      } else {
+        return `Booking only available up to 15 days in advance`;
+      }
+    }
     if (!this.isProviderAvailableToday(provider.id)) {
-      return `${provider.name} is Off today (${this.getSelectedDayName()})`;
+      return `${provider.name} is on Day Off today (${this.getSelectedDayName()}) - Booking unavailable`;
     }
     if (this.isSlotBreakForProvider(provider.id, slot.raw)) {
-      return `${slot.rangeText} – ${provider.name}'s Break / Lunch`;
+      return `${slot.rangeText} – ${provider.name}'s Break / Lunch (Not bookable)`;
     }
     if (this.isSlotOutsideWorkingHours(provider.id, slot.raw)) {
-      return `${slot.rangeText} – Outside ${provider.name}'s regular working hours`;
+      return `${slot.rangeText} – Outside ${provider.name}'s regular working hours (${this.getProviderWorkingHoursText(provider.id)})`;
     }
     return `Click to book ${slot.rangeText} with ${provider.name}`;
   }
@@ -1376,39 +1432,68 @@ export class CalendarComponent implements OnInit, OnDestroy {
     return results;
   }
 
-  // Appointment Themes: Harmonized Teal, Royal Blue, and Purple matching reference screenshot
-  // Appointment Themes: Purple, Blue, Teal, Emerald matching reference screenshot
+  // Appointment Themes: Organic Sage, Emerald, Ocean Teal, Warm Amber, Soft Rose
   getAppointmentTheme(apt: AppointmentDto): ProviderTheme {
     const themes: ProviderTheme[] = [
       {
-        name: 'Purple',
-        dot: '#6366f1',
-        cardBg: '#1c1d42',
-        cardBorder: 'rgba(99, 102, 241, 0.35)',
-        textColor: '#ffffff',
-        serviceColor: '#c4b5fd',
+        name: 'Forest Emerald',
+        dot: '#1e5142',
+        cardBg: '#eef7f2',
+        cardBorder: '#c3ded1',
+        textColor: '#183b32',
+        serviceColor: '#2d6a56',
         timeTagBg: 'transparent',
-        timeTagText: '#818cf8'
+        timeTagText: '#5b756c'
       },
       {
-        name: 'Blue',
-        dot: '#2563eb',
-        cardBg: '#112344',
-        cardBorder: 'rgba(37, 99, 235, 0.35)',
-        textColor: '#ffffff',
-        serviceColor: '#93c5fd',
+        name: 'Ocean Teal',
+        dot: '#0d9488',
+        cardBg: '#f0fdfa',
+        cardBorder: '#99f6e4',
+        textColor: '#134e4a',
+        serviceColor: '#0f766e',
         timeTagBg: 'transparent',
-        timeTagText: '#60a5fa'
+        timeTagText: '#4a7b75'
       },
       {
-        name: 'Teal',
-        dot: '#06b6d4',
-        cardBg: '#092a32',
-        cardBorder: 'rgba(6, 182, 212, 0.35)',
-        textColor: '#ffffff',
-        serviceColor: '#67e8f9',
+        name: 'Sky Azure',
+        dot: '#0284c7',
+        cardBg: '#f0f7ff',
+        cardBorder: '#bae6fd',
+        textColor: '#0c4a6e',
+        serviceColor: '#0369a1',
         timeTagBg: 'transparent',
-        timeTagText: '#22d3ee'
+        timeTagText: '#537894'
+      },
+      {
+        name: 'Warm Amber',
+        dot: '#d97706',
+        cardBg: '#fffdf5',
+        cardBorder: '#fde68a',
+        textColor: '#183b32',
+        serviceColor: '#b45309',
+        timeTagBg: 'transparent',
+        timeTagText: '#78350f'
+      },
+      {
+        name: 'Soft Sage',
+        dot: '#10b981',
+        cardBg: '#f0f9f5',
+        cardBorder: '#bee3d2',
+        textColor: '#183b32',
+        serviceColor: '#059669',
+        timeTagBg: 'transparent',
+        timeTagText: '#5b756c'
+      },
+      {
+        name: 'Soft Rose',
+        dot: '#e11d48',
+        cardBg: '#fff1f2',
+        cardBorder: '#fecdd3',
+        textColor: '#183b32',
+        serviceColor: '#be123c',
+        timeTagBg: 'transparent',
+        timeTagText: '#7e4b58'
       }
     ];
     const index = Math.abs((apt.id * 31 + apt.serviceProviderId * 17) % themes.length);
@@ -1778,14 +1863,71 @@ export class CalendarComponent implements OnInit, OnDestroy {
     if (this.justPanned || this.isPanningGrid || this.isResizingColumn) {
       return;
     }
+
+    // 0. Guard: Slot is in the past
+    if (this.isSlotInPast(hourStr)) {
+      this.errorMessage.set('Cannot book appointments for past time slots.');
+      setTimeout(() => this.errorMessage.set(''), 4000);
+      return;
+    }
+
+    // 1. Guard: Provider is on Day Off / Not Available
+    if (!this.isProviderAvailableToday(provider.id)) {
+      this.errorMessage.set(`${provider.name} is on Day Off today (${this.getSelectedDayName()}). Booking is not available.`);
+      setTimeout(() => this.errorMessage.set(''), 4000);
+      return;
+    }
+
+    // 2. Guard: Slot is during lunch / break
+    if (this.isSlotBreakForProvider(provider.id, hourStr)) {
+      this.errorMessage.set(`${provider.name} is on break/lunch during this time slot.`);
+      setTimeout(() => this.errorMessage.set(''), 4000);
+      return;
+    }
+
+    // 3. Guard: Slot is outside working hours
+    if (this.isSlotOutsideWorkingHours(provider.id, hourStr)) {
+      this.errorMessage.set(`This slot is outside ${provider.name}'s working hours (${this.getProviderWorkingHoursText(provider.id)}).`);
+      setTimeout(() => this.errorMessage.set(''), 4000);
+      return;
+    }
+
+    // 4. Date restriction: Only allow booking from Today up to 15 days in advance
+    if (!this.isDateWithinBookingWindow(this.selectedDate())) {
+      const today = this.getIndianToday();
+      if (this.selectedDate() < today) {
+        this.errorMessage.set('Cannot book appointments for past dates.');
+      } else {
+        this.errorMessage.set('Appointments can only be scheduled from today up to 15 days in advance.');
+      }
+      setTimeout(() => this.errorMessage.set(''), 4500);
+      return;
+    }
     this.bookingPrefillProviderId = provider.id;
     this.bookingPrefillDate = this.selectedDate();
     this.isBookingModalOpen.set(true);
   }
 
+  onDayOffClick(provider: ServiceProviderDto, event: MouseEvent): void {
+    event.stopPropagation();
+    this.errorMessage.set(`${provider.name} is on Day Off today (${this.getSelectedDayName()}). Booking is not available.`);
+    setTimeout(() => this.errorMessage.set(''), 4000);
+  }
+
   openNewBooking(): void {
+    if (!this.isDateWithinBookingWindow(this.selectedDate())) {
+      const today = this.getIndianToday();
+      if (this.selectedDate() < today) {
+        this.errorMessage.set('Cannot book appointments for past dates. Defaulted to today.');
+      } else {
+        this.errorMessage.set('Appointments can only be scheduled up to 15 days in advance. Defaulted to today.');
+      }
+      setTimeout(() => this.errorMessage.set(''), 4500);
+      this.bookingPrefillDate = this.getIndianToday();
+    } else {
+      this.bookingPrefillDate = this.selectedDate();
+    }
     this.bookingPrefillProviderId = null;
-    this.bookingPrefillDate = this.selectedDate();
     this.isBookingModalOpen.set(true);
   }
 
