@@ -37,7 +37,7 @@
       <!-- Date Picker Pill Button: [ 📅 Oct 27, 2026 ▾ ] -->
       <div class="date-picker-anchor">
         <input class="datepicker-anchor-input" [matDatepicker]="matPicker" [value]="selectedDateObject()"
-          (dateChange)="onMaterialDateChange($event)" aria-label="Select date" readonly tabindex="-1">
+          (dateChange)="onMaterialDateChange($event)" (dateInput)="onMaterialDateChange($event)" aria-label="Select date" readonly tabindex="-1">
 
         <button type="button" class="btn-date-pill" (click)="matPicker.open()" [class.active]="matPicker.opened"
           title="Click to open calendar date picker">

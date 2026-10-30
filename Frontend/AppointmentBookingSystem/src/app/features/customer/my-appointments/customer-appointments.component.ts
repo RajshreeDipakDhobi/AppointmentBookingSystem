@@ -190,6 +190,11 @@ export class CustomerAppointmentsComponent implements OnInit, OnDestroy {
 
   // --- Reschedule Flow with Shared Component ---
   openReschedule(appt: AppointmentDto): void {
+    if (!this.canModify(appt)) {
+      this.errorMessage.set('This appointment has not been accepted by a specialist yet and cannot be rescheduled.');
+      setTimeout(() => this.errorMessage.set(''), 4000);
+      return;
+    }
     this.activeRescheduleAppt.set(appt);
   }
 

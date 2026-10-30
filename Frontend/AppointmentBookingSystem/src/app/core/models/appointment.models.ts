@@ -34,11 +34,15 @@ export interface AppointmentDto {
   id: number;
   tenantId: number;
   appointmentNumber: string;
-  serviceProviderId: number;
+  serviceProviderId: number | null;
   serviceProviderName: string;
   serviceProviderType: string;
   serviceProviderProfilePictureUrl?: string;
+  serviceId?: number;
   serviceName?: string;
+  servicePrice?: number;
+  serviceDurationMinutes?: number;
+  isBroadcast?: boolean;
   customerId?: number;
   customerName: string;
   customerEmail: string;
@@ -70,7 +74,8 @@ export interface AppointmentDto {
 }
 
 export interface BookAppointmentRequestDto {
-  serviceProviderId: number;
+  serviceProviderId?: number | null;
+  serviceId?: number | null;
   appointmentDate: string; // "YYYY-MM-DD"
   startTime: string;       // "10:00"
   endTime: string;         // "10:30"

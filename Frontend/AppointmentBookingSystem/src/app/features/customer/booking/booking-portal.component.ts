@@ -45,6 +45,7 @@ export class BookingPortalComponent implements OnInit, OnDestroy {
   // Modals state
   readonly isBookingModalOpen = signal<boolean>(false);
   readonly selectedProviderIdForModal = signal<number | null>(null);
+  readonly selectedServiceIdForModal = signal<number | null>(null);
 
   // Slide-in Auth Drawer state
   readonly isLoginDrawerOpen = signal<boolean>(false);
@@ -154,6 +155,7 @@ export class BookingPortalComponent implements OnInit, OnDestroy {
 
   closeBookingModal(): void {
     this.selectedProviderIdForModal.set(null);
+    this.selectedServiceIdForModal.set(null);
     this.isBookingModalOpen.set(false);
   }
 
@@ -178,13 +180,16 @@ export class BookingPortalComponent implements OnInit, OnDestroy {
     const user = this.authService.currentUser();
     const isCustomer = user && (user.role === UserRole.Customer || (user.role as unknown) === 4 || (user.role as unknown) === '4');
 
-    if (isCustomer) {
-      sessionStorage.removeItem('pending_booking_draft');
-      this.router.navigate(['/my-appointments']);
+    const hasPendingDraft = sessionStorage.getItem('pending_booking_draft');
+    if (hasPendingDraft) {
+      this.checkResumeBooking();
       return;
     }
 
-    this.checkResumeBooking();
+    if (isCustomer) {
+      this.router.navigate(['/my-appointments']);
+      return;
+    }
 
     // If no booking draft to resume, redirect to role dashboard/appointments
     if (!sessionStorage.getItem('pending_booking_draft')) {
@@ -213,13 +218,25 @@ export class BookingPortalComponent implements OnInit, OnDestroy {
     }
 
     const hasPendingDraft = sessionStorage.getItem('pending_booking_draft');
-    const isResume = this.route.snapshot.queryParamMap.get('resumeBooking') === 'true';
+    const isResume = this.route.snapshot.queryParamMap.get('resumeBooking') === 'true' || !!hasPendingDraft;
 
     if (hasPendingDraft && isResume) {
       try {
         const draft = JSON.parse(hasPendingDraft);
-        if (draft && draft.providerId) {
-          this.openBookingModal(draft.providerId);
+        if (draft) {
+          if (draft.serviceId) {
+            this.selectedServiceIdForModal.set(draft.serviceId);
+            this.selectedProviderIdForModal.set(null);
+            this.isBookingModalOpen.set(true);
+          } else if (draft.providerId) {
+            this.selectedProviderIdForModal.set(draft.providerId);
+            this.selectedServiceIdForModal.set(null);
+            this.isBookingModalOpen.set(true);
+          } else {
+            this.selectedServiceIdForModal.set(null);
+            this.selectedProviderIdForModal.set(null);
+            this.isBookingModalOpen.set(true);
+          }
         }
       } catch {
         sessionStorage.removeItem('pending_booking_draft');

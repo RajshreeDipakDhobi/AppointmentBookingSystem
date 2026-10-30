@@ -420,6 +420,7 @@ public class ProvidersController : BaseApiController
         var updateDto = new UpdateServiceProviderRequestDto
         {
             Name = provider.Name,
+            ServiceId = provider.ServiceId,
             ServiceType = provider.ServiceType,
             Email = provider.Email,
             PhoneNumber = provider.PhoneNumber,

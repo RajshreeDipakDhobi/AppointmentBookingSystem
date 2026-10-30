@@ -22,12 +22,12 @@ import { isAppointmentPast, canCancelAppointment } from '../../core/constants/ap
   selector: 'app-dashboard',
   standalone: true,
   imports: [
-    CommonModule, 
-    FormsModule, 
-    RouterModule, 
+    CommonModule,
+    FormsModule,
+    RouterModule,
     TenantModalComponent,
     TenantProfileModalComponent,
-    BookingModalComponent, 
+    BookingModalComponent,
     CustomerAppointmentsComponent,
     CalendarComponent
   ],
@@ -80,13 +80,13 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   // SuperAdmin Platform Metrics computed from real data
   readonly totalTenantsCount = computed(() => this.tenants().length);
-  readonly activeTenantsCount = computed(() => 
+  readonly activeTenantsCount = computed(() =>
     this.tenants().filter(t => t.status === TenantStatus.Active).length
   );
-  readonly totalProvidersCount = computed(() => 
+  readonly totalProvidersCount = computed(() =>
     this.tenants().reduce((acc, t) => acc + (t.totalProvidersCount || 0), 0)
   );
-  readonly totalBookingsCount = computed(() => 
+  readonly totalBookingsCount = computed(() =>
     this.tenants().reduce((acc, t) => acc + (t.totalAppointmentsCount || 0), 0)
   );
   readonly recentTenants = computed(() => this.tenants().slice(0, 5));
@@ -181,7 +181,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
           const dayIndex = (d.getDay() + 6) % 7; // Convert 0(Sun)-6(Sat) to 0(Mon)-6(Sun)
           counts[dayIndex]++;
         }
-      } catch {}
+      } catch { }
     });
 
     const maxVal = Math.max(...counts, 1);
@@ -411,7 +411,19 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.isLoadingRescheduleSlots.set(true);
     this.selectedRescheduleSlot = null;
 
-    this.appointmentService.getAvailableSlots(appt.serviceProviderId, this.rescheduleDate).subscribe({
+    const slots$ = appt.serviceProviderId
+      ? this.appointmentService.getAvailableSlots(appt.serviceProviderId, this.rescheduleDate)
+      : (appt.serviceId
+        ? this.appointmentService.getAvailableSlotsByService(appt.serviceId, this.rescheduleDate)
+        : null);
+
+    if (!slots$) {
+      this.rescheduleSlots.set([]);
+      this.isLoadingRescheduleSlots.set(false);
+      return;
+    }
+
+    slots$.subscribe({
       next: (res) => {
         this.rescheduleSlots.set(res?.slots || []);
         this.isLoadingRescheduleSlots.set(false);

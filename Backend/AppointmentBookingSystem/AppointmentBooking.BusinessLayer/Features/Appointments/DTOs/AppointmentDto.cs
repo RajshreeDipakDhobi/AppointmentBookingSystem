@@ -8,10 +8,16 @@ public class AppointmentDto
     public int TenantId { get; set; }
     public string AppointmentNumber { get; set; } = string.Empty;
 
-    public int ServiceProviderId { get; set; }
+    public int? ServiceProviderId { get; set; }
     public string ServiceProviderName { get; set; } = string.Empty;
     public string ServiceProviderType { get; set; } = string.Empty;
     public string? ServiceProviderProfilePictureUrl { get; set; }
+
+    public int? ServiceId { get; set; }
+    public string? ServiceName { get; set; }
+    public decimal? ServicePrice { get; set; }
+    public int? ServiceDurationMinutes { get; set; }
+    public bool IsBroadcast => !ServiceProviderId.HasValue;
 
     public int? CustomerId { get; set; }
     public string CustomerName { get; set; } = string.Empty;
@@ -29,6 +35,7 @@ public class AppointmentDto
     public AppointmentStatus Status { get; set; }
     public string StatusText => Status switch
     {
+        AppointmentStatus.Pending when !ServiceProviderId.HasValue => "Broadcasting",
         AppointmentStatus.Pending => "Booked",
         AppointmentStatus.Approved => "Approved",
         AppointmentStatus.Completed => "Completed",

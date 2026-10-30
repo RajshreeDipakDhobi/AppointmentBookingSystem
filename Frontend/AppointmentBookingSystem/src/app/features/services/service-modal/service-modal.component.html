@@ -1,0 +1,189 @@
+<div *ngIf="isOpen" class="modal-backdrop animate-fade-in">
+  <div class="modal-dialog glass-card animate-scale-up" role="dialog" aria-modal="true">
+    
+    <!-- Modal Header -->
+    <div class="modal-header">
+      <div class="modal-title-wrap">
+        <h3 class="modal-title">{{ mode === 'create' ? 'Add Service' : 'Edit Service' }}</h3>
+        <p class="modal-subtitle">
+          {{ mode === 'create' 
+            ? 'Define a new service with duration and pricing for your catalog.' 
+            : 'Update service parameters, pricing, duration, and catalog availability.' }}
+        </p>
+      </div>
+      <button type="button" class="btn-close" (click)="onClose()" aria-label="Close dialog">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"/>
+          <line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Modal Body -->
+    <div class="modal-body">
+      <!-- Error Alert Banner -->
+      <div *ngIf="errorMessage()" class="alert-error animate-fade-in">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="12" y1="8" x2="12" y2="12"/>
+          <line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        <span>{{ errorMessage() }}</span>
+      </div>
+
+      <form id="serviceForm" [formGroup]="serviceForm" (ngSubmit)="onSubmit()" class="modal-form" autocomplete="off">
+        
+        <!-- Service Name -->
+        <div class="form-group">
+          <label class="form-label">Service Title / Name <span class="required-star">*</span></label>
+          <input 
+            type="text" 
+            formControlName="name" 
+            class="form-input" 
+            placeholder="e.g. Hair Spa & Scalp Therapy, Bridal Makeup" 
+          />
+          <div *ngIf="serviceForm.get('name')?.touched && serviceForm.get('name')?.invalid" class="form-error">
+            <span *ngIf="serviceForm.get('name')?.hasError('required')">Service name is required.</span>
+            <span *ngIf="serviceForm.get('name')?.hasError('minlength')">Name must be at least 2 characters.</span>
+          </div>
+        </div>
+
+        <!-- Row: Standard Price & Duration (Positioned Above Description) -->
+        <div class="form-row">
+          <!-- Standard Price -->
+          <div class="form-group flex-1">
+            <label class="form-label">Standard Price <span class="required-star">*</span></label>
+            <div class="currency-input-group">
+              <span class="currency-prefix">₹</span>
+              <input 
+                type="number" 
+                formControlName="price" 
+                class="form-input" 
+                min="0"
+                step="50"
+                placeholder="0.00" 
+              />
+            </div>
+            <div *ngIf="serviceForm.get('price')?.touched && serviceForm.get('price')?.invalid" class="form-error">
+              <span *ngIf="serviceForm.get('price')?.hasError('required')">Price is required.</span>
+              <span *ngIf="serviceForm.get('price')?.hasError('min')">Price must be 0 or greater.</span>
+            </div>
+          </div>
+
+          <!-- Duration Custom Luxury Dropdown -->
+          <div class="form-group flex-1">
+            <label class="form-label">Service Duration <span class="required-star">*</span></label>
+            <div class="custom-select-anchor duration-select-anchor" [class.menu-open]="isDurationDropdownOpen()">
+              <button 
+                type="button" 
+                class="custom-select-trigger form-dropdown-trigger" 
+                (click)="toggleDurationDropdown($event)"
+                [attr.aria-expanded]="isDurationDropdownOpen()"
+                title="Choose standard service duration"
+              >
+                <div class="trigger-icon-wrap">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10" />
+                    <polyline points="12 6 12 12 16 14" />
+                  </svg>
+                </div>
+                <span class="trigger-main-text">{{ selectedDurationLabel }}</span>
+                <svg class="trigger-chevron" [class.rotated]="isDurationDropdownOpen()" xmlns="http://www.w3.org/2000/svg"
+                  width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="6 9 12 15 18 9" />
+                </svg>
+              </button>
+
+              <!-- Luxury Floating Popover -->
+              <div *ngIf="isDurationDropdownOpen()" class="custom-dropdown-popover duration-dropdown-popover animate-scale-up"
+                (click)="$event.stopPropagation()">
+                <div class="popover-header">
+                  <span class="popover-header-title">Service Duration</span>
+                  <span class="popover-count-pill">{{ durationOptions.length }} Options</span>
+                </div>
+                <div class="popover-items-list duration-options-scroll">
+                  <button 
+                    type="button" 
+                    *ngFor="let opt of durationOptions"
+                    class="popover-option-item"
+                    [class.option-selected]="serviceForm.get('durationMinutes')?.value === opt.value"
+                    (click)="selectDuration(opt.value, $event)"
+                  >
+                    <div class="option-icon-box">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10" />
+                        <polyline points="12 6 12 12 16 14" />
+                      </svg>
+                    </div>
+                    <div class="option-info">
+                      <span class="option-title">{{ opt.label }}</span>
+                    </div>
+                    <svg *ngIf="serviceForm.get('durationMinutes')?.value === opt.value" class="option-check-icon"
+                      xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                      stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div *ngIf="serviceForm.get('durationMinutes')?.touched && serviceForm.get('durationMinutes')?.invalid" class="form-error">
+              <span *ngIf="serviceForm.get('durationMinutes')?.hasError('required')">Duration is required.</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Description (Placed Under Price & Duration) -->
+        <div class="form-group">
+          <label class="form-label">Description <span class="avatar-compact-tag">Optional</span></label>
+          <textarea 
+            formControlName="description" 
+            class="form-input form-textarea" 
+            rows="2"
+            placeholder="Brief overview of what is included in this service..."
+          ></textarea>
+        </div>
+
+        <!-- Active Status Toggle -->
+        <div class="toggle-control-card">
+          <div class="toggle-info">
+            <span class="toggle-title">Service Availability</span>
+            <span class="toggle-subtitle">When active, customers and providers can view and book this service.</span>
+          </div>
+          <label class="switch-toggle">
+            <input type="checkbox" formControlName="isActive" />
+            <span class="slider round"></span>
+          </label>
+        </div>
+
+      </form>
+    </div>
+
+    <!-- Modal Footer -->
+    <div class="modal-footer">
+      <button 
+        type="button" 
+        class="btn btn-secondary" 
+        (click)="onClose()" 
+        [disabled]="isSubmitting()"
+      >
+        Cancel
+      </button>
+
+      <button 
+        type="submit" 
+        form="serviceForm" 
+        class="btn btn-primary" 
+        [disabled]="isSubmitting() || serviceForm.invalid"
+      >
+        <span *ngIf="isSubmitting()" class="spinner-small"></span>
+        <span>{{ mode === 'create' ? 'Add Service' : 'Save Changes' }}</span>
+      </button>
+    </div>
+
+  </div>
+</div>
+

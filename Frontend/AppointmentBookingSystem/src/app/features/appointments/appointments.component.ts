@@ -13,6 +13,7 @@ import {
 import { BookingModalComponent } from './booking-modal/booking-modal.component';
 import { RescheduleModalComponent } from './reschedule-modal/reschedule-modal.component';
 import { CancelModalComponent } from './cancel-modal/cancel-modal.component';
+import { ServiceDispatchModalComponent } from './service-dispatch-modal/service-dispatch-modal.component';
 import { PaginationComponent } from '../../shared/components/pagination/pagination.component';
 import { AppDatePipe, AppTimePipe, AppStatusBadgePipe, AppInitialsPipe, AppPhonePipe } from '../../shared/pipes';
 import { CopyToClipboardDirective } from '../../shared/directives';
@@ -29,6 +30,7 @@ import { AuthService } from '../../core/services/auth.service';
     BookingModalComponent,
     RescheduleModalComponent,
     CancelModalComponent,
+    ServiceDispatchModalComponent,
     PaginationComponent,
     AppDatePipe,
     AppTimePipe,
@@ -61,6 +63,7 @@ export class AppointmentsComponent implements OnInit {
   }
 
   readonly appointments = signal<AppointmentDto[]>([]);
+  readonly incomingRequests = signal<AppointmentDto[]>([]);
   readonly stats = signal<AppointmentStatsDto | null>(null);
   readonly providers = signal<ServiceProviderDto[]>([]);
   readonly isLoading = signal<boolean>(false);
@@ -164,6 +167,8 @@ export class AppointmentsComponent implements OnInit {
 
   // Modals State
   showBookingModal = false;
+  showDispatchModal = false;
+  selectedDispatchRequest: AppointmentDto | null = null;
   selectedAppointmentForReschedule: AppointmentDto | null = null;
   selectedAppointmentForCancel: AppointmentDto | null = null;
   selectedAppointmentForDetail: AppointmentDto | null = null;
@@ -181,6 +186,36 @@ export class AppointmentsComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadProviders();
+    this.loadStats();
+    this.loadAppointments();
+    if (this.isServiceProvider) {
+      this.loadIncomingRequests();
+    }
+  }
+
+  loadIncomingRequests(): void {
+    if (!this.isServiceProvider) return;
+    this.appointmentService.getIncomingBroadcastRequests().subscribe({
+      next: (requests) => this.incomingRequests.set(requests || []),
+      error: (err) => console.error('Failed to load incoming broadcast requests', err)
+    });
+  }
+
+  openDispatchModal(req?: AppointmentDto): void {
+    this.selectedDispatchRequest = req || null;
+    this.showDispatchModal = true;
+  }
+
+  closeDispatchModal(): void {
+    this.showDispatchModal = false;
+    this.selectedDispatchRequest = null;
+  }
+
+  onDispatchAccepted(apt: AppointmentDto): void {
+    this.showDispatchModal = false;
+    this.selectedDispatchRequest = null;
+    this.showSuccessNotification(`Appointment #${apt.appointmentNumber} accepted! It has been added to your schedule.`);
+    this.loadIncomingRequests();
     this.loadStats();
     this.loadAppointments();
   }

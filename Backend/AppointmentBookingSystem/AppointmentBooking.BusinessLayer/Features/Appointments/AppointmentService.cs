@@ -39,22 +39,31 @@ public class AppointmentService : IAppointmentService
 
     public async Task<ProviderDailyAvailabilityResponseDto?> GetAvailableSlotsAsync(int providerId, DateTime date, CancellationToken cancellationToken = default)
     {
-        var provider = await _unitOfWork.Repository<ServiceProvider>().GetByIdAsync(providerId, cancellationToken);
+        var provider = await _unitOfWork.Repository<ServiceProvider>()
+            .Query()
+            .Include(p => p.User)
+            .Include(p => p.Service)
+            .FirstOrDefaultAsync(p => p.Id == providerId, cancellationToken);
+
         if (provider == null)
         {
             return null;
         }
 
+        int serviceDuration = (provider.Service != null && provider.Service.DurationMinutes > 0)
+            ? provider.Service.DurationMinutes
+            : 30;
+
         var response = new ProviderDailyAvailabilityResponseDto
         {
             ServiceProviderId = provider.Id,
-            ServiceProviderName = provider.Name,
-            ServiceType = provider.ServiceType,
+            ServiceProviderName = provider.User != null ? $"{provider.User.FirstName} {provider.User.LastName}".Trim() : string.Empty,
+            ServiceType = provider.Service?.Name ?? string.Empty,
             Date = date.Date,
             DayName = date.DayOfWeek.ToString(),
             IsWorkingDay = false,
             WorkingHours = "Closed",
-            SlotDurationMinutes = 30,
+            SlotDurationMinutes = serviceDuration,
             Slots = new List<AvailableSlotDto>()
         };
 
@@ -64,17 +73,27 @@ public class AppointmentService : IAppointmentService
             return response;
         }
 
-        var availability = await _unitOfWork.Repository<ProviderAvailability>().Query()
-            .FirstOrDefaultAsync(pa => pa.ServiceProviderId == providerId && pa.DayOfWeek == date.DayOfWeek, cancellationToken);
+        // Check date-specific override first, then fallback to weekly day of week
+        var specificAvailability = await _unitOfWork.Repository<ProviderAvailability>().Query()
+            .FirstOrDefaultAsync(pa => pa.ServiceProviderId == providerId 
+                                    && pa.SpecificDate.HasValue 
+                                    && pa.SpecificDate.Value.Date == date.Date, cancellationToken);
+
+        var availability = specificAvailability ?? await _unitOfWork.Repository<ProviderAvailability>().Query()
+            .FirstOrDefaultAsync(pa => pa.ServiceProviderId == providerId 
+                                    && !pa.SpecificDate.HasValue 
+                                    && pa.DayOfWeek == date.DayOfWeek, cancellationToken);
 
         if (availability == null || !availability.IsAvailable)
         {
             return response;
         }
 
+        int slotDurationMins = serviceDuration > 0 ? serviceDuration : (availability.SlotDurationMinutes > 0 ? availability.SlotDurationMinutes : 30);
+
         response.IsWorkingDay = true;
         response.WorkingHours = $"{availability.StartTime:hh\\:mm} – {availability.EndTime:hh\\:mm}";
-        response.SlotDurationMinutes = availability.SlotDurationMinutes;
+        response.SlotDurationMinutes = slotDurationMins;
 
         // Fetch existing active appointments for this provider on this date
         var existingAppointments = await _unitOfWork.Repository<Appointment>().Query()
@@ -88,7 +107,7 @@ public class AppointmentService : IAppointmentService
         // Calculate time slot intervals using timezone-aware business local time
         var now = _dateTimeProvider.GetCurrentLocalTime();
         var currentSlotTime = availability.StartTime;
-        var duration = TimeSpan.FromMinutes(availability.SlotDurationMinutes);
+        var duration = TimeSpan.FromMinutes(slotDurationMins);
 
         while (currentSlotTime + duration <= availability.EndTime)
         {
@@ -127,6 +146,164 @@ public class AppointmentService : IAppointmentService
             };
 
             response.Slots.Add(slotDto);
+            currentSlotTime = nextSlotTime;
+        }
+
+        return response;
+    }
+
+    public async Task<ProviderDailyAvailabilityResponseDto?> GetAvailableSlotsByServiceAsync(
+        int serviceId, 
+        DateTime date, 
+        int? tenantId, 
+        CancellationToken cancellationToken = default)
+    {
+        var service = await _unitOfWork.Repository<Service>().Query()
+            .FirstOrDefaultAsync(s => s.Id == serviceId && s.IsActive, cancellationToken);
+
+        if (service == null)
+        {
+            return null;
+        }
+
+        int slotDurationMins = service.DurationMinutes > 0 ? service.DurationMinutes : 30;
+
+        var response = new ProviderDailyAvailabilityResponseDto
+        {
+            ServiceProviderId = 0,
+            ServiceProviderName = "All Available Specialists",
+            ServiceType = service.Name,
+            Date = date.Date,
+            DayName = date.DayOfWeek.ToString(),
+            IsWorkingDay = false,
+            WorkingHours = "Closed",
+            SlotDurationMinutes = slotDurationMins,
+            Slots = new List<AvailableSlotDto>()
+        };
+
+        // Fetch all active specialists offering this service
+        var providersQuery = _unitOfWork.Repository<ServiceProvider>().Query()
+            .Include(p => p.User)
+            .Where(p => p.ServiceId == serviceId && p.Status == ProviderStatus.Active);
+
+        if (tenantId.HasValue && tenantId.Value > 0)
+        {
+            providersQuery = providersQuery.Where(p => p.TenantId == tenantId.Value);
+        }
+
+        var providers = await providersQuery.ToListAsync(cancellationToken);
+        if (providers.Count == 0)
+        {
+            response.WorkingHours = "No specialists assigned";
+            return response;
+        }
+
+        var providerIds = providers.Select(p => p.Id).ToList();
+
+        // Fetch availabilities for all these providers on this date
+        var specificAvailabilities = await _unitOfWork.Repository<ProviderAvailability>().Query()
+            .Where(pa => providerIds.Contains(pa.ServiceProviderId)
+                      && pa.SpecificDate.HasValue
+                      && pa.SpecificDate.Value.Date == date.Date)
+            .ToListAsync(cancellationToken);
+
+        var weeklyAvailabilities = await _unitOfWork.Repository<ProviderAvailability>().Query()
+            .Where(pa => providerIds.Contains(pa.ServiceProviderId)
+                      && !pa.SpecificDate.HasValue
+                      && pa.DayOfWeek == date.DayOfWeek)
+            .ToListAsync(cancellationToken);
+
+        // Fetch all existing non-cancelled appointments for all these providers on this date
+        var existingAppointments = await _unitOfWork.Repository<Appointment>().Query()
+            .Where(a => a.ServiceProviderId.HasValue 
+                     && providerIds.Contains(a.ServiceProviderId.Value)
+                     && a.AppointmentDate.Date == date.Date
+                     && a.Status != AppointmentStatus.Cancelled
+                     && a.Status != AppointmentStatus.Rescheduled
+                     && a.Status != AppointmentStatus.Rejected)
+            .ToListAsync(cancellationToken);
+
+        // Filter providers who are active and working on this date
+        var activeWorkingProviders = new List<(ServiceProvider Provider, ProviderAvailability Availability)>();
+        foreach (var p in providers)
+        {
+            var avail = specificAvailabilities.FirstOrDefault(sa => sa.ServiceProviderId == p.Id)
+                     ?? weeklyAvailabilities.FirstOrDefault(wa => wa.ServiceProviderId == p.Id);
+
+            if (avail != null && avail.IsAvailable)
+            {
+                activeWorkingProviders.Add((p, avail));
+            }
+        }
+
+        if (activeWorkingProviders.Count == 0)
+        {
+            return response;
+        }
+
+        response.IsWorkingDay = true;
+        var minStart = activeWorkingProviders.Min(x => x.Availability.StartTime);
+        var maxEnd = activeWorkingProviders.Max(x => x.Availability.EndTime);
+        response.WorkingHours = $"{minStart:hh\\:mm} – {maxEnd:hh\\:mm}";
+
+        var now = _dateTimeProvider.GetCurrentLocalTime();
+        var duration = TimeSpan.FromMinutes(slotDurationMins);
+        var currentSlotTime = minStart;
+
+        while (currentSlotTime + duration <= maxEnd)
+        {
+            var nextSlotTime = currentSlotTime + duration;
+            string startStr = currentSlotTime.ToString(@"hh\:mm");
+            string endStr = nextSlotTime.ToString(@"hh\:mm");
+
+            // Count how many providers are available and free at this time
+            int freeProvidersCount = 0;
+            foreach (var (provider, avail) in activeWorkingProviders)
+            {
+                if (currentSlotTime < avail.StartTime || nextSlotTime > avail.EndTime)
+                    continue;
+
+                bool isBreak = avail.BreakStartTime.HasValue && avail.BreakEndTime.HasValue
+                            && currentSlotTime < avail.BreakEndTime.Value
+                            && nextSlotTime > avail.BreakStartTime.Value;
+                if (isBreak)
+                    continue;
+
+                bool isBooked = existingAppointments.Any(a => a.ServiceProviderId == provider.Id
+                                                           && a.StartTime < nextSlotTime
+                                                           && a.EndTime > currentSlotTime);
+                if (isBooked)
+                    continue;
+
+                freeProvidersCount++;
+            }
+
+            bool isPast = false;
+            if (date.Date < now.Date)
+            {
+                isPast = true;
+            }
+            else if (date.Date == now.Date && currentSlotTime <= now.TimeOfDay)
+            {
+                isPast = true;
+            }
+
+            bool isAvailable = freeProvidersCount > 0 && !isPast;
+            string status = isPast ? "Past" : (freeProvidersCount > 0 ? "Available" : "Booked");
+            string? reason = isPast 
+                ? "Slot time has passed" 
+                : (freeProvidersCount > 0 ? $"{freeProvidersCount} {(freeProvidersCount == 1 ? "specialist" : "specialists")} available" : "All specialists are booked");
+
+            response.Slots.Add(new AvailableSlotDto
+            {
+                StartTime = startStr,
+                EndTime = endStr,
+                DisplayText = $"{date.Date.Add(currentSlotTime):hh:mm tt} – {date.Date.Add(nextSlotTime):hh:mm tt}",
+                IsAvailable = isAvailable,
+                Status = status,
+                Reason = reason
+            });
+
             currentSlotTime = nextSlotTime;
         }
 
@@ -242,26 +419,12 @@ public class AppointmentService : IAppointmentService
         string? createdByName = null, 
         CancellationToken cancellationToken = default)
     {
-        // 1. Validate Provider
-        var provider = await _unitOfWork.Repository<ServiceProvider>().GetByIdAsync(request.ServiceProviderId, cancellationToken);
-        if (provider == null)
-        {
-            return ApiResponse<AppointmentDto>.Fail("Service provider not found.");
-        }
+        bool isDirectProviderBooking = request.ServiceProviderId.HasValue && request.ServiceProviderId.Value > 0;
+        ServiceProvider? provider = null;
+        Service? service = null;
+        int resolvedTenantId;
 
-        if (tenantId.HasValue && provider.TenantId != tenantId.Value)
-        {
-            return ApiResponse<AppointmentDto>.Fail("Service provider not found in current workspace.");
-        }
-
-        if (provider.Status != ProviderStatus.Active)
-        {
-            return ApiResponse<AppointmentDto>.Fail("This service provider is inactive and currently not accepting appointments.");
-        }
-
-        var resolvedTenantId = tenantId ?? provider.TenantId;
-
-        // 2. Parse and Validate Times
+        // Parse and Validate Times
         if (!TimeSpan.TryParse(request.StartTime, out var startTime) || !TimeSpan.TryParse(request.EndTime, out var endTime))
         {
             return ApiResponse<AppointmentDto>.Fail("Invalid time format. Please provide time in HH:mm format.");
@@ -294,46 +457,116 @@ public class AppointmentService : IAppointmentService
             return ApiResponse<AppointmentDto>.Fail("Cannot book a time slot that has already passed.");
         }
 
-        // 3. Verify Provider Availability configuration
-        var availability = await _unitOfWork.Repository<ProviderAvailability>().Query()
-            .FirstOrDefaultAsync(pa => pa.ServiceProviderId == request.ServiceProviderId && pa.DayOfWeek == appointmentDate.DayOfWeek);
-
-        if (availability == null || !availability.IsAvailable)
+        if (isDirectProviderBooking)
         {
-            return ApiResponse<AppointmentDto>.Fail($"Service provider {provider.Name} is not available on {appointmentDate.DayOfWeek}.");
-        }
+            // 1. Direct Specialist Path
+            provider = await _unitOfWork.Repository<ServiceProvider>()
+                .Query()
+                .Include(p => p.User)
+                .Include(p => p.Service)
+                .FirstOrDefaultAsync(p => p.Id == request.ServiceProviderId!.Value, cancellationToken);
 
-        if (startTime < availability.StartTime || endTime > availability.EndTime)
-        {
-            return ApiResponse<AppointmentDto>.Fail($"Selected slot is outside provider's operating hours ({availability.StartTime:hh\\:mm} – {availability.EndTime:hh\\:mm}).");
-        }
-
-        if (availability.BreakStartTime.HasValue && availability.BreakEndTime.HasValue)
-        {
-            if (startTime < availability.BreakEndTime.Value && endTime > availability.BreakStartTime.Value)
+            if (provider == null)
             {
-                return ApiResponse<AppointmentDto>.Fail($"Selected slot falls within the provider's scheduled break time ({availability.BreakStartTime.Value:hh\\:mm} – {availability.BreakEndTime.Value:hh\\:mm}).");
+                return ApiResponse<AppointmentDto>.Fail("Service provider not found.");
+            }
+
+            if (tenantId.HasValue && provider.TenantId != tenantId.Value)
+            {
+                return ApiResponse<AppointmentDto>.Fail("Service provider not found in current workspace.");
+            }
+
+            if (provider.Status != ProviderStatus.Active)
+            {
+                return ApiResponse<AppointmentDto>.Fail("This service provider is inactive and currently not accepting appointments.");
+            }
+
+            resolvedTenantId = tenantId ?? provider.TenantId;
+
+            // Verify Provider Availability configuration (Specific date override first, then weekly)
+            var specificAvailability = await _unitOfWork.Repository<ProviderAvailability>().Query()
+                .FirstOrDefaultAsync(pa => pa.ServiceProviderId == request.ServiceProviderId 
+                                        && pa.SpecificDate.HasValue 
+                                        && pa.SpecificDate.Value.Date == appointmentDate);
+
+            var availability = specificAvailability ?? await _unitOfWork.Repository<ProviderAvailability>().Query()
+                .FirstOrDefaultAsync(pa => pa.ServiceProviderId == request.ServiceProviderId 
+                                        && !pa.SpecificDate.HasValue 
+                                        && pa.DayOfWeek == appointmentDate.DayOfWeek);
+
+            if (availability == null || !availability.IsAvailable)
+            {
+                var provName = provider.User != null ? $"{provider.User.FirstName} {provider.User.LastName}".Trim() : "Provider";
+                return ApiResponse<AppointmentDto>.Fail($"Service provider {provName} is not available on {appointmentDate.DayOfWeek}.");
+            }
+
+            if (startTime < availability.StartTime || endTime > availability.EndTime)
+            {
+                return ApiResponse<AppointmentDto>.Fail($"Selected slot is outside provider's operating hours ({availability.StartTime:hh\\:mm} – {availability.EndTime:hh\\:mm}).");
+            }
+
+            if (availability.BreakStartTime.HasValue && availability.BreakEndTime.HasValue)
+            {
+                if (startTime < availability.BreakEndTime.Value && endTime > availability.BreakStartTime.Value)
+                {
+                    return ApiResponse<AppointmentDto>.Fail($"Selected slot falls within the provider's scheduled break time ({availability.BreakStartTime.Value:hh\\:mm} – {availability.BreakEndTime.Value:hh\\:mm}).");
+                }
             }
         }
+        else
+        {
+            // 2. Urban Company Broadcast Path: Validate Selected Service
+            if (!request.ServiceId.HasValue || request.ServiceId.Value <= 0)
+            {
+                return ApiResponse<AppointmentDto>.Fail("Please select a valid service to book.");
+            }
 
-        // 4. Concurrency Guard / Prevent Duplicate Bookings (Module 6)
-        // Execute inside transaction to prevent simultaneous race conditions
+            service = await _unitOfWork.Repository<Service>().Query()
+                .FirstOrDefaultAsync(s => s.Id == request.ServiceId.Value && s.IsActive, cancellationToken);
+
+            if (service == null)
+            {
+                return ApiResponse<AppointmentDto>.Fail("Selected service is inactive or not found.");
+            }
+
+            var specialistsQuery = _unitOfWork.Repository<ServiceProvider>().Query()
+                .Where(p => p.ServiceId == service.Id && p.Status == ProviderStatus.Active);
+
+            if (tenantId.HasValue && tenantId.Value > 0)
+            {
+                specialistsQuery = specialistsQuery.Where(p => p.TenantId == tenantId.Value);
+            }
+
+            var activeSpecialists = await specialistsQuery.ToListAsync(cancellationToken);
+
+            if (activeSpecialists.Count == 0)
+            {
+                return ApiResponse<AppointmentDto>.Fail("No active specialists are currently assigned to this service.");
+            }
+
+            resolvedTenantId = tenantId ?? activeSpecialists.FirstOrDefault()?.TenantId ?? 1;
+        }
+
+        // Concurrency Guard & Creation inside Transaction
         await _unitOfWork.BeginTransactionAsync();
         try
         {
-            bool isSlotTaken = await _unitOfWork.Repository<Appointment>().Query()
-                .AnyAsync(a => a.ServiceProviderId == request.ServiceProviderId
-                            && a.AppointmentDate.Date == appointmentDate
-                            && a.Status != AppointmentStatus.Cancelled
-                            && a.Status != AppointmentStatus.Rescheduled
-                            && a.Status != AppointmentStatus.Rejected
-                            && a.StartTime < endTime 
-                            && a.EndTime > startTime);
-
-            if (isSlotTaken)
+            if (isDirectProviderBooking)
             {
-                await _unitOfWork.RollbackTransactionAsync();
-                return ApiResponse<AppointmentDto>.Fail("This time slot has just been booked by another customer. Please choose a different slot.");
+                bool isSlotTaken = await _unitOfWork.Repository<Appointment>().Query()
+                    .AnyAsync(a => a.ServiceProviderId == request.ServiceProviderId
+                                && a.AppointmentDate.Date == appointmentDate
+                                && a.Status != AppointmentStatus.Cancelled
+                                && a.Status != AppointmentStatus.Rescheduled
+                                && a.Status != AppointmentStatus.Rejected
+                                && a.StartTime < endTime 
+                                && a.EndTime > startTime);
+
+                if (isSlotTaken)
+                {
+                    await _unitOfWork.RollbackTransactionAsync();
+                    return ApiResponse<AppointmentDto>.Fail("This time slot has just been booked by another customer. Please choose a different slot.");
+                }
             }
 
             // 5. Unified Customer Account Linking / Creation (Even for Guests)
@@ -425,14 +658,15 @@ public class AppointmentService : IAppointmentService
             {
                 TenantId = resolvedTenantId,
                 AppointmentNumber = appointmentNumber,
-                ServiceProviderId = request.ServiceProviderId,
+                ServiceProviderId = isDirectProviderBooking ? request.ServiceProviderId : null,
+                ServiceId = request.ServiceId ?? provider?.ServiceId ?? service?.Id,
                 CustomerId = customerId.Value,
                 Reason = request.Reason?.Trim(),
                 AppointmentDate = appointmentDate,
                 StartTime = startTime,
                 EndTime = endTime,
-                Status = isBookedByProvider ? AppointmentStatus.Approved : AppointmentStatus.Booked,
-                ApprovedAt = isBookedByProvider ? DateTime.UtcNow : null,
+                Status = (isDirectProviderBooking && isBookedByProvider) ? AppointmentStatus.Approved : AppointmentStatus.Booked,
+                ApprovedAt = (isDirectProviderBooking && isBookedByProvider) ? DateTime.UtcNow : null,
                 CreatedAt = DateTime.UtcNow,
                 CreatedBy = !string.IsNullOrWhiteSpace(createdByName) 
                     ? createdByName.Trim() 
@@ -462,11 +696,16 @@ public class AppointmentService : IAppointmentService
 
             // Load navigation properties for return
             var created = await _unitOfWork.Repository<Appointment>().Query()
-                .Include(a => a.ServiceProvider).ThenInclude(s => s.User)
+                .Include(a => a.ServiceProvider).ThenInclude(s => s!.User)
+                .Include(a => a.Service)
                 .Include(a => a.Customer)
                 .FirstAsync(a => a.Id == appointment.Id);
 
-            return ApiResponse<AppointmentDto>.Ok(_mapper.Map<AppointmentDto>(created), "Appointment booked successfully.");
+            string successMsg = isDirectProviderBooking 
+                ? "Appointment booked successfully." 
+                : "Appointment request broadcasted to specialists successfully! A specialist will confirm shortly.";
+
+            return ApiResponse<AppointmentDto>.Ok(_mapper.Map<AppointmentDto>(created), successMsg);
         }
         catch (Exception ex)
         {
@@ -514,6 +753,11 @@ public class AppointmentService : IAppointmentService
             return ApiResponse<AppointmentDto>.Fail("Cannot reschedule a cancelled appointment.");
         }
 
+        if (!appointment.ServiceProviderId.HasValue || appointment.ServiceProviderId.Value <= 0)
+        {
+            return ApiResponse<AppointmentDto>.Fail("This appointment request has not been accepted by a specialist yet and cannot be rescheduled.");
+        }
+
         var now = _dateTimeProvider.GetCurrentLocalTime();
         var appointmentStartDateTime = appointment.AppointmentDate.Date.Add(appointment.StartTime);
         if (now >= appointmentStartDateTime.AddHours(-1))
@@ -548,9 +792,16 @@ public class AppointmentService : IAppointmentService
             return ApiResponse<AppointmentDto>.Fail("The appointment is already scheduled for this slot. Please select a different date or time slot.");
         }
 
-        // Verify provider availability for new schedule
-        var availability = await _unitOfWork.Repository<ProviderAvailability>().Query()
-            .FirstOrDefaultAsync(pa => pa.ServiceProviderId == appointment.ServiceProviderId && pa.DayOfWeek == newDate.DayOfWeek);
+        // Verify provider availability for new schedule (Specific date override first, then weekly)
+        var specificAvailability = await _unitOfWork.Repository<ProviderAvailability>().Query()
+            .FirstOrDefaultAsync(pa => pa.ServiceProviderId == appointment.ServiceProviderId 
+                                    && pa.SpecificDate.HasValue 
+                                    && pa.SpecificDate.Value.Date == newDate);
+
+        var availability = specificAvailability ?? await _unitOfWork.Repository<ProviderAvailability>().Query()
+            .FirstOrDefaultAsync(pa => pa.ServiceProviderId == appointment.ServiceProviderId 
+                                    && !pa.SpecificDate.HasValue 
+                                    && pa.DayOfWeek == newDate.DayOfWeek);
 
         if (availability == null || !availability.IsAvailable)
         {
@@ -1170,6 +1421,179 @@ public class AppointmentService : IAppointmentService
             CompletedAppointments = appointments.Count(a => a.Status == AppointmentStatus.Completed),
             CancelledAppointments = appointments.Count(a => a.Status == AppointmentStatus.Cancelled)
         };
+    }
+
+    public async Task<List<AppointmentDto>> GetIncomingBroadcastRequestsAsync(
+        int? providerId, 
+        int? tenantId, 
+        CancellationToken cancellationToken = default)
+    {
+        var today = _dateTimeProvider.Today;
+        var nowTime = _dateTimeProvider.GetCurrentLocalTime().TimeOfDay;
+
+        // Base query for unassigned broadcast appointments
+        var query = _unitOfWork.Repository<Appointment>().Query()
+            .Include(a => a.Service)
+            .Include(a => a.Customer)
+            .Include(a => a.ServiceProvider).ThenInclude(sp => sp!.User)
+            .Where(a => a.ServiceProviderId == null 
+                     && a.Status == AppointmentStatus.Booked
+                     && a.AppointmentDate.Date >= today);
+
+        if (tenantId.HasValue && tenantId.Value > 0)
+        {
+            query = query.Where(a => a.TenantId == tenantId.Value);
+        }
+
+        if (providerId.HasValue && providerId.Value > 0)
+        {
+            var provider = await _unitOfWork.Repository<ServiceProvider>().GetByIdAsync(providerId.Value);
+            if (provider == null || provider.Status != ProviderStatus.Active)
+            {
+                return new List<AppointmentDto>();
+            }
+
+            // Only show requests for the service category the specialist is assigned to
+            if (provider.ServiceId.HasValue)
+            {
+                query = query.Where(a => a.ServiceId == provider.ServiceId.Value);
+            }
+
+            // Fetch provider's active bookings to avoid showing conflicting slots
+            var providerBookings = await _unitOfWork.Repository<Appointment>().Query()
+                .Where(a => a.ServiceProviderId == providerId.Value
+                         && a.AppointmentDate.Date >= today
+                         && a.Status != AppointmentStatus.Cancelled
+                         && a.Status != AppointmentStatus.Rescheduled
+                         && a.Status != AppointmentStatus.Rejected)
+                .Select(a => new { a.AppointmentDate, a.StartTime, a.EndTime })
+                .ToListAsync(cancellationToken);
+
+            var openRequests = await query
+                .OrderBy(a => a.AppointmentDate)
+                .ThenBy(a => a.StartTime)
+                .ToListAsync(cancellationToken);
+
+            // Filter out past slots for today and any slots where provider is already busy
+            var validRequests = openRequests.Where(a =>
+            {
+                if (a.AppointmentDate.Date == today && a.StartTime <= nowTime)
+                    return false;
+
+                bool isConflict = providerBookings.Any(b =>
+                    b.AppointmentDate.Date == a.AppointmentDate.Date &&
+                    b.StartTime < a.EndTime &&
+                    b.EndTime > a.StartTime);
+
+                return !isConflict;
+            }).ToList();
+
+            return _mapper.Map<List<AppointmentDto>>(validRequests);
+        }
+        else
+        {
+            // For Admins / All Requests
+            var openRequests = await query
+                .OrderBy(a => a.AppointmentDate)
+                .ThenBy(a => a.StartTime)
+                .ToListAsync(cancellationToken);
+
+            var validRequests = openRequests.Where(a =>
+                !(a.AppointmentDate.Date == today && a.StartTime <= nowTime)
+            ).ToList();
+
+            return _mapper.Map<List<AppointmentDto>>(validRequests);
+        }
+    }
+
+    public async Task<ApiResponse<AppointmentDto>> AcceptBroadcastAppointmentAsync(
+        int appointmentId, 
+        int providerId, 
+        CancellationToken cancellationToken = default)
+    {
+        var provider = await _unitOfWork.Repository<ServiceProvider>().Query()
+            .Include(p => p.User)
+            .FirstOrDefaultAsync(p => p.Id == providerId, cancellationToken);
+
+        if (provider == null || provider.Status != ProviderStatus.Active)
+        {
+            return ApiResponse<AppointmentDto>.Fail("Active service specialist profile was not found.");
+        }
+
+        await _unitOfWork.BeginTransactionAsync();
+        try
+        {
+            var appointment = await _unitOfWork.Repository<Appointment>().Query()
+                .Include(a => a.Service)
+                .Include(a => a.Customer)
+                .FirstOrDefaultAsync(a => a.Id == appointmentId, cancellationToken);
+
+            if (appointment == null)
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                return ApiResponse<AppointmentDto>.Fail("Appointment request was not found.");
+            }
+
+            // First-come, first-served concurrency check
+            if (appointment.ServiceProviderId.HasValue)
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                return ApiResponse<AppointmentDto>.Fail("This appointment request has already been accepted and confirmed by another specialist.");
+            }
+
+            if (appointment.Status == AppointmentStatus.Cancelled || appointment.Status == AppointmentStatus.Rejected)
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                return ApiResponse<AppointmentDto>.Fail("This appointment has already been cancelled.");
+            }
+
+            if (appointment.ServiceId.HasValue && provider.ServiceId.HasValue && appointment.ServiceId.Value != provider.ServiceId.Value)
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                return ApiResponse<AppointmentDto>.Fail("You are not assigned to perform this service category.");
+            }
+
+            // Verify no time conflict with this provider's existing schedule
+            bool hasConflict = await _unitOfWork.Repository<Appointment>().Query()
+                .AnyAsync(a => a.ServiceProviderId == providerId
+                            && a.AppointmentDate.Date == appointment.AppointmentDate.Date
+                            && a.Status != AppointmentStatus.Cancelled
+                            && a.Status != AppointmentStatus.Rescheduled
+                            && a.Status != AppointmentStatus.Rejected
+                            && a.StartTime < appointment.EndTime
+                            && a.EndTime > appointment.StartTime, cancellationToken);
+
+            if (hasConflict)
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                return ApiResponse<AppointmentDto>.Fail("You already have an active appointment scheduled during this time slot.");
+            }
+
+            // Assign provider and auto-approve
+            appointment.ServiceProviderId = providerId;
+            appointment.Status = AppointmentStatus.Approved;
+            appointment.ApprovedAt = _dateTimeProvider.UtcNow;
+            appointment.UpdatedAt = _dateTimeProvider.UtcNow;
+
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+            await _unitOfWork.CommitTransactionAsync();
+
+            // Reload with relations for DTO
+            var updated = await _unitOfWork.Repository<Appointment>().Query()
+                .Include(a => a.ServiceProvider).ThenInclude(sp => sp!.User)
+                .Include(a => a.Service)
+                .Include(a => a.Customer)
+                .FirstAsync(a => a.Id == appointment.Id, cancellationToken);
+
+            var providerName = provider.User != null ? $"{provider.User.FirstName} {provider.User.LastName}".Trim() : "Specialist";
+            return ApiResponse<AppointmentDto>.Ok(_mapper.Map<AppointmentDto>(updated), $"Appointment successfully accepted and confirmed by {providerName}!");
+        }
+        catch (Exception ex)
+        {
+            await _unitOfWork.RollbackTransactionAsync();
+            _logger.LogError(ex, "Error accepting broadcast appointment ID {AppointmentId} by Provider ID {ProviderId}", appointmentId, providerId);
+            return ApiResponse<AppointmentDto>.Fail(ex.Message);
+        }
     }
 
     private static string? VerifyAppointmentOwnership(

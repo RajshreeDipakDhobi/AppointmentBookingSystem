@@ -1,0 +1,439 @@
+<div class="services-container">
+
+  <!-- Page Header -->
+  <div class="page-header">
+    <div class="header-titles">
+      <h2>Services</h2>
+      <p>Standardized service catalog, pricing, duration, and provider allocations.</p>
+    </div>
+    <button type="button" class="btn btn-primary btn-add-service" (click)="openCreateModal()">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+        stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="12" y1="5" x2="12" y2="19" />
+        <line x1="5" y1="12" x2="19" y2="12" />
+      </svg>
+      <span>Add Service</span>
+    </button>
+  </div>
+
+  <!-- Success Notification Alert -->
+  <div *ngIf="successMessage()" class="alert alert-success animate-fade-in">
+    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+      <polyline points="22 4 12 14.01 9 11.01" />
+    </svg>
+    <span>{{ successMessage() }}</span>
+  </div>
+
+  <!-- Error Notification Alert -->
+  <div *ngIf="errorMessage()" class="alert alert-error animate-fade-in">
+    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="10" />
+      <line x1="12" y1="8" x2="12" y2="12" />
+      <line x1="12" y1="16" x2="12.01" y2="16" />
+    </svg>
+    <span>{{ errorMessage() }}</span>
+  </div>
+
+  <!-- Stats Metric Cards -->
+  <div class="stats-grid">
+    <div class="stat-card glass-card">
+      <div class="stat-icon-wrap icon-primary">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect width="18" height="18" x="3" y="3" rx="2" />
+          <path d="M7 7h10" />
+          <path d="M7 12h10" />
+          <path d="M7 17h10" />
+        </svg>
+      </div>
+      <div class="stat-details">
+        <span class="stat-value">{{ totalServicesCount() }}</span>
+        <span class="stat-label">Total Services</span>
+      </div>
+    </div>
+
+    <div class="stat-card glass-card">
+      <div class="stat-icon-wrap icon-success">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+          <polyline points="22 4 12 14.01 9 11.01" />
+        </svg>
+      </div>
+      <div class="stat-details">
+        <span class="stat-value">{{ activeServicesCount() }}</span>
+        <span class="stat-label">Active Services</span>
+      </div>
+    </div>
+
+    <div class="stat-card glass-card">
+      <div class="stat-icon-wrap icon-warning">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10" />
+          <line x1="12" y1="8" x2="12" y2="12" />
+          <line x1="12" y1="16" x2="12.01" y2="16" />
+        </svg>
+      </div>
+      <div class="stat-details">
+        <span class="stat-value">{{ inactiveServicesCount() }}</span>
+        <span class="stat-label">Inactive Services</span>
+      </div>
+    </div>
+
+    <div class="stat-card glass-card">
+      <div class="stat-icon-wrap icon-purple">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+          <circle cx="9" cy="7" r="4" />
+          <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+          <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+        </svg>
+      </div>
+      <div class="stat-details">
+        <span class="stat-value">{{ totalProvidersAllocated() }}</span>
+        <span class="stat-label">Linked Specialists</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Search & Filter Controls -->
+  <div class="filter-bar glass-card" [class.menu-open]="isStatusFilterDropdownOpen()">
+    <div class="search-box">
+      <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="8" />
+        <line x1="21" y1="21" x2="16.65" y2="16.65" />
+      </svg>
+      <input type="text" [ngModel]="searchQuery()" (ngModelChange)="onSearchChange($event)" class="search-input"
+        placeholder="Search by service name or creator..." />
+      <button *ngIf="searchQuery()" type="button" class="btn-clear-search" (click)="clearSearch()"
+        title="Clear search">✕</button>
+    </div>
+
+    <div class="filter-controls">
+      <!-- Custom Glassmorphism Status Filter Dropdown (Identical to Providers & Appointments) -->
+      <div class="custom-select-anchor status-filter-anchor" [class.menu-open]="isStatusFilterDropdownOpen()"
+        [class.has-selection]="statusFilter() !== 'all'">
+        <button type="button" class="custom-select-trigger" (click)="toggleStatusFilterDropdown($event)"
+          [title]="'Filter by status: ' + statusFilterLabel()" aria-haspopup="listbox"
+          [attr.aria-expanded]="isStatusFilterDropdownOpen()">
+          <!-- Left Dynamic Status Indicator -->
+          <div class="trigger-icon-wrap">
+            <span *ngIf="statusFilter() === 'all'" class="trigger-default-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+              </svg>
+            </span>
+            <span *ngIf="statusFilter() === 'active'" class="status-dot dot-active"></span>
+            <span *ngIf="statusFilter() === 'inactive'" class="status-dot dot-inactive"></span>
+          </div>
+
+          <!-- Label Display -->
+          <div class="trigger-label-group">
+            <span class="trigger-main-text">{{ statusFilterLabel() }}</span>
+          </div>
+
+          <!-- Chevron Indicator -->
+          <svg class="trigger-chevron" [class.rotated]="isStatusFilterDropdownOpen()" xmlns="http://www.w3.org/2000/svg"
+            width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+            stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="6 9 12 15 18 9" />
+          </svg>
+        </button>
+
+        <!-- Glassmorphism Dropdown Popover Menu -->
+        <div *ngIf="isStatusFilterDropdownOpen()" class="custom-dropdown-popover animate-scale-up"
+          (click)="$event.stopPropagation()">
+          <div class="popover-header">
+            <span class="popover-header-title">Filter by Status</span>
+            <span class="popover-count-pill">3 Options</span>
+          </div>
+
+          <div class="popover-items-list">
+            <!-- All Status Option -->
+            <button type="button" class="popover-option-item" [class.option-selected]="statusFilter() === 'all'"
+              (click)="selectStatusFilter('all', $event)">
+              <div class="option-icon-box">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+                </svg>
+              </div>
+              <div class="option-info">
+                <span class="option-title">All Status</span>
+                <span class="option-desc">Show all services</span>
+              </div>
+              <svg *ngIf="statusFilter() === 'all'" class="option-check-icon" xmlns="http://www.w3.org/2000/svg"
+                width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+            </button>
+
+            <!-- Active Only Option -->
+            <button type="button" class="popover-option-item" [class.option-selected]="statusFilter() === 'active'"
+              (click)="selectStatusFilter('active', $event)">
+              <div class="option-dot-box">
+                <span class="status-dot dot-active"></span>
+              </div>
+              <div class="option-info">
+                <span class="option-title">Active Only</span>
+                <span class="option-desc">Show active catalog services</span>
+              </div>
+              <svg *ngIf="statusFilter() === 'active'" class="option-check-icon" xmlns="http://www.w3.org/2000/svg"
+                width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5"
+                stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+            </button>
+
+            <!-- Inactive Only Option -->
+            <button type="button" class="popover-option-item" [class.option-selected]="statusFilter() === 'inactive'"
+              (click)="selectStatusFilter('inactive', $event)">
+              <div class="option-dot-box">
+                <span class="status-dot dot-inactive"></span>
+              </div>
+              <div class="option-info">
+                <span class="option-title">Inactive Only</span>
+                <span class="option-desc">Show paused / inactive services</span>
+              </div>
+              <svg *ngIf="statusFilter() === 'inactive'" class="option-check-icon" xmlns="http://www.w3.org/2000/svg"
+                width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f43f5e" stroke-width="2.5"
+                stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="services-count">
+        <span>Total: <strong>{{ totalCount() }}</strong> Services</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="isLoading()" class="loading-state glass-card">
+    <div class="spinner"></div>
+    <p>Loading services catalog...</p>
+  </div>
+
+  <!-- Services Data Grid (Table Format) -->
+  <div *ngIf="!isLoading()" class="table-card glass-card">
+    <div class="table-responsive">
+      <table class="custom-table">
+        <thead>
+          <tr>
+            <th class="col-service-title">Service Title</th>
+            <th class="col-service-duration">Duration</th>
+            <th class="col-service-price">Standard Price</th>
+            <th class="col-service-providers">Specialists</th>
+            <th class="col-service-status">Status</th>
+            <th class="col-service-actions text-right">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let s of pagedServices()" class="table-row">
+
+            <!-- Service Name & Icon -->
+            <td class="col-service-title">
+              <div class="service-cell">
+                <div class="service-icon-box">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect width="18" height="18" x="3" y="3" rx="2" />
+                    <path d="M7 7h10" />
+                    <path d="M7 12h10" />
+                    <path d="M7 17h10" />
+                  </svg>
+                </div>
+                <div class="service-info">
+                  <span class="service-name-text" [title]="s.name">{{ s.name }}</span>
+                </div>
+              </div>
+            </td>
+
+            <!-- Duration Badge -->
+            <td class="col-service-duration">
+              <span class="duration-badge-pill" [title]="s.durationMinutes + ' minutes per slot'">
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10" />
+                  <polyline points="12 6 12 12 16 14" />
+                </svg>
+                <span>{{ s.durationMinutes }} mins</span>
+              </span>
+            </td>
+
+            <!-- Standard Price -->
+            <td class="col-service-price">
+              <div class="charges-chip" [title]="'Catalog Price: ₹' + (s.price | number:'1.2-2')">
+                <span class="currency">₹</span>
+                <span>{{ s.price | number:'1.2-2' }}</span>
+              </div>
+            </td>
+
+            <!-- Linked Specialists Count -->
+            <td class="col-service-providers">
+              <span class="provider-badge-pill" [title]="s.providersCount + ' specialists assigned'">
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                  <circle cx="9" cy="7" r="4" />
+                </svg>
+                <span>{{ s.providersCount }} {{ s.providersCount === 1 ? 'Specialist' : 'Specialists' }}</span>
+              </span>
+            </td>
+
+            <!-- Status Dropdown Pill -->
+            <td class="col-service-status">
+              <div class="custom-status-dropdown" (click)="$event.stopPropagation()">
+                <button type="button" class="status-pill-btn" [ngClass]="s.isActive ? 'pill-active' : 'pill-inactive'"
+                  (click)="toggleStatusDropdown(s.id, $event)" [attr.aria-expanded]="openStatusDropdownId() === s.id"
+                  title="Click to toggle status">
+                  <span class="status-dot" [ngClass]="s.isActive ? 'dot-active' : 'dot-inactive'"></span>
+                  <span class="status-label">{{ s.isActive ? 'Active' : 'Inactive' }}</span>
+                  <svg class="chevron-icon" [class.rotate]="openStatusDropdownId() === s.id"
+                    xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="6 9 12 15 18 9" />
+                  </svg>
+                </button>
+
+                <!-- Floating Status Dropdown Menu -->
+                <div class="status-menu animate-fade-in" *ngIf="openStatusDropdownId() === s.id">
+                  <button type="button" class="status-menu-item" [class.selected]="s.isActive"
+                    (click)="selectServiceStatus(s, true, $event)">
+                    <span class="status-dot dot-active"></span>
+                    <span class="menu-item-text">Active</span>
+                    <svg *ngIf="s.isActive" class="check-icon" xmlns="http://www.w3.org/2000/svg" width="13" height="13"
+                      viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round"
+                      stroke-linejoin="round">
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                  </button>
+
+                  <button type="button" class="status-menu-item" [class.selected]="!s.isActive"
+                    (click)="selectServiceStatus(s, false, $event)">
+                    <span class="status-dot dot-inactive"></span>
+                    <span class="menu-item-text">Inactive</span>
+                    <svg *ngIf="!s.isActive" class="check-icon" xmlns="http://www.w3.org/2000/svg" width="13"
+                      height="13" viewBox="0 0 24 24" fill="none" stroke="#f43f5e" stroke-width="2.5"
+                      stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </td>
+
+            <!-- Actions -->
+            <td class="col-service-actions text-right">
+              <div class="actions-group">
+                <button type="button" class="btn-action-icon btn-edit-icon" (click)="openEditModal(s, $event)"
+                  title="Edit Service">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                    <path d="m15 5 4 4" />
+                  </svg>
+                </button>
+
+                <button type="button" class="btn-action-icon btn-delete-icon" (click)="confirmDelete(s, $event)"
+                  title="Remove Service">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 6h18" />
+                    <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                    <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                  </svg>
+                </button>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Empty State Row -->
+          <tr *ngIf="filteredServices().length === 0">
+            <td colspan="6" class="empty-cell">
+              <div class="empty-state">
+                <div class="empty-icon-wrap">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <rect width="18" height="18" x="3" y="3" rx="2" />
+                    <path d="M7 7h10" />
+                    <path d="M7 12h10" />
+                    <path d="M7 17h10" />
+                  </svg>
+                </div>
+                <h4>No Services Found</h4>
+                <p *ngIf="searchQuery()">No services matching "{{ searchQuery() }}". Try adjusting your filter.</p>
+                <p *ngIf="!searchQuery()">Your services catalog is empty. Click "Add Service" to add your first service.
+                </p>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Reusable App Pagination Component -->
+    <app-pagination [pageNumber]="currentPage()" [pageSize]="pageSize()" [totalCount]="totalCount()"
+      [totalPages]="totalPages()" [pageSizeOptions]="[5, 10, 20, 50]" (pageChange)="onPageChange($event)"
+      (pageSizeChange)="onPageSizeChange($event)">
+    </app-pagination>
+  </div>
+
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div *ngIf="serviceToDelete()" class="modal-backdrop animate-fade-in">
+  <div class="modal-dialog glass-card delete-dialog animate-scale-up" role="dialog" aria-modal="true">
+    <div class="delete-icon-box">
+      <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none"
+        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 6h18" />
+        <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+        <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+        <line x1="10" x2="10" y1="11" y2="17" />
+        <line x1="14" x2="14" y1="11" y2="17" />
+      </svg>
+    </div>
+
+    <h3 class="delete-title">Delete Service?</h3>
+    <p class="delete-msg">
+      Are you sure you want to delete <strong>"{{ serviceToDelete()?.name }}"</strong>?
+      This will remove it from the services catalog menu.
+    </p>
+
+    <div *ngIf="deleteError()" class="alert alert-error animate-fade-in">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10" />
+        <line x1="12" y1="8" x2="12" y2="12" />
+        <line x1="12" y1="16" x2="12.01" y2="16" />
+      </svg>
+      <span>{{ deleteError() }}</span>
+    </div>
+
+    <div class="delete-actions">
+      <button type="button" class="btn btn-secondary" (click)="cancelDelete()" [disabled]="isDeleting()">
+        Cancel
+      </button>
+      <button type="button" class="btn btn-danger" (click)="executeDelete()" [disabled]="isDeleting()">
+        <span *ngIf="isDeleting()" class="spinner-small"></span>
+        <span>{{ isDeleting() ? 'Deleting...' : 'Yes, Delete' }}</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Add / Edit Service Modal -->
+<app-service-modal [isOpen]="isModalOpen()" [mode]="modalMode()" [serviceToEdit]="selectedService()"
+  (close)="closeModal()" (saved)="onServiceSaved($event)"></app-service-modal>

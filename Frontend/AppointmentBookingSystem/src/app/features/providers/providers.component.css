@@ -132,35 +132,6 @@
   z-index: 1001;
 }
 
-.filter-dropdown-trigger {
-  padding: 0.45rem 0.95rem;
-  border-radius: 10px;
-  background: #f4f8f5;
-  border: 1px solid #e2ece6;
-  color: #183b32;
-  font-size: 0.82rem;
-  font-weight: 500;
-  cursor: pointer;
-  outline: none;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.55rem;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  white-space: nowrap;
-}
-
-.filter-dropdown-trigger:hover {
-  background: #e8f3ee;
-  border-color: #b8dacb;
-  color: #1e5142;
-}
-
-.status-filter-anchor.menu-open .filter-dropdown-trigger {
-  border-color: #1e5142;
-  box-shadow: 0 0 0 3px rgba(30, 81, 66, 0.12);
-  background: #ffffff;
-}
-
 .status-filter-anchor .custom-dropdown-popover {
   left: auto;
   right: 0;
@@ -220,8 +191,8 @@
 
 /* Explicit Named Column Widths - Compact & Responsive */
 .col-provider {
-  width: 180px;
-  min-width: 170px;
+  width: 220px;
+  min-width: 190px;
 }
 
 .col-specialty {

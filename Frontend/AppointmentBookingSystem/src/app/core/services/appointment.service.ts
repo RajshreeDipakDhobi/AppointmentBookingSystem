@@ -43,6 +43,40 @@ export class AppointmentService {
   }
 
   /**
+   * Urban Company Style: Get merged available slots for all specialists offering a service
+   */
+  getAvailableSlotsByService(serviceId: number, date: string, tenantId?: number): Observable<ProviderDailyAvailabilityResponseDto> {
+    const url = tenantId 
+      ? `${this.apiUrl}/service-slots?serviceId=${serviceId}&date=${date}&tenantId=${tenantId}`
+      : `${this.apiUrl}/service-slots?serviceId=${serviceId}&date=${date}`;
+    return this.http.get<any>(url).pipe(
+      map(res => (res && res.data !== undefined) ? res.data : res)
+    );
+  }
+
+  /**
+   * Urban Company Style: Get incoming broadcast requests for specialists
+   */
+  getIncomingBroadcastRequests(tenantId?: number): Observable<AppointmentDto[]> {
+    const url = tenantId ? `${this.apiUrl}/incoming-requests?tenantId=${tenantId}` : `${this.apiUrl}/incoming-requests`;
+    return this.http.get<any>(url).pipe(
+      map(res => (res && res.data !== undefined) ? res.data : (Array.isArray(res) ? res : []))
+    );
+  }
+
+  /**
+   * Urban Company Style: Specialist accepts an open broadcast appointment request
+   */
+  acceptBroadcastAppointment(appointmentId: number, providerId?: number): Observable<AppointmentDto> {
+    const url = providerId 
+      ? `${this.apiUrl}/${appointmentId}/accept?providerId=${providerId}` 
+      : `${this.apiUrl}/${appointmentId}/accept`;
+    return this.http.post<any>(url, {}).pipe(
+      map(res => (res && res.data !== undefined) ? res.data : res)
+    );
+  }
+
+  /**
    * Module 4: Book an appointment (Unwraps ApiResponse.data)
    */
   bookAppointment(dto: BookAppointmentRequestDto, tenantId?: number): Observable<AppointmentDto> {

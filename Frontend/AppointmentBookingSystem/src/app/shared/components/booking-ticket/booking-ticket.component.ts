@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { AppointmentDto, AppointmentStatus } from '../../../core/models/appointment.models';
 import { AppDatePipe, AppTimePipe, AppStatusBadgePipe, AppPhonePipe, AppInitialsPipe } from '../../pipes';
 import { CopyToClipboardDirective } from '../../directives';
-import { isAppointmentPast, canCancelAppointment } from '../../../core/constants/app.constants';
+import { isAppointmentPast, canCancelAppointment, canRescheduleAppointment } from '../../../core/constants/app.constants';
 
 @Component({
   selector: 'app-booking-ticket',
@@ -44,6 +44,10 @@ export class BookingTicketComponent {
 
   get canCancel(): boolean {
     return canCancelAppointment(this.appointment);
+  }
+
+  get canReschedule(): boolean {
+    return canRescheduleAppointment(this.appointment);
   }
 
   printTicket(): void {

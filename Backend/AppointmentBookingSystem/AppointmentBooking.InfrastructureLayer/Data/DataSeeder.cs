@@ -184,6 +184,28 @@ public static class DataSeeder
                 await context.SaveChangesAsync();
             }
 
+            // Ensure Master Service exists for this service type
+            var masterService = await context.Services
+                .IgnoreQueryFilters()
+                .FirstOrDefaultAsync(s => s.Name.ToLower() == item.ServiceType.ToLower());
+
+            if (masterService == null)
+            {
+                masterService = new Service
+                {
+                    UserId = user.Id,
+                    Name = item.ServiceType,
+                    Description = item.Bio,
+                    DurationMinutes = 30,
+                    Price = item.ChargesAmount,
+                    IsActive = true,
+                    CreatedAt = DateTime.UtcNow,
+                    CreatedBy = "System"
+                };
+                await context.Services.AddAsync(masterService);
+                await context.SaveChangesAsync();
+            }
+
             var existingProvider = await context.ServiceProviders
                 .IgnoreQueryFilters()
                 .FirstOrDefaultAsync(sp => sp.UserId == user.Id || (sp.TenantId == tenantId && sp.User.Email.ToLower() == item.Email.ToLower()));
@@ -194,9 +216,8 @@ public static class DataSeeder
                 {
                     TenantId = tenantId,
                     UserId = user.Id,
-                    ServiceType = item.ServiceType,
+                    ServiceId = masterService.Id,
                     Bio = item.Bio,
-                    ChargesAmount = item.ChargesAmount,
                     Status = ProviderStatus.Active,
                     CreatedAt = DateTime.UtcNow,
                     CreatedBy = "System"
@@ -208,8 +229,7 @@ public static class DataSeeder
             }
             else
             {
-                existingProvider.ServiceType = item.ServiceType;
-                existingProvider.ChargesAmount = item.ChargesAmount;
+                existingProvider.ServiceId = masterService.Id;
                 existingProvider.Bio = item.Bio;
                 existingProvider.Status = ProviderStatus.Active;
                 await context.SaveChangesAsync();

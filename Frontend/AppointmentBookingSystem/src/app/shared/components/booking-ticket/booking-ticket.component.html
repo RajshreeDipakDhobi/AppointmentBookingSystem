@@ -196,8 +196,8 @@
         <span>Scheduled time has passed. Cancellation is locked. You can still reschedule to a new slot.</span>
       </div>
 
-      <div *ngIf="isActionable && (allowReschedule || (allowCancel && canCancel))" class="secondary-actions">
-        <button *ngIf="allowReschedule" type="button" class="btn btn-ticket btn-reschedule"
+      <div *ngIf="isActionable && ((allowReschedule && canReschedule) || (allowCancel && canCancel))" class="secondary-actions">
+        <button *ngIf="allowReschedule && canReschedule" type="button" class="btn btn-ticket btn-reschedule"
           (click)="triggerReschedule()">
           <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

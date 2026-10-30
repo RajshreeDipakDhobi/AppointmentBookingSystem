@@ -111,7 +111,9 @@
 
   <!-- Reusable Booking Modal -->
   <app-booking-modal *ngIf="isBookingModalOpen()" [tenantId]="selectedTenant()?.id"
-    [initialProviderId]="selectedProviderIdForModal()" (close)="closeBookingModal()"
+    [initialProviderId]="selectedProviderIdForModal()"
+    [initialServiceId]="selectedServiceIdForModal()"
+    (close)="closeBookingModal()"
     (booked)="onAppointmentBooked($event)"></app-booking-modal>
 
 

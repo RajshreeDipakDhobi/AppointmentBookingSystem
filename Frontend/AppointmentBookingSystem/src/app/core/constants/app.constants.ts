@@ -159,11 +159,19 @@ export function isAppointmentPast(apt: { appointmentDate?: string | Date; startT
 }
 
 /**
- * Reschedule Policy: Appointments can only be rescheduled at least 1 hour prior
- * to their scheduled start time, and only if active (Booked or Approved).
+ * Reschedule Policy: Appointments can only be rescheduled if:
+ * 1. The appointment has been accepted by a specialist (assigned provider, not broadcasting/pending dispatch)
+ * 2. Active status (Booked or Approved)
+ * 3. At least 1 hour prior to scheduled start time
  */
 export function canRescheduleAppointment(apt: AppointmentDto | null | undefined): boolean {
   if (!apt) return false;
+
+  // Unaccepted / Broadcasting requests cannot be rescheduled
+  if (!apt.serviceProviderId || apt.serviceProviderId <= 0 || apt.isBroadcast || apt.statusText?.toLowerCase() === 'broadcasting') {
+    return false;
+  }
+
   if (apt.status !== AppointmentStatus.Booked && apt.status !== AppointmentStatus.Approved) {
     return false;
   }
@@ -244,3 +252,23 @@ export function canCancelAppointment(apt: AppointmentDto | null | undefined): bo
   const oneHourBeforeStart = new Date(appointmentStart.getTime() - 60 * 60 * 1000);
   return now.getTime() < oneHourBeforeStart.getTime();
 }
+
+/**
+ * Standard Service & Slot Duration Options across the application
+ */
+export interface DurationOption {
+  value: number;
+  label: string;
+}
+
+export const STANDARD_DURATION_OPTIONS: DurationOption[] = [
+  { value: 15, label: '15 Minutes' },
+  { value: 20, label: '20 Minutes' },
+  { value: 30, label: '30 Minutes' },
+  { value: 45, label: '45 Minutes' },
+  { value: 60, label: '1 Hour (60 mins)' },
+  { value: 90, label: '1.5 Hours (90 mins)' },
+  { value: 120, label: '2 Hours (120 mins)' },
+  { value: 180, label: '3 Hours (180 mins)' },
+  { value: 240, label: '4 Hours (240 mins)' }
+];

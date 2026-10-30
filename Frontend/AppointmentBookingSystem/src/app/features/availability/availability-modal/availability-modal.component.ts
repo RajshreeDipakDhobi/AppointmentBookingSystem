@@ -11,6 +11,8 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { MatDatepickerModule, MatDatepickerInputEvent } from '@angular/material/datepicker';
+import { provideNativeDateAdapter } from '@angular/material/core';
 import { AvailabilityService } from '../../../core/services/availability.service';
 import { ConfirmService } from '../../../shared/components/confirmation-modal/confirm.service';
 import { getAvatarGradient } from '../../../core/constants/app.constants';
@@ -48,7 +50,8 @@ export interface HourOption {
 @Component({
   selector: 'app-availability-modal',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, MatDatepickerModule],
+  providers: [provideNativeDateAdapter()],
   templateUrl: './availability-modal.component.html',
   styleUrls: ['./availability-modal.component.css']
 })
@@ -236,6 +239,11 @@ export class AvailabilityModalComponent implements OnChanges {
     if (match) {
       this.providerName = match.providerName;
       this.providerRole = match.specialization || 'Specialist';
+      const provDur = match.slotDurationMinutes || 30;
+      this.days.forEach(d => {
+        d.slotDurationMinutes = provDur;
+      });
+      this.dateSchedule.slotDurationMinutes = provDur;
     }
   }
 
@@ -253,6 +261,11 @@ export class AvailabilityModalComponent implements OnChanges {
     this.selectedProviderId = p.providerId;
     this.providerName = p.providerName;
     this.providerRole = p.specialization || 'Specialist';
+    const provDur = p.slotDurationMinutes || 30;
+    this.days.forEach(d => {
+      d.slotDurationMinutes = provDur;
+    });
+    this.dateSchedule.slotDurationMinutes = provDur;
     this.isProviderMenuOpen = false;
 
     // Reset initial overrides when switching provider inside modal
@@ -298,13 +311,14 @@ export class AvailabilityModalComponent implements OnChanges {
           }
         });
 
+        const provDur = this.currentProvider?.slotDurationMinutes || 30;
         this.days.forEach(day => {
           const matched = (schedules || []).find(s => s.dayOfWeek === day.dayOfWeek);
           if (matched && matched.id > 0 && matched.isAvailable) {
             day.isActive = true;
             day.startTime = this.normalizeTime(matched.startTime) || '10:00';
             day.endTime = this.normalizeTime(matched.endTime) || '17:00';
-            day.slotDurationMinutes = matched.slotDurationMinutes || 30;
+            day.slotDurationMinutes = matched.slotDurationMinutes || provDur;
             day.blockedSlots = matched.blockedSlotList || (matched.blockedSlots ? matched.blockedSlots.split(',').map(s => s.trim()) : []);
 
             if (matched.breakStartTime && matched.breakEndTime) {
@@ -564,6 +578,32 @@ export class AvailabilityModalComponent implements OnChanges {
     });
   }
 
+  get selectedDateObject(): Date {
+    if (!this.selectedDate) return new Date();
+    const parts = this.selectedDate.split('-').map(Number);
+    if (parts.length === 3 && !isNaN(parts[0]) && !isNaN(parts[1]) && !isNaN(parts[2])) {
+      return new Date(parts[0], parts[1] - 1, parts[2]);
+    }
+    return new Date();
+  }
+
+  get minDateObject(): Date {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return today;
+  }
+
+  onMaterialDateChange(event: MatDatepickerInputEvent<Date> | any): void {
+    const rawVal = event?.value ?? (event?.target as any)?.value;
+    if (!rawVal) return;
+    const d = rawVal instanceof Date ? rawVal : new Date(rawVal);
+    if (isNaN(d.getTime())) return;
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    this.onDatePicked(`${year}-${month}-${day}`);
+  }
+
   onDatePicked(newDate: string): void {
     this.selectedDate = newDate;
     this.loadDateSchedule(newDate);
@@ -608,7 +648,8 @@ export class AvailabilityModalComponent implements OnChanges {
         this.dateSchedule.isOverride = !!(res.id && res.specificDate);
         this.dateSchedule.startTime = this.normalizeTime(res.startTime) || '10:00';
         this.dateSchedule.endTime = this.normalizeTime(res.endTime) || '17:00';
-        this.dateSchedule.slotDurationMinutes = res.slotDurationMinutes || 30;
+        const provDur = this.currentProvider?.slotDurationMinutes || 30;
+        this.dateSchedule.slotDurationMinutes = res.slotDurationMinutes || provDur;
 
         if (res.breakStartTime && res.breakEndTime) {
           this.dateSchedule.hasBreak = true;

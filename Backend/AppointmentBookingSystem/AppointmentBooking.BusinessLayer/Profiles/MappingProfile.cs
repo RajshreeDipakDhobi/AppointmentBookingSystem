@@ -1,5 +1,6 @@
 using AppointmentBooking.BusinessLayer.Features.Auth.DTOs;
 using AppointmentBooking.BusinessLayer.Features.Providers.DTOs;
+using AppointmentBooking.BusinessLayer.Features.Services.DTOs;
 using AppointmentBooking.BusinessLayer.Features.Tenants.DTOs;
 using AppointmentBooking.DomainLayer.Entities;
 using AppointmentBooking.DomainLayer.Enums;
@@ -38,21 +39,39 @@ public class MappingProfile : Profile
             .ForMember(dest => dest.Email, opt => opt.MapFrom(src => src.User != null ? src.User.Email : string.Empty))
             .ForMember(dest => dest.PhoneNumber, opt => opt.MapFrom(src => src.User != null ? (src.User.PhoneNumber ?? string.Empty) : string.Empty))
             .ForMember(dest => dest.Address, opt => opt.MapFrom(src => src.User != null ? src.User.Address : null))
+            .ForMember(dest => dest.ProfilePictureUrl, opt => opt.MapFrom(src => src.User != null ? src.User.ProfilePictureUrl : null))
+            .ForMember(dest => dest.ServiceId, opt => opt.MapFrom(src => src.ServiceId))
+            .ForMember(dest => dest.ServiceName, opt => opt.MapFrom(src => src.Service != null ? src.Service.Name : string.Empty))
+            .ForMember(dest => dest.ServiceType, opt => opt.MapFrom(src => src.Service != null ? src.Service.Name : string.Empty))
+            .ForMember(dest => dest.ChargesAmount, opt => opt.MapFrom(src => src.Service != null ? src.Service.Price : 0.00m))
             .ForMember(dest => dest.TotalAppointmentsCount, opt => opt.MapFrom(src => 
                 src.Appointments != null 
                     ? src.Appointments.Count(a => 
                         a.Status == AppointmentStatus.Booked || 
                         a.Status == AppointmentStatus.Approved || 
-                        a.Status == AppointmentStatus.RescheduleProposed ||
+                        a.Status == AppointmentStatus.RescheduleProposed || 
                         a.Status == AppointmentStatus.Rescheduled) 
                     : 0));
 
         CreateMap<CreateServiceProviderRequestDto, ServiceProvider>()
-            .ForMember(dest => dest.ServiceType, opt => opt.MapFrom(src => src.ServiceType.Trim()))
+            .ForMember(dest => dest.ServiceId, opt => opt.MapFrom(src => src.ServiceId))
             .ForMember(dest => dest.Status, opt => opt.MapFrom(_ => ProviderStatus.Active));
 
         CreateMap<UpdateServiceProviderRequestDto, ServiceProvider>()
-            .ForMember(dest => dest.ServiceType, opt => opt.MapFrom(src => src.ServiceType.Trim()));
+            .ForMember(dest => dest.ServiceId, opt => opt.MapFrom(src => src.ServiceId));
+
+        // Master Service Mappings
+        CreateMap<Service, ServiceDto>()
+            .ForMember(dest => dest.CreatedByName, opt => opt.MapFrom(src => src.User != null ? $"{src.User.FirstName} {src.User.LastName}".Trim() : string.Empty))
+            .ForMember(dest => dest.ProvidersCount, opt => opt.MapFrom(src => src.ServiceProviders != null ? src.ServiceProviders.Count(sp => !sp.IsDeleted && sp.Status == ProviderStatus.Active) : 0));
+
+        CreateMap<CreateServiceRequestDto, Service>()
+            .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.Name.Trim()))
+            .ForMember(dest => dest.Description, opt => opt.MapFrom(src => src.Description != null ? src.Description.Trim() : null));
+
+        CreateMap<UpdateServiceRequestDto, Service>()
+            .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.Name.Trim()))
+            .ForMember(dest => dest.Description, opt => opt.MapFrom(src => src.Description != null ? src.Description.Trim() : null));
 
         // Tenant Request Mappings
         CreateMap<CreateTenantRequestDto, Tenant>()
@@ -74,7 +93,10 @@ public class MappingProfile : Profile
 
         // Provider Availability Mappings
         CreateMap<ProviderAvailability, AppointmentBooking.BusinessLayer.Features.Availability.DTOs.ProviderAvailabilityDto>()
-            .ForMember(dest => dest.ServiceProviderName, opt => opt.MapFrom(src => src.ServiceProvider != null ? src.ServiceProvider.Name : string.Empty))
+            .ForMember(dest => dest.ServiceProviderName, opt => opt.MapFrom(src => 
+                src.ServiceProvider != null && src.ServiceProvider.User != null 
+                    ? $"{src.ServiceProvider.User.FirstName} {src.ServiceProvider.User.LastName}".Trim() 
+                    : string.Empty))
             .ForMember(dest => dest.StartTime, opt => opt.MapFrom(src => src.StartTime.ToString(@"hh\:mm")))
             .ForMember(dest => dest.EndTime, opt => opt.MapFrom(src => src.EndTime.ToString(@"hh\:mm")))
             .ForMember(dest => dest.BreakStartTime, opt => opt.MapFrom(src => src.BreakStartTime.HasValue ? src.BreakStartTime.Value.ToString(@"hh\:mm") : null))
@@ -82,8 +104,23 @@ public class MappingProfile : Profile
 
         // Appointment Mappings
         CreateMap<Appointment, AppointmentBooking.BusinessLayer.Features.Appointments.DTOs.AppointmentDto>()
-            .ForMember(dest => dest.ServiceProviderName, opt => opt.MapFrom(src => src.ServiceProvider != null ? src.ServiceProvider.Name : string.Empty))
-            .ForMember(dest => dest.ServiceProviderType, opt => opt.MapFrom(src => src.ServiceProvider != null ? src.ServiceProvider.ServiceType : string.Empty))
+            .ForMember(dest => dest.ServiceProviderId, opt => opt.MapFrom(src => src.ServiceProviderId))
+            .ForMember(dest => dest.ServiceProviderName, opt => opt.MapFrom(src => 
+                src.ServiceProvider != null && src.ServiceProvider.User != null 
+                    ? $"{src.ServiceProvider.User.FirstName} {src.ServiceProvider.User.LastName}".Trim() 
+                    : (!src.ServiceProviderId.HasValue ? "Broadcasting to specialists..." : string.Empty)))
+            .ForMember(dest => dest.ServiceProviderType, opt => opt.MapFrom(src => 
+                src.ServiceProvider != null && src.ServiceProvider.Service != null 
+                    ? src.ServiceProvider.Service.Name 
+                    : (src.Service != null ? src.Service.Name : string.Empty)))
+            .ForMember(dest => dest.ServiceProviderProfilePictureUrl, opt => opt.MapFrom(src => 
+                src.ServiceProvider != null && src.ServiceProvider.User != null 
+                    ? src.ServiceProvider.User.ProfilePictureUrl 
+                    : null))
+            .ForMember(dest => dest.ServiceId, opt => opt.MapFrom(src => src.ServiceId))
+            .ForMember(dest => dest.ServiceName, opt => opt.MapFrom(src => src.Service != null ? src.Service.Name : (src.ServiceProvider != null && src.ServiceProvider.Service != null ? src.ServiceProvider.Service.Name : null)))
+            .ForMember(dest => dest.ServicePrice, opt => opt.MapFrom(src => src.Service != null ? (decimal?)src.Service.Price : (src.ServiceProvider != null && src.ServiceProvider.Service != null ? (decimal?)src.ServiceProvider.Service.Price : null)))
+            .ForMember(dest => dest.ServiceDurationMinutes, opt => opt.MapFrom(src => src.Service != null ? (int?)src.Service.DurationMinutes : (src.ServiceProvider != null && src.ServiceProvider.Service != null ? (int?)src.ServiceProvider.Service.DurationMinutes : null)))
 
             .ForMember(dest => dest.CustomerName, opt => opt.MapFrom(src => src.Customer != null ? (string.IsNullOrWhiteSpace(src.Customer.LastName) ? src.Customer.FirstName : $"{src.Customer.FirstName} {src.Customer.LastName}".Trim()) : string.Empty))
             .ForMember(dest => dest.CustomerEmail, opt => opt.MapFrom(src => src.Customer != null ? src.Customer.Email : string.Empty))

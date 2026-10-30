@@ -140,14 +140,23 @@ export class CalendarComponent implements OnInit, OnDestroy {
     return new Date();
   });
 
-  onMaterialDateChange(event: MatDatepickerInputEvent<Date>): void {
-    if (event.value) {
-      const dateStr = this.formatDateToString(event.value);
-      this.selectedDate.set(dateStr);
-      this.fetchAppointments();
+  onMaterialDateChange(event: MatDatepickerInputEvent<Date> | any): void {
+    const rawVal = event?.value ?? (event?.target as any)?.value;
+    if (!rawVal) return;
+    const d = rawVal instanceof Date ? rawVal : new Date(rawVal);
+    if (isNaN(d.getTime())) return;
+    const dateStr = this.formatDateToString(d);
+    this.selectedDate.set(dateStr);
+    this.fetchAppointments();
 
-      if (this.fullCalendarComponent) {
-        this.fullCalendarComponent.getApi().gotoDate(dateStr);
+    if (this.fullCalendarComponent) {
+      try {
+        const api = this.fullCalendarComponent.getApi();
+        if (api) {
+          api.gotoDate(dateStr);
+        }
+      } catch (err) {
+        console.warn('FullCalendar API not ready for gotoDate:', err);
       }
     }
   }
@@ -1034,7 +1043,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
     // Only map appointments for active service providers
     const activeIds = new Set(this.displayedProviders().map(p => p.id));
     const activeItems = activeIds.size > 0
-      ? items.filter(a => activeIds.has(a.serviceProviderId))
+      ? items.filter(a => a.serviceProviderId != null && activeIds.has(a.serviceProviderId))
       : items;
 
     // Month view: individual events so each displays on its line in day cell (only for the active month)
@@ -1049,7 +1058,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
       });
 
       const events: EventInput[] = monthItems.map(apt => {
-        const theme = this.getProviderTheme(apt.serviceProviderId);
+        const theme = this.getProviderTheme(apt.serviceProviderId ?? 0);
         const startIso = this.formatIsoDateTime(apt.appointmentDate, apt.startTime);
         return {
           id: apt.id.toString(),
@@ -1076,7 +1085,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
     const clusters = this.groupAppointmentsForWeek(activeItems);
     const events: EventInput[] = clusters.map(cluster => {
       const first = cluster[0];
-      const theme = this.getProviderTheme(first.serviceProviderId);
+      const theme = this.getProviderTheme(first.serviceProviderId ?? 0);
       const startIso = this.formatIsoDateTime(first.appointmentDate, first.startTime);
       let endIso = this.formatIsoDateTime(first.appointmentDate, first.endTime);
 
@@ -1496,7 +1505,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
         timeTagText: '#7e4b58'
       }
     ];
-    const index = Math.abs((apt.id * 31 + apt.serviceProviderId * 17) % themes.length);
+    const index = Math.abs((apt.id * 31 + (apt.serviceProviderId ?? 0) * 17) % themes.length);
     return themes[index];
   }
 

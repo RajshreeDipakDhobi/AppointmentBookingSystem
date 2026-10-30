@@ -56,6 +56,116 @@ public class AppointmentsController : BaseApiController
     }
 
     /// <summary>
+    /// Module 3B: View Merged Available Time Slots for a Service Category on a Specific Date (Public / Urban Company style)
+    /// </summary>
+    [HttpGet("service-slots")]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(ProviderDailyAvailabilityResponseDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetAvailableSlotsByService(
+        [FromQuery] int serviceId, 
+        [FromQuery] DateTime date,
+        [FromQuery] int? tenantId,
+        CancellationToken cancellationToken)
+    {
+        if (serviceId <= 0)
+        {
+            return ErrorResponse("Valid Service ID must be specified.");
+        }
+
+        try
+        {
+            var activeTenantId = ResolveTenantId(tenantId);
+            var result = await _appointmentService.GetAvailableSlotsByServiceAsync(serviceId, date, activeTenantId, cancellationToken);
+            if (result == null)
+            {
+                return NotFoundResponse($"Service with ID {serviceId} was not found or is inactive.");
+            }
+
+            return OkResponse(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting available slots for service ID {ServiceId}", serviceId);
+            return ErrorResponse(ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// Urban Company Style: View open incoming broadcast requests awaiting specialist confirmation
+    /// </summary>
+    [HttpGet("incoming-requests")]
+    [Authorize]
+    [ProducesResponseType(typeof(List<AppointmentDto>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetIncomingBroadcastRequests(
+        [FromQuery] int? tenantId,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var activeTenantId = ResolveTenantId(tenantId);
+            int? providerId = null;
+
+            if (IsServiceProvider)
+            {
+                providerId = CurrentProviderId;
+            }
+
+            var result = await _appointmentService.GetIncomingBroadcastRequestsAsync(providerId, activeTenantId, cancellationToken);
+            return OkResponse(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting incoming broadcast appointment requests");
+            return ErrorResponse(ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// Urban Company Style: Specialist accepts an open broadcast appointment request (first-come, first-served)
+    /// </summary>
+    [HttpPost("{appointmentId:int}/accept")]
+    [Authorize(Roles = $"{AppRoles.ServiceProvider},{AppRoles.Admin},{AppRoles.SuperAdmin}")]
+    [ProducesResponseType(typeof(ApiResponse<AppointmentDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> AcceptBroadcastAppointment(
+        [FromRoute] int appointmentId,
+        [FromQuery] int? providerId,
+        CancellationToken cancellationToken)
+    {
+        int targetProviderId = 0;
+        if (IsServiceProvider && CurrentProviderId.HasValue)
+        {
+            targetProviderId = CurrentProviderId.Value;
+        }
+        else if ((IsAdmin || IsSuperAdmin) && providerId.HasValue)
+        {
+            targetProviderId = providerId.Value;
+        }
+
+        if (targetProviderId <= 0)
+        {
+            return ErrorResponse("Valid Service Specialist ID is required to accept this request.");
+        }
+
+        var result = await _appointmentService.AcceptBroadcastAppointmentAsync(appointmentId, targetProviderId, cancellationToken);
+        if (!result.Success)
+        {
+            int statusCode = (result.Message.Contains("already been accepted", StringComparison.OrdinalIgnoreCase) ||
+                              result.Message.Contains("already accepted", StringComparison.OrdinalIgnoreCase) ||
+                              result.Message.Contains("active appointment scheduled", StringComparison.OrdinalIgnoreCase))
+                             ? StatusCodes.Status409Conflict 
+                             : StatusCodes.Status400BadRequest;
+
+            return StatusCode(statusCode, result);
+        }
+
+        return Ok(result);
+    }
+
+    /// <summary>
     /// Module 4: Book an Appointment (Supports Logged-in Customer & Admin Walk-in Booking)
     /// </summary>
     [HttpPost]

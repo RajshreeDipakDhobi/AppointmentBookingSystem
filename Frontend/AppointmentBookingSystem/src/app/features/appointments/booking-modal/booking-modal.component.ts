@@ -4,8 +4,10 @@ import { FormsModule } from '@angular/forms';
 import { RouterModule, Router } from '@angular/router';
 import { AppointmentService } from '../../../core/services/appointment.service';
 import { ProviderService } from '../../../core/services/provider.service';
+import { ServiceCatalogService } from '../../../core/services/service-catalog.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { ServiceProviderDto } from '../../../core/models/provider.models';
+import { ServiceDto } from '../../../core/models/service.models';
 import {
   AvailableSlotDto,
   BookAppointmentRequestDto,
@@ -52,16 +54,23 @@ export interface CalendarDay {
 export class BookingModalComponent implements OnInit {
   private readonly appointmentService = inject(AppointmentService);
   private readonly providerService = inject(ProviderService);
+  private readonly serviceCatalogService = inject(ServiceCatalogService);
   readonly authService = inject(AuthService);
   private readonly router = inject(Router);
   private readonly confirmService = inject(ConfirmService);
   private readonly cdr = inject(ChangeDetectorRef);
 
   @Input() initialProviderId: number | null = null;
+  @Input() initialServiceId: number | null = null;
   @Input() initialDate?: string;
   @Input() tenantId?: number;
   @Output() close = new EventEmitter<void>();
   @Output() booked = new EventEmitter<AppointmentDto>();
+
+  // Booking Flow Mode: 'broadcast' (Urban Company Auto-Assign) vs 'direct' (Specific Specialist)
+  bookingMode: 'broadcast' | 'direct' = 'broadcast';
+  selectedServiceId: number | null = null;
+  selectedService: ServiceDto | null = null;
 
   // State Signals
   readonly providers = signal<ServiceProviderDto[]>([]);
@@ -77,7 +86,7 @@ export class BookingModalComponent implements OnInit {
   readonly isCustomerNotFound = signal<boolean>(false);
 
   // Stepper State:
-  // 1 = Select Specialist
+  // 1 = Select Service / Specialist
   // 2 = Side-by-Side: Month Calendar Date Picker (Left) + Available Time Slots (Right)
   // 3 = Customer Info (logged-in detection & edit mode)
   // 4 = Review & Confirmation
@@ -109,11 +118,17 @@ export class BookingModalComponent implements OnInit {
   customerPhone = '';
   customerAddress = '';
   bookingNotes = '';
+  isEmailTouched = false;
+
+  get isEmailValid(): boolean {
+    if (!this.customerEmail || !this.customerEmail.trim()) return false;
+    return isValidEmail(this.customerEmail);
+  }
 
   // Logged-in Customer & Staff state
   isLoggedInUser = signal<boolean>(false);
   readonly isAdmin = computed(() => this.authService.isAdmin() || this.authService.isSuperAdmin());
-  readonly isStaffOrAdmin = computed(() => 
+  readonly isStaffOrAdmin = computed(() =>
     this.authService.isAdmin() || this.authService.isSuperAdmin() || this.authService.isServiceProvider()
   );
 
@@ -124,13 +139,22 @@ export class BookingModalComponent implements OnInit {
   readonly showSearchDropdown = signal<boolean>(false);
   private searchDebounceTimer: any = null;
 
-  // Service Type Filtering (Custom Dropdown matching Calendar)
+  // Service Catalog API & Service Filtering (Custom Dropdown matching Luxury Design)
+  readonly catalogServices = signal<ServiceDto[]>([]);
+  readonly isLoadingServices = signal<boolean>(false);
   selectedServiceType = signal<string>('ALL');
   isServiceDropdownOpen = false;
   serviceSearchQuery = signal<string>('');
 
   readonly serviceTypes = computed<string[]>(() => {
     const types = new Set<string>();
+    // Priority 1: From live Services Catalog API
+    this.catalogServices().forEach(s => {
+      if (s.name && s.name.trim()) {
+        types.add(s.name.trim());
+      }
+    });
+    // Priority 2: From active providers (to support any unlinked legacy service types)
     this.providers().forEach(p => {
       if (p.serviceType && p.serviceType.trim()) {
         types.add(p.serviceType.trim());
@@ -146,6 +170,39 @@ export class BookingModalComponent implements OnInit {
     return list.filter(t => t.toLowerCase().includes(query));
   });
 
+  readonly filteredCatalogServices = computed<ServiceDto[]>(() => {
+    const query = this.serviceSearchQuery().trim().toLowerCase();
+    const list = this.catalogServices();
+    if (!query) return list;
+    return list.filter(s =>
+      s.name.toLowerCase().includes(query) ||
+      (s.description && s.description.toLowerCase().includes(query))
+    );
+  });
+
+  setBookingMode(mode: 'broadcast' | 'direct'): void {
+    if (this.bookingMode === mode) return;
+    this.bookingMode = mode;
+    this.selectedSlot = null;
+    this.errorMessage.set('');
+    if (mode === 'broadcast') {
+      this.selectedProviderId = null;
+      this.selectedProvider = null;
+    } else {
+      this.selectedServiceId = null;
+      this.selectedService = null;
+    }
+  }
+
+  selectServiceCard(service: ServiceDto): void {
+    this.selectedServiceId = service.id;
+    this.selectedService = service;
+    this.selectedProviderId = null;
+    this.selectedProvider = null;
+    this.selectedSlot = null;
+    this.errorMessage.set('');
+  }
+
   readonly selectedServiceLabel = computed<string>(() => {
     const selected = this.selectedServiceType();
     return selected === 'ALL' ? 'All Services' : selected;
@@ -156,7 +213,11 @@ export class BookingModalComponent implements OnInit {
     let list = this.providers();
     const typeFilter = this.selectedServiceType();
     if (typeFilter && typeFilter !== 'ALL') {
-      list = list.filter(p => p.serviceType?.toLowerCase() === typeFilter.toLowerCase());
+      const selectedService = this.catalogServices().find(s => s.name.toLowerCase() === typeFilter.toLowerCase());
+      list = list.filter(p =>
+        (p.serviceType && p.serviceType.toLowerCase() === typeFilter.toLowerCase()) ||
+        (selectedService && p.serviceId === selectedService.id)
+      );
     }
     const query = this.providerSearchQuery().trim().toLowerCase();
     if (!query) return list;
@@ -167,6 +228,22 @@ export class BookingModalComponent implements OnInit {
       (p.address && p.address.toLowerCase().includes(query))
     );
   });
+
+  get canGoBack(): boolean {
+    if (this.currentStep <= 1 || this.currentStep >= 5) return false;
+    // Service provider booking flow starts directly on Step 2 (their own schedule)
+    if (this.authService.isServiceProvider() && this.currentStep === 2) return false;
+    return true;
+  }
+
+  get providerDisplayName(): string {
+    if (this.selectedProvider) return this.selectedProvider.name;
+    if (this.authService.isServiceProvider()) {
+      const u = this.authService.currentUser();
+      return u?.fullName || 'Your Schedule';
+    }
+    return '';
+  }
 
   get progressPercentage(): number {
     switch (this.currentStep) {
@@ -341,6 +418,32 @@ export class BookingModalComponent implements OnInit {
     this.fetchSlots();
   }
 
+  initRoleBookingFlow(): void {
+    if (this.initialProviderId) {
+      this.bookingMode = 'direct';
+      this.selectedProviderId = Number(this.initialProviderId);
+      this.currentStep = 2;
+      return;
+    }
+    if (this.initialServiceId) {
+      this.bookingMode = 'broadcast';
+      this.selectedServiceId = Number(this.initialServiceId);
+      this.currentStep = 2;
+      return;
+    }
+
+    if (this.authService.isServiceProvider()) {
+      this.bookingMode = 'direct';
+      this.currentStep = 2;
+    } else if (this.isAdmin()) {
+      this.bookingMode = 'direct';
+      this.currentStep = 1;
+    } else {
+      this.bookingMode = 'broadcast';
+      this.currentStep = 1;
+    }
+  }
+
   // --- Component Lifecycle ---
   ngOnInit(): void {
     const today = new Date();
@@ -357,18 +460,52 @@ export class BookingModalComponent implements OnInit {
     const dateObj = this.initialDate ? new Date(this.initialDate) : today;
     this.currentMonthDate = new Date(dateObj.getFullYear(), dateObj.getMonth(), 1);
 
+    this.initRoleBookingFlow();
+
     if (!this.authService.isInitialized()) {
       this.authService.checkAuth().subscribe(() => {
         this.checkUserAuth();
+        this.initRoleBookingFlow();
         this.checkAndResumeDraft();
       });
     } else {
       this.checkUserAuth();
+      this.initRoleBookingFlow();
       this.checkAndResumeDraft();
     }
 
-    // Load active providers
+    // Load active providers and services from Service Catalog API
     this.loadProviders();
+    this.loadServices();
+  }
+
+  loadServices(): void {
+    this.isLoadingServices.set(true);
+    this.serviceCatalogService.getActiveServices(this.tenantId).subscribe({
+      next: (services) => {
+        const list = services || [];
+        this.catalogServices.set(list);
+        this.isLoadingServices.set(false);
+
+        const targetServiceId = this.selectedServiceId || this.initialServiceId;
+        if (targetServiceId) {
+          const match = list.find(s => s.id === Number(targetServiceId));
+          if (match) {
+            this.bookingMode = 'broadcast';
+            this.selectedServiceId = match.id;
+            this.selectedService = match;
+            if (this.currentStep < 2) {
+              this.currentStep = 2;
+              this.fetchSlots();
+            }
+          }
+        }
+      },
+      error: (err) => {
+        this.isLoadingServices.set(false);
+        console.error('Failed to load active services for booking dropdown', err);
+      }
+    });
   }
 
   checkAndResumeDraft(): void {
@@ -382,12 +519,50 @@ export class BookingModalComponent implements OnInit {
 
     try {
       const draft = JSON.parse(draftRaw);
-      if (draft && draft.providerId && draft.slot) {
-        this.selectedProviderId = draft.providerId;
-        this.selectedProvider = draft.provider || null;
-        this.selectedDate = draft.selectedDate || this.minDate;
-        this.selectedSlot = draft.slot;
-        this.currentStep = 3;
+      if (draft && (draft.slot || draft.selectedSlot || draft.serviceId || draft.providerId)) {
+        const slot = draft.slot || draft.selectedSlot;
+        if (slot) {
+          this.selectedSlot = slot;
+        }
+        if (draft.selectedDate) {
+          this.selectedDate = draft.selectedDate;
+        }
+
+        if (draft.bookingMode) {
+          this.bookingMode = draft.bookingMode;
+        }
+
+        if (draft.serviceId) {
+          this.bookingMode = 'broadcast';
+          this.selectedServiceId = Number(draft.serviceId);
+          this.selectedService = draft.service || this.selectedService;
+        }
+
+        if (draft.providerId) {
+          this.selectedProviderId = Number(draft.providerId);
+          this.selectedProvider = draft.provider || this.selectedProvider;
+        }
+
+        if (draft.bookingNotes) {
+          this.bookingNotes = draft.bookingNotes;
+        }
+
+        // Fill customer details from newly logged-in customer account
+        this.checkUserAuth();
+
+        if (!this.customerName && draft.customerName) this.customerName = draft.customerName;
+        if (!this.customerEmail && draft.customerEmail) this.customerEmail = draft.customerEmail;
+        if (!this.customerPhone && draft.customerPhone) this.customerPhone = draft.customerPhone;
+        if (!this.customerAddress && draft.customerAddress) this.customerAddress = draft.customerAddress;
+
+        // Navigate directly to the step the customer was on or heading to!
+        const targetStep = draft.targetStep || draft.currentStep || 3;
+        this.currentStep = (targetStep >= 2 && targetStep <= 4) ? targetStep : 3;
+
+        // Ensure availableSlots contains the draft slot so slot summary displays properly
+        if (slot && (!this.availableSlots || this.availableSlots.length === 0)) {
+          this.availableSlots = [slot];
+        }
       }
     } catch {
       sessionStorage.removeItem('pending_booking_draft');
@@ -553,7 +728,7 @@ export class BookingModalComponent implements OnInit {
     // Public active providers endpoint filtered by tenant if available
     this.providerService.getActiveProviders(this.tenantId).subscribe({
       next: (activeProviders) => {
-        const filtered = this.tenantId 
+        const filtered = this.tenantId
           ? (activeProviders || []).filter(p => p.tenantId === this.tenantId)
           : (activeProviders || []);
         this.providers.set(filtered);
@@ -565,22 +740,24 @@ export class BookingModalComponent implements OnInit {
           if (match) {
             this.selectedProviderId = match.id;
             this.selectedProvider = match;
-            if (this.currentStep < 2) {
-              this.currentStep = 2; // Jump directly to Calendar + Time Slots!
+            if (this.currentStep === 2) {
               this.fetchSlots();
             }
           }
         } else if (this.authService.isServiceProvider()) {
           const currentUser = this.authService.currentUser();
-          if (currentUser && currentUser.email) {
-            const myProvider = filtered.find(p => p.email.toLowerCase() === currentUser.email.toLowerCase());
+          if (currentUser) {
+            const myProvider = filtered.find(p =>
+              (currentUser.email && p.email && p.email.toLowerCase() === currentUser.email.toLowerCase()) ||
+              (p.userId && p.userId === currentUser.id) ||
+              (p.name && currentUser.fullName && p.name.trim().toLowerCase() === currentUser.fullName.trim().toLowerCase())
+            );
             if (myProvider) {
               this.selectedProviderId = myProvider.id;
               this.selectedProvider = myProvider;
-              if (this.currentStep < 2) {
-                this.currentStep = 2; // Jump directly to Calendar for Service Provider
-                this.fetchSlots();
-              }
+              this.bookingMode = 'direct';
+              this.currentStep = 2;
+              this.fetchSlots();
             }
           }
         }
@@ -638,7 +815,21 @@ export class BookingModalComponent implements OnInit {
   }
 
   getProviderCountForService(st: string): number {
-    return this.providers().filter(p => p.serviceType?.toLowerCase() === st.toLowerCase()).length;
+    const selectedService = this.catalogServices().find(s => s.name.toLowerCase() === st.toLowerCase());
+    return this.providers().filter(p =>
+      (p.serviceType && p.serviceType.toLowerCase() === st.toLowerCase()) ||
+      (selectedService && p.serviceId === selectedService.id)
+    ).length;
+  }
+
+  getServiceSubtitle(st: string): string {
+    const match = this.catalogServices().find(s => s.name.toLowerCase() === st.toLowerCase());
+    const count = this.getProviderCountForService(st);
+    const countText = `${count} ${count === 1 ? 'specialist' : 'specialists'}`;
+    if (match) {
+      return `₹${match.price.toLocaleString('en-IN')} · ${match.durationMinutes} mins · ${countText}`;
+    }
+    return countText;
   }
 
   @HostListener('document:click')
@@ -648,9 +839,16 @@ export class BookingModalComponent implements OnInit {
   }
 
   goToStep2(): void {
-    if (!this.selectedProviderId || !this.selectedProvider) {
-      this.errorMessage.set('Please select a service provider to proceed.');
-      return;
+    if (this.bookingMode === 'broadcast') {
+      if (!this.selectedServiceId || !this.selectedService) {
+        this.errorMessage.set('Please select a service from the catalog to proceed.');
+        return;
+      }
+    } else {
+      if (!this.selectedProviderId || !this.selectedProvider) {
+        this.errorMessage.set('Please select a service provider to proceed.');
+        return;
+      }
     }
     this.errorMessage.set('');
     this.fetchSlots();
@@ -659,12 +857,18 @@ export class BookingModalComponent implements OnInit {
 
   // --- Step 2: Available Time Slots (Hide booked/unavailable and past time slots) ---
   fetchSlots(): void {
-    if (!this.selectedProviderId || !this.selectedDate) return;
+    if (!this.selectedDate) return;
+    if (this.bookingMode === 'broadcast' && !this.selectedServiceId) return;
+    if (this.bookingMode === 'direct' && !this.selectedProviderId) return;
 
     this.isLoadingSlots.set(true);
     this.errorMessage.set('');
 
-    this.appointmentService.getAvailableSlots(this.selectedProviderId, this.selectedDate).subscribe({
+    const slots$ = this.bookingMode === 'broadcast'
+      ? this.appointmentService.getAvailableSlotsByService(this.selectedServiceId!, this.selectedDate, this.tenantId)
+      : this.appointmentService.getAvailableSlots(this.selectedProviderId!, this.selectedDate);
+
+    slots$.subscribe({
       next: (res: ProviderDailyAvailabilityResponseDto) => {
         if (!res) {
           this.isWorkingDay = false;
@@ -725,11 +929,21 @@ export class BookingModalComponent implements OnInit {
 
   redirectToAuth(mode: 'login' | 'register'): void {
     const draft = {
+      bookingMode: this.bookingMode,
+      serviceId: this.selectedServiceId,
+      service: this.selectedService,
       providerId: this.selectedProviderId,
       provider: this.selectedProvider,
       selectedDate: this.selectedDate,
       slot: this.selectedSlot,
       tenantId: this.tenantId,
+      targetStep: this.currentStep === 4 ? 4 : 3,
+      currentStep: this.currentStep,
+      customerName: this.customerName,
+      customerEmail: this.customerEmail,
+      customerPhone: this.customerPhone,
+      customerAddress: this.customerAddress,
+      bookingNotes: this.bookingNotes,
       returnUrl: this.router.url
     };
     sessionStorage.setItem('pending_booking_draft', JSON.stringify(draft));
@@ -750,10 +964,12 @@ export class BookingModalComponent implements OnInit {
       return;
     }
     if (!this.customerEmail.trim()) {
+      this.isEmailTouched = true;
       this.errorMessage.set(this.isStaffOrAdmin() ? 'Please enter customer\'s email address.' : 'Please enter your email address.');
       return;
     }
     if (!isValidEmail(this.customerEmail)) {
+      this.isEmailTouched = true;
       this.errorMessage.set('Please enter a valid email address (e.g. name@example.com).');
       return;
     }
@@ -769,10 +985,7 @@ export class BookingModalComponent implements OnInit {
       this.errorMessage.set(this.isStaffOrAdmin() ? 'Please enter customer\'s complete address.' : 'Please enter your complete address.');
       return;
     }
-    if (!this.bookingNotes.trim()) {
-      this.errorMessage.set('Please enter the reason for visit / appointment purpose.');
-      return;
-    }
+    // Reason for visit is optional
     this.errorMessage.set('');
     this.currentStep = 4;
   }
@@ -786,6 +999,7 @@ export class BookingModalComponent implements OnInit {
   // --- Back Navigation ---
   goBack(): void {
     if (this.currentStep === 2) {
+      if (this.authService.isServiceProvider()) return;
       if (this.returnToStep) {
         const dest = this.returnToStep;
         this.returnToStep = null;
@@ -799,6 +1013,7 @@ export class BookingModalComponent implements OnInit {
   }
 
   backToStep1(): void {
+    if (this.authService.isServiceProvider()) return;
     this.errorMessage.set('');
     this.returnToStep = null;
     this.currentStep = 1;
@@ -816,13 +1031,25 @@ export class BookingModalComponent implements OnInit {
 
   // --- Step 4: Confirm Booking Submission ---
   confirmBooking(): void {
-    if (!this.selectedProviderId || !this.selectedSlot) return;
+    if (!this.selectedSlot) return;
+    if (this.bookingMode === 'direct' && !this.selectedProviderId) return;
+    if (this.bookingMode === 'broadcast' && !this.selectedServiceId) return;
+
+    if (!this.authService.isAuthenticated() && !this.isAdmin()) {
+      this.showAuthPrompt.set(true);
+      return;
+    }
 
     this.isSubmitting.set(true);
     this.errorMessage.set('');
 
+    const resolvedServiceId = this.bookingMode === 'broadcast'
+      ? this.selectedServiceId
+      : (this.selectedProvider?.serviceId || (this.selectedService ? this.selectedService.id : null));
+
     const req: BookAppointmentRequestDto = {
-      serviceProviderId: this.selectedProviderId,
+      serviceProviderId: this.bookingMode === 'direct' ? this.selectedProviderId : null,
+      serviceId: resolvedServiceId,
       appointmentDate: this.selectedDate,
       startTime: this.selectedSlot.startTime,
       endTime: this.selectedSlot.endTime,
@@ -833,13 +1060,16 @@ export class BookingModalComponent implements OnInit {
       reason: this.bookingNotes.trim() || undefined
     };
 
-    this.appointmentService.bookAppointment(req).subscribe({
+    this.appointmentService.bookAppointment(req, this.tenantId).subscribe({
       next: (res: AppointmentDto) => {
         sessionStorage.removeItem('pending_booking_draft');
         this.isSubmitting.set(false);
         this.confirmedAppointment.set(res);
         this.booked.emit(res);
         this.close.emit();
+        if (this.authService.isCustomer()) {
+          this.router.navigate(['/my-appointments']);
+        }
       },
       error: (err) => {
         this.isSubmitting.set(false);
@@ -875,8 +1105,14 @@ export class BookingModalComponent implements OnInit {
   startNewBooking(): void {
     sessionStorage.removeItem('pending_booking_draft');
     this.selectedSlot = null;
+    this.selectedServiceId = null;
+    this.selectedService = null;
+    this.selectedProviderId = null;
+    this.selectedProvider = null;
+    this.bookingMode = 'broadcast';
     this.confirmedAppointment.set(null);
     this.bookingNotes = '';
+    this.isEmailTouched = false;
     this.copiedRef = false;
     this.linkedCustomer = null;
     this.isCustomerNotFound.set(false);

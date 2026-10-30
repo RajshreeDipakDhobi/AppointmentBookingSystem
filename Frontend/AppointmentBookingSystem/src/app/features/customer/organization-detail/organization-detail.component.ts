@@ -4,9 +4,11 @@ import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { TenantService } from '../../../core/services/tenant.service';
 import { ProviderService } from '../../../core/services/provider.service';
+import { ServiceCatalogService } from '../../../core/services/service-catalog.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { TenantDto } from '../../../core/models/tenant.models';
 import { ServiceProviderDto } from '../../../core/models/provider.models';
+import { ServiceDto } from '../../../core/models/service.models';
 import { AppointmentDto } from '../../../core/models/appointment.models';
 import { BookingModalComponent } from '../../appointments/booking-modal/booking-modal.component';
 import { TopbarComponent } from '../../../layout/topbar/topbar.component';
@@ -32,11 +34,14 @@ export class OrganizationDetailComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly tenantService = inject(TenantService);
   private readonly providerService = inject(ProviderService);
+  private readonly serviceCatalogService = inject(ServiceCatalogService);
   private readonly authService = inject(AuthService);
 
   readonly tenant = signal<TenantDto | null>(null);
+  readonly services = signal<ServiceDto[]>([]);
   readonly providers = signal<ServiceProviderDto[]>([]);
   readonly isLoadingTenant = signal<boolean>(true);
+  readonly isLoadingServices = signal<boolean>(false);
   readonly isLoadingProviders = signal<boolean>(false);
   readonly errorMessage = signal<string | null>(null);
 
@@ -46,23 +51,32 @@ export class OrganizationDetailComponent implements OnInit {
   // Modals
   readonly isBookingModalOpen = signal<boolean>(false);
   readonly selectedProviderId = signal<number | null>(null);
+  readonly selectedServiceId = signal<number | null>(null);
   readonly toastMessage = signal<string | null>(null);
 
-  readonly filteredProviders = computed(() => {
+  readonly filteredServices = computed(() => {
     const q = this.searchQuery().trim().toLowerCase();
-    let list = this.providers();
+    let list = this.services();
 
     if (q) {
-      list = list.filter(p =>
-        (p.name && p.name.toLowerCase().includes(q)) ||
-        (p.serviceType && p.serviceType.toLowerCase().includes(q)) ||
-        (p.address && p.address.toLowerCase().includes(q)) ||
-        (p.bio && p.bio.toLowerCase().includes(q))
+      list = list.filter(s =>
+        (s.name && s.name.toLowerCase().includes(q)) ||
+        (s.description && s.description.toLowerCase().includes(q))
       );
     }
 
     return list;
   });
+
+  getProviderCountForService(serviceName: string): number {
+    const sName = serviceName.trim().toLowerCase();
+    const serviceMatch = this.services().find(s => s.name.toLowerCase() === sName);
+    const count = this.providers().filter(p =>
+      (p.serviceType && p.serviceType.toLowerCase() === sName) ||
+      (serviceMatch && p.serviceId === serviceMatch.id)
+    ).length;
+    return count > 0 ? count : (serviceMatch?.providersCount ?? 1);
+  }
 
   ngOnInit(): void {
     this.route.paramMap.subscribe(params => {
@@ -73,6 +87,12 @@ export class OrganizationDetailComponent implements OnInit {
         this.backToDirectory();
       }
     });
+
+    if (!this.authService.isInitialized()) {
+      this.authService.checkAuth().subscribe(() => {
+        this.checkResumeBooking();
+      });
+    }
   }
 
   loadTenantBySlugOrId(slugOrId: string): void {
@@ -91,6 +111,7 @@ export class OrganizationDetailComponent implements OnInit {
         if (found) {
           this.tenant.set(found);
           this.isLoadingTenant.set(false);
+          this.loadServices(found.id);
           this.loadProviders(found.id);
         } else {
           this.isLoadingTenant.set(false);
@@ -104,6 +125,20 @@ export class OrganizationDetailComponent implements OnInit {
     });
   }
 
+  loadServices(tenantId: number): void {
+    this.isLoadingServices.set(true);
+    this.serviceCatalogService.getActiveServices(tenantId).subscribe({
+      next: (list) => {
+        this.services.set(list || []);
+        this.isLoadingServices.set(false);
+        this.checkResumeBooking();
+      },
+      error: () => {
+        this.isLoadingServices.set(false);
+      }
+    });
+  }
+
   loadProviders(tenantId: number): void {
     this.isLoadingProviders.set(true);
     this.providerService.getActiveProviders(tenantId).subscribe({
@@ -111,7 +146,6 @@ export class OrganizationDetailComponent implements OnInit {
         const tenantSpecific = (list || []).filter(p => !tenantId || p.tenantId === tenantId);
         this.providers.set(tenantSpecific);
         this.isLoadingProviders.set(false);
-        this.checkResumeBooking();
       },
       error: () => {
         this.isLoadingProviders.set(false);
@@ -126,8 +160,20 @@ export class OrganizationDetailComponent implements OnInit {
     if (draftRaw && (isResume || this.authService.isAuthenticated())) {
       try {
         const draft = JSON.parse(draftRaw);
-        if (draft && draft.providerId) {
-          this.openBookingModal(draft.providerId);
+        if (draft) {
+          if (draft.serviceId) {
+            this.selectedServiceId.set(draft.serviceId);
+            this.selectedProviderId.set(null);
+            this.isBookingModalOpen.set(true);
+          } else if (draft.providerId) {
+            this.selectedProviderId.set(draft.providerId);
+            this.selectedServiceId.set(null);
+            this.isBookingModalOpen.set(true);
+          } else {
+            this.selectedServiceId.set(null);
+            this.selectedProviderId.set(null);
+            this.isBookingModalOpen.set(true);
+          }
         }
       } catch {
         sessionStorage.removeItem('pending_booking_draft');
@@ -148,12 +194,14 @@ export class OrganizationDetailComponent implements OnInit {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
-  openBookingModal(providerId?: number): void {
-    this.selectedProviderId.set(providerId ?? null);
+  openBookingModal(serviceId?: number): void {
+    this.selectedServiceId.set(serviceId ?? null);
+    this.selectedProviderId.set(null);
     this.isBookingModalOpen.set(true);
   }
 
   closeBookingModal(): void {
+    this.selectedServiceId.set(null);
     this.selectedProviderId.set(null);
     this.isBookingModalOpen.set(false);
   }
@@ -173,22 +221,5 @@ export class OrganizationDetailComponent implements OnInit {
 
   getInitials(name?: string): string {
     return getInitials(name || 'ORG');
-  }
-
-  getAvatarGradient(name: string): string {
-    const gradients = [
-      'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-      'linear-gradient(135deg, #0ea5e9 0%, #3b82f6 100%)',
-      'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-      'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-      'linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%)',
-      'linear-gradient(135deg, #06b6d4 0%, #6366f1 100%)'
-    ];
-    let hash = 0;
-    for (let i = 0; i < (name || '').length; i++) {
-      hash = name.charCodeAt(i) + ((hash << 5) - hash);
-    }
-    const index = Math.abs(hash) % gradients.length;
-    return gradients[index];
   }
 }

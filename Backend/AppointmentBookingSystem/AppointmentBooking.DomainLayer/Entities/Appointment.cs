@@ -10,9 +10,13 @@ public class Appointment : BaseEntity
     // Human-readable unique appointment ID (e.g., "APT-20261014-4821")
     public string AppointmentNumber { get; set; } = string.Empty;
 
-    // Service Provider relation (Required)
-    public int ServiceProviderId { get; set; }
+    // Service Provider relation (Nullable when broadcasted to all specialists until accepted)
+    public int? ServiceProviderId { get; set; }
     public virtual ServiceProvider? ServiceProvider { get; set; }
+
+    // Service relation (Linked to master Service catalog)
+    public int? ServiceId { get; set; }
+    public virtual Service? Service { get; set; }
 
 
     // Customer relation (Single source of truth in User entity - Required)

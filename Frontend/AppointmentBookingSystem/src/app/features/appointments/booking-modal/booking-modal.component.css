@@ -3292,3 +3292,281 @@
     display: none !important;
   }
 }
+
+/* ==========================================================================
+   URBAN COMPANY STYLE: MODE SWITCHER & SERVICE CATALOG CARDS
+   ========================================================================== */
+.booking-mode-switcher-bar {
+  display: flex;
+  align-items: center;
+  background: #f1f6f3;
+  padding: 0.3rem;
+  border-radius: 12px;
+  gap: 0.35rem;
+  margin-bottom: 1.15rem;
+  border: 1px solid #d8e6df;
+}
+
+.mode-tab-btn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.55rem 0.9rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #4a675d;
+  background: transparent;
+  border: none;
+  border-radius: 9px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.mode-tab-btn:hover {
+  color: #183b32;
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.mode-tab-btn.active {
+  background: #ffffff;
+  color: #183b32;
+  box-shadow: 0 2px 8px rgba(24, 59, 50, 0.08);
+  font-weight: 700;
+}
+
+.mode-badge-rec {
+  display: inline-block;
+  background: #e8f5e9;
+  color: #2e7d32;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.15rem 0.45rem;
+  border-radius: 20px;
+  border: 1px solid #c8e6c9;
+}
+
+.service-icon-box {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #e8f5ed 0%, #d1ebe0 100%);
+  color: #1e5142;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 1px solid #bce1d0;
+}
+
+.broadcast-summary-icon-wrap {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #1e5142 0%, #2f7a65 100%);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(30, 81, 66, 0.25);
+}
+
+.duration-mini-badge {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #4a675d;
+  background: #edf4f0;
+  padding: 0.15rem 0.45rem;
+  border-radius: 6px;
+}
+
+/* Luxury Modern Service Catalog Cards */
+.service-catalog-select-card {
+  padding: 1.15rem 1.25rem !important;
+  background: #ffffff !important;
+  border: 1.5px solid #e2ece6 !important;
+  border-radius: 16px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: space-between !important;
+  gap: 0.85rem !important;
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  box-shadow: 0 2px 8px rgba(24, 59, 50, 0.04) !important;
+  cursor: pointer;
+}
+
+.service-catalog-select-card:hover {
+  background: #ffffff !important;
+  border-color: #1e5142 !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 8px 24px rgba(24, 59, 50, 0.09) !important;
+}
+
+.service-catalog-select-card.selected {
+  background: #f7faf8 !important;
+  border-color: #1e5142 !important;
+  box-shadow: 0 0 0 1.5px #1e5142, 0 8px 24px rgba(30, 81, 66, 0.12) !important;
+}
+
+.service-catalog-select-card .provider-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.85rem;
+}
+
+.service-catalog-select-card .service-icon-box {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #e8f5ed 0%, #d8ede2 100%);
+  color: #1e5142;
+  border: 1.5px solid #c2e2d2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+.service-catalog-select-card:hover .service-icon-box {
+  background: linear-gradient(135deg, #1e5142 0%, #2f7a65 100%);
+  color: #ffffff;
+  border-color: #1e5142;
+}
+
+.service-catalog-select-card.selected .service-icon-box {
+  background: #1e5142;
+  color: #ffffff;
+  border-color: #1e5142;
+  box-shadow: 0 3px 8px rgba(30, 81, 66, 0.25);
+}
+
+.service-catalog-select-card .card-provider-name {
+  font-size: 1.02rem;
+  font-weight: 700;
+  color: #183b32;
+  letter-spacing: -0.01em;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.service-catalog-select-card .card-charges-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #134e4a;
+  background: #e6f4ea;
+  border: 1px solid #b7dfca;
+  padding: 0.2rem 0.55rem;
+  border-radius: 6px;
+}
+
+.service-catalog-select-card .card-service-type-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: #475569;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  padding: 0.2rem 0.55rem;
+  border-radius: 6px;
+}
+
+.service-catalog-select-card .btn-select-provider {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border-radius: 9999px;
+  padding: 0.42rem 1.05rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  border: 1.5px solid #d1d5db;
+  background: #ffffff;
+  color: #374151;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.service-catalog-select-card .btn-select-provider:hover {
+  border-color: #1e5142;
+  background: #e8f3ee;
+  color: #1e5142;
+}
+
+.service-catalog-select-card .btn-select-provider.is-selected {
+  background: #1e5142;
+  border-color: #1e5142;
+  color: #ffffff;
+  box-shadow: 0 3px 10px rgba(30, 81, 66, 0.28);
+}
+
+.service-catalog-select-card .provider-card-bio {
+  font-size: 0.82rem;
+  color: #5b756c;
+  line-height: 1.45;
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.service-catalog-select-card .provider-card-footer-meta {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding-top: 0.55rem;
+  border-top: 1px solid #f0f5f2;
+  margin-top: auto;
+}
+
+.service-catalog-select-card .status-verified-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: #2e6050;
+}
+
+/* Optional tag & Field validation */
+.optional-tag {
+  font-size: 0.74rem;
+  font-weight: 500;
+  color: #7b948a;
+  margin-left: 0.35rem;
+  text-transform: none;
+}
+
+.form-control.is-invalid {
+  border-color: #ef4444 !important;
+  background-color: #fff8f8 !important;
+}
+
+.form-control.is-invalid:focus {
+  border-color: #dc2626 !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15) !important;
+}
+
+.field-icon-wrap.field-invalid .field-icon {
+  color: #ef4444 !important;
+}
+
+.field-inline-error {
+  display: block;
+  font-size: 0.74rem;
+  color: #dc2626;
+  font-weight: 500;
+  margin-top: 0.35rem;
+  line-height: 1.25;
+}

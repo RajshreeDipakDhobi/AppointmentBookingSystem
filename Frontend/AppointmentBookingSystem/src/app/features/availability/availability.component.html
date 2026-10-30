@@ -211,7 +211,7 @@
 
                         <div class="d-card-footer">
                           <span class="d-slots-pill">{{ d.totalCalculatedSlots }} Slots</span>
-                          <span class="d-dur-pill">{{ d.slotDurationMinutes }}m duration</span>
+                          <span class="d-dur-pill">{{ d.slotDurationMinutes || 30 }}m slot</span>
                         </div>
                       </div>
 
@@ -317,9 +317,13 @@
             <span class="metric-label">Rest Break</span>
             <span class="metric-val">{{ viewingProvider()?.breakSummary }}</span>
           </div>
+          <div class="summary-metric" *ngIf="viewingProvider()?.specialization">
+            <span class="metric-label">Specialization</span>
+            <span class="metric-val">{{ viewingProvider()?.specialization }}</span>
+          </div>
           <div class="summary-metric">
-            <span class="metric-label">Slot Duration</span>
-            <span class="metric-val">{{ viewingProvider()?.slotDurationMinutes }}m</span>
+            <span class="metric-label">Service Slot Duration</span>
+            <span class="metric-val highlight">{{ viewingProvider()?.slotDurationMinutes || 30 }} mins</span>
           </div>
           <div class="summary-metric">
             <span class="metric-label">Weekly Capacity</span>
@@ -394,7 +398,7 @@
               <span *ngIf="currentViewingDay?.isAvailable" class="heading-timing-tag">{{ currentViewingDay?.timeDisplay }}</span>
             </h4>
             <span class="slots-badge" *ngIf="currentViewingDay?.isAvailable">
-              {{ viewingSlots().length }} Available Slots &bull; {{ currentViewingDay?.slotDurationMinutes }}m duration
+              {{ viewingSlots().length }} Available Slots &bull; {{ currentViewingDay?.slotDurationMinutes || 30 }}m Service Slot
             </span>
           </div>
 
@@ -407,7 +411,7 @@
               </span>
             </h4>
             <span class="slots-badge" *ngIf="selectedViewingSpecificDate?.isAvailable">
-              {{ viewingSlots().length }} Available Slots &bull; {{ selectedViewingSpecificDate?.slotDurationMinutes || 30 }}m duration &bull; Date Override
+              {{ viewingSlots().length }} Available Slots &bull; {{ selectedViewingSpecificDate?.slotDurationMinutes || 30 }}m Service Slot &bull; Date Override
             </span>
             <span class="slots-badge badge-holiday" *ngIf="!selectedViewingSpecificDate?.isAvailable">
               Scheduled Holiday / Leave

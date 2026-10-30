@@ -1238,51 +1238,91 @@
   flex-wrap: wrap;
 }
 
-.date-capsule-picker {
+/* Date Picker Anchor (Matching Calendar Component UI) */
+.date-picker-anchor {
   position: relative;
   display: inline-flex;
+}
+
+.datepicker-anchor-input {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  pointer-events: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  z-index: -1;
+}
+
+.btn-date-pill {
+  display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.38rem 0.75rem;
-  background: #ffffff;
-  border: 1px solid #e2ece6;
+  gap: 7px;
+  padding: 0 12px;
+  height: 34px;
   border-radius: 8px;
+  background: #f4f8f5;
+  border: 1px solid #e2ece6;
+  color: #183b32;
+  font-size: 0.84rem;
+  font-weight: 500;
   cursor: pointer;
-  box-shadow: 0 1px 3px rgba(24, 59, 50, 0.04);
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  user-select: none;
+  box-shadow: 0 1px 4px rgba(24, 59, 50, 0.04);
 }
 
-.date-capsule-picker:hover {
-  border-color: #1e5142;
-  transform: translateY(-1px);
+.btn-date-pill:hover,
+.btn-date-pill.active {
+  background: #e8f3ee;
+  border-color: #b8dacb;
+  color: #1e5142;
+  box-shadow: 0 2px 8px rgba(30, 81, 66, 0.1);
 }
 
-.date-capsule-picker .calendar-icon {
+.date-pill-text {
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: #183b32;
+  white-space: nowrap;
+}
+
+.calendar-icon {
   color: #1e5142;
   flex-shrink: 0;
 }
 
-.date-capsule-text {
-  font-size: 0.82rem;
-  font-weight: 700;
-  color: #183b32;
-  letter-spacing: -0.01em;
-}
-
-.date-capsule-chevron {
+.chevron-mini {
   color: #5b756c;
-  flex-shrink: 0;
+  transition: transform 0.2s ease;
 }
 
-.date-capsule-hidden-input {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  opacity: 0;
-  cursor: pointer;
-  color-scheme: light;
+.chevron-mini.rotated {
+  transform: rotate(180deg);
+}
+
+/* Service Slot & Shift Badges */
+.timing-badges-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.service-slot-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  background: #eef7f2;
+  border: 1px solid #b8dacb;
+  color: #1e5142;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
 }
 
 .date-status-badge {

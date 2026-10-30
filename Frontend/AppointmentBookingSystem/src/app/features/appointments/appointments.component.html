@@ -8,6 +8,14 @@
     </div>
 
     <div class="header-actions">
+      <!-- Service Provider Dispatch Shortcut (Only visible to Specialist, NEVER Admin) -->
+      <button *ngIf="isServiceProvider && incomingRequests().length > 0" type="button" 
+        class="btn-dispatch-round animate-fade-in" 
+        (click)="openDispatchModal()"
+        [title]="incomingRequests().length + ' incoming service request(s) available'">
+        <span class="dispatch-count">{{ incomingRequests().length }}</span>
+      </button>
+
       <button type="button" class="btn btn-primary btn-book" (click)="openBookingModal()">
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
           stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -41,7 +49,8 @@
 
 
 
-  <!-- Controls & Filters Bar -->
+
+
   <!-- Controls & Filters Bar (Luxury Command Dock) -->
   <div class="filter-panel glass-card">
     <!-- Top Row: Search + Provider Dropdown + View Toggle -->
@@ -430,7 +439,15 @@
 
               <!-- 3. Service Provider (Hidden for Service Provider themselves) -->
               <td *ngIf="!isServiceProvider" class="td-provider">
-                <div class="provider-cell">
+                <div *ngIf="!apt.serviceProviderId" class="broadcast-unassigned-cell">
+                  <span class="broadcast-table-tag">
+                    <span class="live-ping-dot-mini"></span>
+                    <span>Broadcasting</span>
+                  </span>
+                  <span class="broadcast-service-sub" *ngIf="apt.serviceName">{{ apt.serviceName }}</span>
+                </div>
+
+                <div *ngIf="apt.serviceProviderId" class="provider-cell">
                   <div class="provider-avatar-circle"
                     [ngStyle]="{'background': getAvatarGradient(apt.serviceProviderName || 'Specialist')}">
                     <img *ngIf="apt.serviceProviderProfilePictureUrl" [src]="apt.serviceProviderProfilePictureUrl"
@@ -479,7 +496,11 @@
 
               <!-- 5. Status -->
               <td class="td-status">
-                <span class="badge" [ngClass]="apt.status | appStatusBadge"
+                <span *ngIf="!apt.serviceProviderId" class="badge badge-dispatch-open" title="Broadcast request open for specialists">
+                  <span class="dot"></span>
+                  <span>Awaiting Specialist</span>
+                </span>
+                <span *ngIf="apt.serviceProviderId" class="badge" [ngClass]="apt.status | appStatusBadge"
                   [title]="apt.status === AppointmentStatus.RescheduleProposed && apt.proposedDate ? ('Proposed Slot: ' + (apt.proposedDate | appDate) + ' ' + (apt.proposedStartTime | appTime) + ' – ' + (apt.proposedEndTime | appTime) + (apt.rescheduleNotes ? ' | Note: ' + apt.rescheduleNotes : '')) : ''">
                   <span class="dot"></span>
                   <span *ngIf="apt.status === AppointmentStatus.Booked">Pending Approval</span>
@@ -490,8 +511,18 @@
               <!-- 6. Actions (Direct View for Admin & Terminal Statuses, Manage Dropdown for Provider on Active Bookings) -->
               <td class="td-actions text-right">
                 <div class="row-actions-group">
+                  <!-- Specialist Review Dispatch Button for Unassigned Broadcast Appointments -->
+                  <button *ngIf="isServiceProvider && !apt.serviceProviderId" type="button" class="btn-dispatch-table-review"
+                    (click)="openDispatchModal(apt)" title="Review and accept dispatch">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none"
+                      stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                      <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+                    </svg>
+                    <span>Review Dispatch</span>
+                  </button>
+
                   <!-- Direct View Button (Admin always; Service Provider when in terminal status: Cancelled, Completed, Rejected) -->
-                  <button *ngIf="isAdmin() || isTerminalStatus(apt.status)" type="button" class="btn-direct-view"
+                  <button *ngIf="isAdmin() || (isTerminalStatus(apt.status) && apt.serviceProviderId)" type="button" class="btn-direct-view"
                     (click)="viewDetails(apt)" title="View Details">
                     <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none"
                       stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
@@ -502,7 +533,7 @@
                   </button>
 
                   <!-- Manage Dropdown for Service Providers on Active / Actionable Bookings ONLY -->
-                  <div *ngIf="!isAdmin() && !isTerminalStatus(apt.status)" class="action-dropdown-wrap"
+                  <div *ngIf="!isAdmin() && !isTerminalStatus(apt.status) && apt.serviceProviderId" class="action-dropdown-wrap"
                     [class.is-open]="openActionDropdownId() === apt.id" [class.drop-up]="i >= 3 && i >= count - 2">
                     <button type="button" class="btn-action-dropdown-trigger"
                       [class.active]="openActionDropdownId() === apt.id" (click)="toggleActionDropdown(apt.id, $event)"
@@ -622,9 +653,15 @@
     </div>
   </div>
 
-
-
   <!-- MODALS -->
+
+  <!-- Service Dispatch Opportunities Modal (Specialist Only) -->
+  <app-service-dispatch-modal *ngIf="isServiceProvider && showDispatchModal" 
+    [requests]="incomingRequests()" 
+    [selectedRequest]="selectedDispatchRequest" 
+    (close)="closeDispatchModal()" 
+    (accepted)="onDispatchAccepted($event)">
+  </app-service-dispatch-modal>
 
   <!-- 1. Book New Appointment Modal -->
   <app-booking-modal *ngIf="showBookingModal" (close)="showBookingModal = false"

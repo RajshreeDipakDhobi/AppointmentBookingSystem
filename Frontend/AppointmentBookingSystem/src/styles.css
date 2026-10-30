@@ -953,10 +953,23 @@ textarea:focus {
 
 .dot,
 .status-dot {
-  width: 6px;
-  height: 6px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
   display: inline-block;
+  flex-shrink: 0;
+  pointer-events: none;
+  transition: all 0.2s ease;
+}
+
+.dot-active {
+  background: #16a34a !important;
+  box-shadow: 0 0 0 2px rgba(22, 163, 74, 0.25) !important;
+}
+
+.dot-inactive {
+  background: #8fa69d !important;
+  box-shadow: 0 0 0 2px rgba(143, 166, 157, 0.25) !important;
 }
 
 .badge-booked {
@@ -1412,6 +1425,11 @@ select option,
   background: #f4f8f5;
 }
 
+.option-dot-box .status-dot {
+  width: 8px;
+  height: 8px;
+}
+
 .option-avatar-circle {
   width: 30px;
   height: 30px;
@@ -1522,6 +1540,12 @@ body:has(.modal-backdrop) .main-wrapper {
    ANGULAR MATERIAL DATEPICKER - ORGANIC LUXURY THEME
    ========================================================================== */
 
+/* CDK Overlay Container - Ensure Overlays (Datepickers, Dialogs, Menus) Float Above Modals */
+.cdk-overlay-container {
+  position: fixed !important;
+  z-index: 200000 !important;
+}
+
 /* ==========================================================================
    MATERIAL DATEPICKER - Modern Luxury Emerald Datepicker (Pixel-Perfect)
    ========================================================================== */
@@ -1539,6 +1563,9 @@ mat-datepicker-content,
   --mat-datepicker-calendar-date-selected-state-background-color: #1e5142 !important;
   --mat-datepicker-calendar-date-selected-state-text-color: #ffffff !important;
   --mat-datepicker-calendar-date-today-outline-color: #1e5142 !important;
+  --mat-datepicker-calendar-date-today-selected-state-background-color: #1e5142 !important;
+  --mat-datepicker-calendar-date-today-selected-state-text-color: #ffffff !important;
+  --mat-datepicker-calendar-date-today-selected-state-outline-color: #1e5142 !important;
   --mat-datepicker-calendar-header-text-color: #183b32 !important;
   --mat-datepicker-calendar-header-divider-color: transparent !important;
   --mat-sys-surface-container-high: #ffffff !important;
@@ -1557,7 +1584,6 @@ mat-datepicker-content,
   border-radius: 16px !important;
   margin-top: 6px !important;
   box-shadow: 0 16px 40px rgba(24, 59, 50, 0.14), 0 2px 8px rgba(24, 59, 50, 0.04) !important;
-  transform: translateZ(0) !important;
 }
 
 /* Smooth Slide-Down Animation */
@@ -1814,13 +1840,25 @@ td.mat-calendar-body-label {
   display: none !important;
 }
 
-.mat-calendar-body-cell-content {
+.mat-calendar-month-view .mat-calendar-body-cell-content {
   width: 30px !important;
   height: 30px !important;
   min-width: 30px !important;
   min-height: 30px !important;
   max-width: 30px !important;
   max-height: 30px !important;
+}
+
+.mat-calendar-year-view .mat-calendar-body-cell-content,
+.mat-calendar-multi-year-view .mat-calendar-body-cell-content {
+  width: 52px !important;
+  height: 32px !important;
+  min-width: 48px !important;
+  max-width: 60px !important;
+  border-radius: 8px !important;
+}
+
+.mat-calendar-body-cell-content {
   margin: auto !important;
   border-radius: 8px !important;
   color: #183b32 !important;
@@ -1873,14 +1911,14 @@ button.mat-calendar-body-disabled {
 }
 
 /* Today Circle (when unselected) */
-.mat-calendar-body-today:not(.mat-calendar-body-selected) .mat-calendar-body-cell-content {
+.mat-calendar-body-today:not([aria-selected="true"]):not(.mat-calendar-body-selected) .mat-calendar-body-cell-content {
   border: 1.5px solid #1e5142 !important;
   color: #1e5142 !important;
   font-weight: 700 !important;
   background: #f0f7f3 !important;
 }
 
-/* Selected Date - Forest Emerald */
+/* Selected Date - Forest Emerald (covers both today and any date when selected) */
 .mat-calendar-body-selected {
   background: transparent !important;
 }
@@ -1888,13 +1926,23 @@ button.mat-calendar-body-disabled {
 .mat-calendar-body-cell.mat-calendar-body-selected .mat-calendar-body-cell-content,
 .mat-calendar-body-cell[aria-selected="true"] .mat-calendar-body-cell-content,
 .mat-calendar-body-selected .mat-calendar-body-cell-content,
-.mat-calendar-body-cell-content.mat-calendar-body-selected {
+.mat-calendar-body-cell-content.mat-calendar-body-selected,
+.mat-calendar-body-cell.mat-calendar-body-today[aria-selected="true"] .mat-calendar-body-cell-content,
+.mat-calendar-body-cell.mat-calendar-body-today.mat-calendar-body-selected .mat-calendar-body-cell-content {
   background: #1e5142 !important;
+  background-color: #1e5142 !important;
   color: #ffffff !important;
   font-weight: 700 !important;
   border-color: transparent !important;
   border-radius: 8px !important;
   box-shadow: 0 3px 10px rgba(30, 81, 66, 0.3) !important;
+}
+
+.mat-calendar-body-cell[aria-selected="true"] .mat-calendar-body-cell-content,
+.mat-calendar-body-cell[aria-selected="true"] span,
+.mat-calendar-body-selected span,
+.mat-calendar-body-cell.mat-calendar-body-today[aria-selected="true"] * {
+  color: #ffffff !important;
 }
 
 .mat-calendar-body-cell-content.mat-focus-indicator {

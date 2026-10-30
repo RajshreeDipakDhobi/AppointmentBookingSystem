@@ -1,0 +1,131 @@
+<div class="modal-backdrop animate-fade-in" (click)="onClose()">
+  <div class="modal-card glass-card modal-dispatch-dialog animate-scale-up" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
+
+    <!-- Modal Header -->
+    <div class="modal-header">
+      <div class="header-content">
+        <div class="title-with-counter">
+          <h3 class="modal-title">New Service Request</h3>
+          <span *ngIf="requests.length > 1" class="requests-count-badge">
+            {{ requests.length }} Requests
+          </span>
+        </div>
+        <p class="modal-subtitle">Review incoming booking details to accept or decline.</p>
+      </div>
+
+      <button type="button" class="btn-close" (click)="onClose()" aria-label="Close modal">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18" />
+          <line x1="6" y1="6" x2="18" y2="18" />
+        </svg>
+      </button>
+    </div>
+
+    <!-- Error Banner -->
+    <div *ngIf="errorMessage()" class="alert alert-error">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10" />
+        <line x1="12" y1="8" x2="12" y2="12" />
+        <line x1="12" y1="16" x2="12.01" y2="16" />
+      </svg>
+      <span>{{ errorMessage() }}</span>
+    </div>
+
+    <!-- Body -->
+    <div class="modal-body custom-scrollbar" *ngIf="activeRequest as req">
+
+      <!-- Multiple Requests Switcher Bar (Only shown if > 1 request exists) -->
+      <div *ngIf="requests.length > 1" class="requests-switcher-bar">
+        <button *ngFor="let r of requests; let idx = index"
+          type="button"
+          class="request-switcher-pill"
+          [class.active]="req.id === r.id"
+          (click)="selectRequest(r)"
+          [title]="'View request #' + (idx + 1) + ': ' + (r.serviceName || r.serviceProviderType)">
+          <span class="pill-dot"></span>
+          <span class="pill-number">#{{ idx + 1 }}</span>
+          <span class="pill-service">{{ r.serviceName || r.serviceProviderType }}</span>
+          <span *ngIf="r.servicePrice" class="pill-price">₹{{ r.servicePrice | number }}</span>
+        </button>
+      </div>
+
+      <!-- Request Details Card (Matching project's standard current-schedule-strip) -->
+      <div class="current-schedule-strip">
+        <div class="strip-item">
+          <span class="strip-label">Appointment ID</span>
+          <span class="strip-val monospace">#{{ req.appointmentNumber }}</span>
+        </div>
+
+        <div class="strip-item">
+          <span class="strip-label">Service</span>
+          <div class="strip-val font-semibold">
+            <span>{{ req.serviceName || req.serviceProviderType }}</span>
+            <span *ngIf="req.servicePrice" class="service-price-tag">₹{{ req.servicePrice | number }}</span>
+            <span *ngIf="req.serviceDurationMinutes" class="service-duration-tag">({{ req.serviceDurationMinutes }} mins)</span>
+          </div>
+        </div>
+
+        <div class="strip-item">
+          <span class="strip-label">Customer</span>
+          <span class="strip-val">
+            {{ req.customerName }}
+            <span *ngIf="req.customerPhone && req.customerPhone !== '-'" class="sub-contact">({{ req.customerPhone | appPhone }})</span>
+          </span>
+        </div>
+
+        <div class="strip-item" *ngIf="req.customerAddress">
+          <span class="strip-label">Location / Address</span>
+          <span class="strip-val location-val">
+            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+              <circle cx="12" cy="10" r="3" />
+            </svg>
+            <span>{{ req.customerAddress }}</span>
+          </span>
+        </div>
+
+        <div class="strip-item">
+          <span class="strip-label">Scheduled Time</span>
+          <span class="strip-val current-highlight">
+            {{ req.appointmentDate | appDate }} at {{ req.startTime | appTime }} – {{ req.endTime | appTime }}
+          </span>
+        </div>
+
+        <div class="strip-item" *ngIf="req.reason">
+          <span class="strip-label">Customer Note</span>
+          <span class="strip-val notes-val">“{{ req.reason }}”</span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Empty State -->
+    <div class="modal-body" *ngIf="!activeRequest">
+      <div class="empty-state-simple">
+        <p>No pending service requests available at this moment.</p>
+      </div>
+    </div>
+
+    <!-- Modal Footer Actions: ONLY ACCEPT & DECLINE -->
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary" [disabled]="isAcceptingId() !== null" (click)="declineCurrent()">
+        Decline
+      </button>
+
+      <button *ngIf="activeRequest as req" 
+        type="button" 
+        class="btn btn-primary btn-accept" 
+        [disabled]="isAcceptingId() === req.id"
+        (click)="acceptRequest(req)">
+        <span *ngIf="isAcceptingId() === req.id" class="spinner-small"></span>
+        <svg *ngIf="isAcceptingId() !== req.id" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="20 6 9 17 4 12" />
+        </svg>
+        <span>{{ isAcceptingId() === req.id ? 'Accepting...' : 'Accept Request' }}</span>
+      </button>
+    </div>
+
+  </div>
+</div>

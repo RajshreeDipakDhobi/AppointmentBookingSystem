@@ -21,6 +21,7 @@ public class AvailabilityService : IAvailabilityService
         var providers = await _unitOfWork.Repository<ServiceProvider>()
             .Query()
             .Include(p => p.User)
+            .Include(p => p.Service)
             .Where(p => p.TenantId == tenantId)
             .OrderBy(p => p.User.FirstName)
             .ToListAsync(cancellationToken);
@@ -45,6 +46,10 @@ public class AvailabilityService : IAvailabilityService
 
         foreach (var provider in providers)
         {
+            int serviceDuration = (provider.Service != null && provider.Service.DurationMinutes > 0)
+                ? provider.Service.DurationMinutes
+                : 30;
+
             var providerRecords = allAvailabilities.Where(pa => pa.ServiceProviderId == provider.Id).ToList();
             var daySummaries = new List<DayScheduleSummaryDto>();
 
@@ -53,10 +58,11 @@ public class AvailabilityService : IAvailabilityService
                 var match = providerRecords.FirstOrDefault(r => r.DayOfWeek == day);
                 if (match != null && match.IsAvailable)
                 {
+                    int effectiveDuration = serviceDuration;
                     var blockedList = !string.IsNullOrWhiteSpace(match.BlockedSlots)
                         ? match.BlockedSlots.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
                         : null;
-                    var slots = CalculateSlots(match.StartTime, match.EndTime, match.SlotDurationMinutes, match.BreakStartTime, match.BreakEndTime, blockedList);
+                    var slots = CalculateSlots(match.StartTime, match.EndTime, effectiveDuration, match.BreakStartTime, match.BreakEndTime, blockedList);
                     var bookableCount = slots.Count(s => !s.IsBreak);
 
                     var startTimeStr = $"{match.StartTime.Hours:D2}:{match.StartTime.Minutes:D2}";
@@ -77,7 +83,7 @@ public class AvailabilityService : IAvailabilityService
                         EndTime = endTimeStr,
                         BreakStartTime = breakStartStr,
                         BreakEndTime = breakEndStr,
-                        SlotDurationMinutes = match.SlotDurationMinutes,
+                        SlotDurationMinutes = effectiveDuration,
                         BlockedSlots = match.BlockedSlots,
                         BlockedSlotList = blockedList?.ToList(),
                         TotalCalculatedSlots = bookableCount,
@@ -95,7 +101,7 @@ public class AvailabilityService : IAvailabilityService
                         EndTime = null,
                         BreakStartTime = null,
                         BreakEndTime = null,
-                        SlotDurationMinutes = match?.SlotDurationMinutes ?? 30,
+                        SlotDurationMinutes = serviceDuration,
                         TotalCalculatedSlots = 0,
                         TimeDisplay = "Off",
                         BreakDisplay = "None"
@@ -106,7 +112,7 @@ public class AvailabilityService : IAvailabilityService
             var activeDays = daySummaries.Where(d => d.IsAvailable).ToList();
             bool isConfigured = activeDays.Any();
             int totalWeeklySlots = activeDays.Sum(d => d.TotalCalculatedSlots);
-            int slotDuration = activeDays.FirstOrDefault()?.SlotDurationMinutes ?? 30;
+            int slotDuration = serviceDuration;
 
             string activeDaysSummary = "Not Configured";
             string workingHoursSummary = "Not Set";
@@ -157,11 +163,11 @@ public class AvailabilityService : IAvailabilityService
             providerItems.Add(new ProviderScheduleOverviewItemDto
             {
                 ProviderId = provider.Id,
-                ProviderName = provider.Name,
-                Specialization = provider.ServiceType,
-                Email = provider.Email,
-                PhoneNumber = provider.PhoneNumber,
-                ProfilePictureUrl = provider.ProfilePictureUrl,
+                ProviderName = provider.User != null ? $"{provider.User.FirstName} {provider.User.LastName}".Trim() : string.Empty,
+                Specialization = provider.Service?.Name ?? string.Empty,
+                Email = provider.User?.Email ?? string.Empty,
+                PhoneNumber = provider.User?.PhoneNumber ?? string.Empty,
+                ProfilePictureUrl = provider.User?.ProfilePictureUrl,
                 IsConfigured = isConfigured,
                 ActiveDaysCount = activeDays.Count,
                 ActiveDaysSummary = activeDaysSummary,
@@ -199,12 +205,19 @@ public class AvailabilityService : IAvailabilityService
     {
         var provider = await _unitOfWork.Repository<ServiceProvider>()
             .Query()
+            .Include(p => p.User)
+            .Include(p => p.Service)
             .FirstOrDefaultAsync(p => p.Id == providerId && p.TenantId == tenantId, cancellationToken);
 
         if (provider == null)
         {
             return null;
         }
+
+        var providerName = provider.User != null ? $"{provider.User.FirstName} {provider.User.LastName}".Trim() : string.Empty;
+        int effectiveDuration = (provider.Service != null && provider.Service.DurationMinutes > 0)
+            ? provider.Service.DurationMinutes
+            : 30;
 
         var existingRecords = await _unitOfWork.Repository<ProviderAvailability>()
             .Query()
@@ -233,19 +246,19 @@ public class AvailabilityService : IAvailabilityService
                 var blockedList = !string.IsNullOrWhiteSpace(match.BlockedSlots)
                     ? match.BlockedSlots.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
                     : null;
-                var slots = CalculateSlots(match.StartTime, match.EndTime, match.SlotDurationMinutes, match.BreakStartTime, match.BreakEndTime, blockedList);
+                var slots = CalculateSlots(match.StartTime, match.EndTime, effectiveDuration, match.BreakStartTime, match.BreakEndTime, blockedList);
                 result.Add(new ProviderAvailabilityDto
                 {
                     Id = match.Id,
                     ServiceProviderId = providerId,
-                    ServiceProviderName = provider.Name,
+                    ServiceProviderName = providerName,
                     DayOfWeek = match.DayOfWeek,
                     SpecificDate = match.SpecificDate,
                     StartTime = $"{match.StartTime.Hours:D2}:{match.StartTime.Minutes:D2}",
                     EndTime = $"{match.EndTime.Hours:D2}:{match.EndTime.Minutes:D2}",
                     BreakStartTime = match.BreakStartTime.HasValue ? $"{match.BreakStartTime.Value.Hours:D2}:{match.BreakStartTime.Value.Minutes:D2}" : null,
                     BreakEndTime = match.BreakEndTime.HasValue ? $"{match.BreakEndTime.Value.Hours:D2}:{match.BreakEndTime.Value.Minutes:D2}" : null,
-                    SlotDurationMinutes = match.SlotDurationMinutes,
+                    SlotDurationMinutes = effectiveDuration,
                     BlockedSlots = match.BlockedSlots,
                     IsAvailable = match.IsAvailable,
                     TotalCalculatedSlots = match.IsAvailable ? slots.Count(s => !s.IsBreak && !s.IsBlocked) : 0
@@ -257,14 +270,14 @@ public class AvailabilityService : IAvailabilityService
                 {
                     Id = 0,
                     ServiceProviderId = providerId,
-                    ServiceProviderName = provider.Name,
+                    ServiceProviderName = providerName,
                     DayOfWeek = day,
                     SpecificDate = null,
                     StartTime = null,
                     EndTime = null,
                     BreakStartTime = null,
                     BreakEndTime = null,
-                    SlotDurationMinutes = 30,
+                    SlotDurationMinutes = effectiveDuration,
                     BlockedSlots = null,
                     IsAvailable = false,
                     TotalCalculatedSlots = 0
@@ -283,12 +296,20 @@ public class AvailabilityService : IAvailabilityService
     {
         var provider = await _unitOfWork.Repository<ServiceProvider>()
             .Query()
+            .Include(p => p.User)
+            .Include(p => p.Service)
             .FirstOrDefaultAsync(p => p.Id == request.ServiceProviderId && p.TenantId == tenantId, cancellationToken);
 
         if (provider == null)
         {
             return null;
         }
+
+        int effectiveDuration = (provider.Service != null && provider.Service.DurationMinutes > 0)
+            ? provider.Service.DurationMinutes
+            : 30;
+
+        var providerName = provider.User != null ? $"{provider.User.FirstName} {provider.User.LastName}".Trim() : string.Empty;
 
         var existingRecords = await _unitOfWork.Repository<ProviderAvailability>()
             .Query()
@@ -331,7 +352,7 @@ public class AvailabilityService : IAvailabilityService
                 existing.EndTime = endTime;
                 existing.BreakStartTime = breakStartTime;
                 existing.BreakEndTime = breakEndTime;
-                existing.SlotDurationMinutes = schedule.SlotDurationMinutes;
+                existing.SlotDurationMinutes = effectiveDuration;
                 existing.BlockedSlots = blockedSlotsStr;
                 existing.IsAvailable = schedule.IsAvailable;
                 existing.UpdatedAt = DateTime.UtcNow;
@@ -350,7 +371,7 @@ public class AvailabilityService : IAvailabilityService
                     EndTime = endTime,
                     BreakStartTime = breakStartTime,
                     BreakEndTime = breakEndTime,
-                    SlotDurationMinutes = schedule.SlotDurationMinutes,
+                    SlotDurationMinutes = effectiveDuration,
                     BlockedSlots = blockedSlotsStr,
                     IsAvailable = schedule.IsAvailable,
                     CreatedAt = DateTime.UtcNow,
@@ -373,12 +394,19 @@ public class AvailabilityService : IAvailabilityService
     {
         var provider = await _unitOfWork.Repository<ServiceProvider>()
             .Query()
+            .Include(p => p.User)
+            .Include(p => p.Service)
             .FirstOrDefaultAsync(p => p.Id == providerId && p.TenantId == tenantId, cancellationToken);
 
         if (provider == null)
         {
             return null;
         }
+
+        var providerName = provider.User != null ? $"{provider.User.FirstName} {provider.User.LastName}".Trim() : string.Empty;
+        int effectiveDuration = (provider.Service != null && provider.Service.DurationMinutes > 0)
+            ? provider.Service.DurationMinutes
+            : 30;
 
         var records = await _unitOfWork.Repository<ProviderAvailability>()
             .Query()
@@ -392,20 +420,20 @@ public class AvailabilityService : IAvailabilityService
             var blockedList = !string.IsNullOrWhiteSpace(r.BlockedSlots)
                 ? r.BlockedSlots.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
                 : null;
-            var slots = CalculateSlots(r.StartTime, r.EndTime, r.SlotDurationMinutes, r.BreakStartTime, r.BreakEndTime, blockedList);
+            var slots = CalculateSlots(r.StartTime, r.EndTime, effectiveDuration, r.BreakStartTime, r.BreakEndTime, blockedList);
 
             result.Add(new ProviderAvailabilityDto
             {
                 Id = r.Id,
                 ServiceProviderId = providerId,
-                ServiceProviderName = provider.Name,
+                ServiceProviderName = providerName,
                 DayOfWeek = r.DayOfWeek,
                 SpecificDate = r.SpecificDate,
                 StartTime = $"{r.StartTime.Hours:D2}:{r.StartTime.Minutes:D2}",
                 EndTime = $"{r.EndTime.Hours:D2}:{r.EndTime.Minutes:D2}",
                 BreakStartTime = r.BreakStartTime.HasValue ? $"{r.BreakStartTime.Value.Hours:D2}:{r.BreakStartTime.Value.Minutes:D2}" : null,
                 BreakEndTime = r.BreakEndTime.HasValue ? $"{r.BreakEndTime.Value.Hours:D2}:{r.BreakEndTime.Value.Minutes:D2}" : null,
-                SlotDurationMinutes = r.SlotDurationMinutes,
+                SlotDurationMinutes = effectiveDuration,
                 BlockedSlots = r.BlockedSlots,
                 IsAvailable = r.IsAvailable,
                 TotalCalculatedSlots = r.IsAvailable ? slots.Count(s => !s.IsBreak && !s.IsBlocked) : 0
@@ -423,12 +451,20 @@ public class AvailabilityService : IAvailabilityService
     {
         var provider = await _unitOfWork.Repository<ServiceProvider>()
             .Query()
+            .Include(p => p.User)
+            .Include(p => p.Service)
             .FirstOrDefaultAsync(p => p.Id == request.ServiceProviderId && p.TenantId == tenantId, cancellationToken);
 
         if (provider == null)
         {
             return null;
         }
+
+        int effectiveDuration = (provider.Service != null && provider.Service.DurationMinutes > 0)
+            ? provider.Service.DurationMinutes
+            : 30;
+
+        var providerName = provider.User != null ? $"{provider.User.FirstName} {provider.User.LastName}".Trim() : string.Empty;
 
         if (!TimeSpan.TryParse(request.StartTime, out var startTime))
         {
@@ -472,7 +508,7 @@ public class AvailabilityService : IAvailabilityService
             existing.EndTime = endTime;
             existing.BreakStartTime = breakStartTime;
             existing.BreakEndTime = breakEndTime;
-            existing.SlotDurationMinutes = request.SlotDurationMinutes;
+            existing.SlotDurationMinutes = effectiveDuration;
             existing.BlockedSlots = blockedSlotsStr;
             existing.IsAvailable = request.IsAvailable;
             existing.UpdatedAt = DateTime.UtcNow;
@@ -483,20 +519,20 @@ public class AvailabilityService : IAvailabilityService
             var blockedList = !string.IsNullOrWhiteSpace(existing.BlockedSlots)
                 ? existing.BlockedSlots.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
                 : null;
-            var slots = CalculateSlots(existing.StartTime, existing.EndTime, existing.SlotDurationMinutes, existing.BreakStartTime, existing.BreakEndTime, blockedList);
+            var slots = CalculateSlots(existing.StartTime, existing.EndTime, effectiveDuration, existing.BreakStartTime, existing.BreakEndTime, blockedList);
 
             return new ProviderAvailabilityDto
             {
                 Id = existing.Id,
                 ServiceProviderId = request.ServiceProviderId,
-                ServiceProviderName = provider.Name,
+                ServiceProviderName = providerName,
                 DayOfWeek = existing.DayOfWeek,
                 SpecificDate = existing.SpecificDate,
                 StartTime = $"{existing.StartTime.Hours:D2}:{existing.StartTime.Minutes:D2}",
                 EndTime = $"{existing.EndTime.Hours:D2}:{existing.EndTime.Minutes:D2}",
                 BreakStartTime = existing.BreakStartTime.HasValue ? $"{existing.BreakStartTime.Value.Hours:D2}:{existing.BreakStartTime.Value.Minutes:D2}" : null,
                 BreakEndTime = existing.BreakEndTime.HasValue ? $"{existing.BreakEndTime.Value.Hours:D2}:{existing.BreakEndTime.Value.Minutes:D2}" : null,
-                SlotDurationMinutes = existing.SlotDurationMinutes,
+                SlotDurationMinutes = effectiveDuration,
                 BlockedSlots = existing.BlockedSlots,
                 IsAvailable = existing.IsAvailable,
                 TotalCalculatedSlots = existing.IsAvailable ? slots.Count(s => !s.IsBreak && !s.IsBlocked) : 0
@@ -514,7 +550,7 @@ public class AvailabilityService : IAvailabilityService
                 EndTime = endTime,
                 BreakStartTime = breakStartTime,
                 BreakEndTime = breakEndTime,
-                SlotDurationMinutes = request.SlotDurationMinutes,
+                SlotDurationMinutes = effectiveDuration,
                 BlockedSlots = blockedSlotsStr,
                 IsAvailable = request.IsAvailable,
                 CreatedAt = DateTime.UtcNow,
@@ -527,20 +563,20 @@ public class AvailabilityService : IAvailabilityService
             var blockedList = !string.IsNullOrWhiteSpace(newRecord.BlockedSlots)
                 ? newRecord.BlockedSlots.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
                 : null;
-            var slots = CalculateSlots(newRecord.StartTime, newRecord.EndTime, newRecord.SlotDurationMinutes, newRecord.BreakStartTime, newRecord.BreakEndTime, blockedList);
+            var slots = CalculateSlots(newRecord.StartTime, newRecord.EndTime, effectiveDuration, newRecord.BreakStartTime, newRecord.BreakEndTime, blockedList);
 
             return new ProviderAvailabilityDto
             {
                 Id = newRecord.Id,
                 ServiceProviderId = request.ServiceProviderId,
-                ServiceProviderName = provider.Name,
+                ServiceProviderName = providerName,
                 DayOfWeek = newRecord.DayOfWeek,
                 SpecificDate = newRecord.SpecificDate,
                 StartTime = $"{newRecord.StartTime.Hours:D2}:{newRecord.StartTime.Minutes:D2}",
                 EndTime = $"{newRecord.EndTime.Hours:D2}:{newRecord.EndTime.Minutes:D2}",
                 BreakStartTime = newRecord.BreakStartTime.HasValue ? $"{newRecord.BreakStartTime.Value.Hours:D2}:{newRecord.BreakStartTime.Value.Minutes:D2}" : null,
                 BreakEndTime = newRecord.BreakEndTime.HasValue ? $"{newRecord.BreakEndTime.Value.Hours:D2}:{newRecord.BreakEndTime.Value.Minutes:D2}" : null,
-                SlotDurationMinutes = newRecord.SlotDurationMinutes,
+                SlotDurationMinutes = effectiveDuration,
                 BlockedSlots = newRecord.BlockedSlots,
                 IsAvailable = newRecord.IsAvailable,
                 TotalCalculatedSlots = newRecord.IsAvailable ? slots.Count(s => !s.IsBreak && !s.IsBlocked) : 0
@@ -556,12 +592,19 @@ public class AvailabilityService : IAvailabilityService
     {
         var provider = await _unitOfWork.Repository<ServiceProvider>()
             .Query()
+            .Include(p => p.User)
+            .Include(p => p.Service)
             .FirstOrDefaultAsync(p => p.Id == providerId && p.TenantId == tenantId, cancellationToken);
 
         if (provider == null)
         {
             return null;
         }
+
+        var providerName = provider.User != null ? $"{provider.User.FirstName} {provider.User.LastName}".Trim() : string.Empty;
+        int effectiveDuration = (provider.Service != null && provider.Service.DurationMinutes > 0)
+            ? provider.Service.DurationMinutes
+            : 30;
 
         var targetDate = date.Date;
 
@@ -591,14 +634,14 @@ public class AvailabilityService : IAvailabilityService
             {
                 Id = 0,
                 ServiceProviderId = providerId,
-                ServiceProviderName = provider.Name,
+                ServiceProviderName = providerName,
                 DayOfWeek = targetDate.DayOfWeek,
                 SpecificDate = targetDate,
                 StartTime = null,
                 EndTime = null,
                 BreakStartTime = null,
                 BreakEndTime = null,
-                SlotDurationMinutes = 30,
+                SlotDurationMinutes = effectiveDuration,
                 BlockedSlots = null,
                 IsAvailable = false,
                 TotalCalculatedSlots = 0
@@ -608,20 +651,20 @@ public class AvailabilityService : IAvailabilityService
         var blockedList = !string.IsNullOrWhiteSpace(match.BlockedSlots)
             ? match.BlockedSlots.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             : null;
-        var slots = CalculateSlots(match.StartTime, match.EndTime, match.SlotDurationMinutes, match.BreakStartTime, match.BreakEndTime, blockedList);
+        var slots = CalculateSlots(match.StartTime, match.EndTime, effectiveDuration, match.BreakStartTime, match.BreakEndTime, blockedList);
 
         return new ProviderAvailabilityDto
         {
             Id = match.Id,
             ServiceProviderId = providerId,
-            ServiceProviderName = provider.Name,
+            ServiceProviderName = providerName,
             DayOfWeek = match.DayOfWeek,
             SpecificDate = match.SpecificDate ?? targetDate,
             StartTime = $"{match.StartTime.Hours:D2}:{match.StartTime.Minutes:D2}",
             EndTime = $"{match.EndTime.Hours:D2}:{match.EndTime.Minutes:D2}",
             BreakStartTime = match.BreakStartTime.HasValue ? $"{match.BreakStartTime.Value.Hours:D2}:{match.BreakStartTime.Value.Minutes:D2}" : null,
             BreakEndTime = match.BreakEndTime.HasValue ? $"{match.BreakEndTime.Value.Hours:D2}:{match.BreakEndTime.Value.Minutes:D2}" : null,
-            SlotDurationMinutes = match.SlotDurationMinutes,
+            SlotDurationMinutes = effectiveDuration,
             BlockedSlots = match.BlockedSlots,
             IsAvailable = match.IsAvailable,
             TotalCalculatedSlots = match.IsAvailable ? slots.Count(s => !s.IsBreak && !s.IsBlocked) : 0

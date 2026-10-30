@@ -4,8 +4,11 @@ namespace AppointmentBooking.BusinessLayer.Features.Appointments.DTOs;
 
 public class BookAppointmentRequestDto
 {
-    [Required]
-    public int ServiceProviderId { get; set; }
+    // Optional: If null, broadcasted to all available specialists offering this Service
+    public int? ServiceProviderId { get; set; }
+
+    // Required: Which service the customer wants
+    public int? ServiceId { get; set; }
 
     [Required]
     public DateTime AppointmentDate { get; set; }

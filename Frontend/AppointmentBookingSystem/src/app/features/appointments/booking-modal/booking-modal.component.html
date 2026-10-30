@@ -5,8 +5,8 @@
     <!-- Modal Header: Aligned with standard modals -->
     <div class="modal-header">
       <div class="header-left">
-        <!-- Back Arrow Button (Visible after Step 1) -->
-        <button *ngIf="currentStep > 1 && currentStep < 5" type="button" class="btn-back-header" (click)="goBack()"
+        <!-- Back Arrow Button (Visible when previous step navigation is permitted) -->
+        <button *ngIf="canGoBack" type="button" class="btn-back-header" (click)="goBack()"
           [attr.aria-label]="(currentStep === 2 && returnToStep === 3) ? 'Back to Customer Details' : 'Go to previous step'"
           [title]="(currentStep === 2 && returnToStep === 3) ? 'Back to Customer Details' : 'Back'">
           <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
@@ -19,7 +19,8 @@
         <div class="modal-title-wrap">
           <h3 class="modal-title">
             <ng-container [ngSwitch]="currentStep">
-              <span *ngSwitchCase="1">Select Service Provider</span>
+              <span *ngSwitchCase="1">{{ bookingMode === 'broadcast' ? 'Select Service' : 'Select Service Provider'
+                }}</span>
               <span *ngSwitchCase="2">Select Date & Available Time</span>
               <span *ngSwitchCase="3">{{ isStaffOrAdmin() ? 'Customer Details' : 'Your Information' }}</span>
               <span *ngSwitchCase="4">Review & Confirm</span>
@@ -36,7 +37,8 @@
           </h3>
           <p class="modal-subtitle">
             <ng-container [ngSwitch]="currentStep">
-              <span *ngSwitchCase="1">Choose an active provider for your appointment</span>
+              <span *ngSwitchCase="1">{{ bookingMode === 'broadcast' ? 'Choose a service from our catalog to book your
+                appointment' : 'Choose an active provider for your appointment' }}</span>
               <span *ngSwitchCase="2">Choose an appointment date and available time slot</span>
               <span *ngSwitchCase="3">{{ isStaffOrAdmin() ? 'Search existing customer to auto-fill or enter walk-in
                 details' : 'Provide contact details for booking confirmation' }}</span>
@@ -72,258 +74,349 @@
     <div class="modal-body custom-scrollbar">
 
       <!-- ======================================================== -->
-      <!-- STEP 1: Select a Service Provider                        -->
+      <!-- STEP 1: Select a Service or Specialist                  -->
       <!-- ======================================================== -->
       <div *ngIf="currentStep === 1" class="step-pane animate-fade-in">
 
-        <!-- Search & Service Type Dropdown Filter Bar -->
-        <div class="provider-filters-row">
-          <!-- Text Search Box -->
-          <div class="provider-search-box">
-            <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
-              fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="11" cy="11" r="8" />
-              <line x1="21" y1="21" x2="16.65" y2="16.65" />
-            </svg>
-            <input type="text" [ngModel]="providerSearchQuery()" (ngModelChange)="providerSearchQuery.set($event)"
-              placeholder="Search by name, service, location..." class="provider-search-input" />
-            <button *ngIf="providerSearchQuery()" type="button" class="btn-clear-mini-search"
-              (click)="providerSearchQuery.set('')" title="Clear search">✕</button>
+        <!-- MODE A: Broadcast Flow (Select Service from Catalog) -->
+        <div *ngIf="bookingMode === 'broadcast'" class="broadcast-service-select-pane animate-fade-in">
+          <!-- Service Search Box -->
+          <div class="provider-filters-row">
+            <div class="provider-search-box">
+              <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+              <input type="text" [ngModel]="serviceSearchQuery()" (ngModelChange)="serviceSearchQuery.set($event)"
+                placeholder="Search catalog services (e.g. Hair Spa, Facial, Haircut)..."
+                class="provider-search-input" />
+              <button *ngIf="serviceSearchQuery()" type="button" class="btn-clear-mini-search"
+                (click)="serviceSearchQuery.set('')" title="Clear search">✕</button>
+            </div>
+            <span class="providers-count-pill" *ngIf="!isLoadingServices()">
+              {{ filteredCatalogServices().length }} {{ filteredCatalogServices().length === 1 ? 'service' : 'services'
+              }}
+            </span>
           </div>
 
-          <!-- Custom Glassmorphism Service Dropdown Filter (Matching Calendar Component) -->
-          <div class="custom-select-anchor service-select-anchor" [class.menu-open]="isServiceDropdownOpen"
-            [class.has-selection]="selectedServiceType() !== 'ALL'">
-            <button type="button" class="custom-select-trigger" (click)="toggleServiceDropdown($event)"
-              [title]="'Filter by service: ' + selectedServiceLabel()" aria-haspopup="listbox"
-              [attr.aria-expanded]="isServiceDropdownOpen">
-              <!-- Left Icon -->
-              <div class="trigger-icon-wrap">
-                <span class="trigger-default-icon">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
-                    stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
-                    <line x1="7" y1="7" x2="7.01" y2="7" />
-                  </svg>
-                </span>
-              </div>
+          <!-- Loading Services -->
+          <div *ngIf="isLoadingServices()" class="providers-loading-pane">
+            <div class="spinner-small"></div>
+            <span>Loading service catalog...</span>
+          </div>
 
-              <!-- Label Display -->
-              <div class="trigger-label-group">
-                <span class="trigger-main-text">{{ selectedServiceLabel() }}</span>
-              </div>
-
-              <!-- Inline Clear Button (Reset service filter) -->
-              <span *ngIf="selectedServiceType() !== 'ALL'" class="trigger-clear-btn"
-                (click)="clearServiceSelection($event)" title="Reset to All Services" role="button">✕</span>
-
-              <!-- Chevron Indicator -->
-              <svg class="trigger-chevron" [class.rotated]="isServiceDropdownOpen" xmlns="http://www.w3.org/2000/svg"
-                width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
-                stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="6 9 12 15 18 9" />
-              </svg>
-            </button>
-
-            <!-- Glassmorphism Dropdown Popover Menu -->
-            <div *ngIf="isServiceDropdownOpen" class="custom-dropdown-popover animate-scale-up"
-              (click)="$event.stopPropagation()">
-              <div class="popover-header">
-                <span class="popover-header-title">Filter by Service</span>
-                <div class="popover-header-right">
-                  <span class="popover-count-pill" *ngIf="selectedServiceType() === 'ALL'">
-                    {{ serviceTypes().length }} Total
-                  </span>
-
-                  <ng-container *ngIf="selectedServiceType() !== 'ALL'">
-                    <span class="popover-selected-pill">1 selected</span>
-                    <button type="button" class="btn-popover-reset" (click)="selectService('ALL', $event)"
-                      title="Reset to all services">
-                      Reset
-                    </button>
-                  </ng-container>
-                </div>
-              </div>
-
-              <!-- Service Search Input Box (Shown if more than 3 services) -->
-              <div class="popover-search-container" *ngIf="serviceTypes().length > 3">
-                <div class="popover-search-box">
-                  <svg class="popover-search-icon" xmlns="http://www.w3.org/2000/svg" width="13" height="13"
-                    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"
-                    stroke-linejoin="round">
-                    <circle cx="11" cy="11" r="8"></circle>
-                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                  </svg>
-                  <input type="text" class="popover-search-input" placeholder="Search service or specialty..."
-                    [value]="serviceSearchQuery()" (input)="onServiceSearchInput($event)"
-                    (click)="$event.stopPropagation()" autocomplete="off" spellcheck="false" />
-                  <button *ngIf="serviceSearchQuery()" type="button" class="popover-search-clear"
-                    (click)="clearServiceSearch($event)" title="Clear search">✕</button>
-                </div>
-              </div>
-
-              <div class="popover-items-list">
-                <!-- All Services Option -->
-                <button *ngIf="!serviceSearchQuery().trim()" type="button" class="popover-option-item all-services-item"
-                  [class.option-selected]="selectedServiceType() === 'ALL'" (click)="selectService('ALL', $event)">
-                  <div class="option-icon-box">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none"
-                      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                      <rect x="3" y="3" width="7" height="7"></rect>
-                      <rect x="14" y="3" width="7" height="7"></rect>
-                      <rect x="14" y="14" width="7" height="7"></rect>
-                      <rect x="3" y="14" width="7" height="7"></rect>
-                    </svg>
-                  </div>
-                  <div class="option-info">
-                    <span class="option-title">All Services</span>
-                    <span class="option-desc">Show specialists across all specialties</span>
-                  </div>
-
-                  <div class="option-checkbox-indicator" [class.is-checked]="selectedServiceType() === 'ALL'">
-                    <svg *ngIf="selectedServiceType() === 'ALL'" class="checkbox-check-svg"
-                      xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none"
-                      stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                      <polyline points="20 6 9 17 4 12" />
-                    </svg>
-                  </div>
-                </button>
-
-                <!-- Individual Services List -->
-                <button *ngFor="let st of filteredServiceTypes()" type="button" class="popover-option-item"
-                  [class.option-selected]="selectedServiceType() === st" (click)="selectService(st, $event)">
-                  <div class="option-icon-box service-type-icon-box">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
-                      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <!-- Services Catalog Cards Grid -->
+          <div *ngIf="!isLoadingServices() && filteredCatalogServices().length > 0" class="provider-cards-grid">
+            <div *ngFor="let s of filteredCatalogServices()" class="provider-select-card service-catalog-select-card"
+              [class.selected]="selectedServiceId === s.id" (click)="selectServiceCard(s)">
+              <div class="provider-card-top">
+                <div class="provider-card-identity">
+                  <div class="service-icon-box">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                      stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                       <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
                       <line x1="7" y1="7" x2="7.01" y2="7" />
                     </svg>
                   </div>
-                  <div class="option-info">
-                    <span class="option-title">{{ st }}</span>
-                    <span class="option-desc">{{ getProviderCountForService(st) }} {{ getProviderCountForService(st) ===
-                      1 ? 'specialist' : 'specialists' }}</span>
+                  <div class="identity-text">
+                    <h4 class="card-provider-name">{{ s.name }}</h4>
+                    <div class="card-badges-row">
+                      <span class="card-charges-badge">₹{{ s.price | number }}</span>
+                      <span class="card-service-type-badge">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none"
+                          stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                          <circle cx="12" cy="12" r="10" />
+                          <polyline points="12 6 12 12 16 14" />
+                        </svg>
+                        <span>{{ s.durationMinutes }} mins</span>
+                      </span>
+                    </div>
                   </div>
-
-                  <div class="option-checkbox-indicator" [class.is-checked]="selectedServiceType() === st">
-                    <svg *ngIf="selectedServiceType() === st" class="checkbox-check-svg"
-                      xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none"
-                      stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                      <polyline points="20 6 9 17 4 12" />
-                    </svg>
-                  </div>
-                </button>
-
-                <!-- No Results State -->
-                <div *ngIf="filteredServiceTypes().length === 0" class="popover-no-results">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
-                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="11" cy="11" r="8"></circle>
-                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                  </svg>
-                  <span>No service found matching "{{ serviceSearchQuery() }}"</span>
                 </div>
+
+                <button type="button" class="btn-select-provider" [class.is-selected]="selectedServiceId === s.id"
+                  (click)="selectServiceCard(s); $event.stopPropagation()">
+                  <svg *ngIf="selectedServiceId === s.id" xmlns="http://www.w3.org/2000/svg" width="12" height="12"
+                    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"
+                    stroke-linejoin="round">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                  <span>{{ selectedServiceId === s.id ? 'Selected' : 'Select' }}</span>
+                </button>
+              </div>
+
+              <p *ngIf="s.description && s.description.trim().toLowerCase() !== s.name.trim().toLowerCase()"
+                class="provider-card-bio">{{ s.description }}</p>
+
+              <div class="provider-card-footer-meta">
+                <span class="status-verified-tag">
+                  <span class="status-dot-pulse"></span>
+                  {{ getProviderCountForService(s.name) }} {{ getProviderCountForService(s.name) === 1 ? 'specialist' :
+                  'specialists' }} available
+                </span>
               </div>
             </div>
           </div>
 
-          <span class="providers-count-pill" *ngIf="!isLoadingProviders()">
-            {{ filteredProviders().length }} {{ filteredProviders().length === 1 ? 'provider' : 'providers' }}
-          </span>
+          <!-- Empty State -->
+          <div *ngIf="!isLoadingServices() && filteredCatalogServices().length === 0" class="providers-empty-pane">
+            <p>No services found matching "{{ serviceSearchQuery() }}"</p>
+            <button type="button" class="btn-reset-search" (click)="serviceSearchQuery.set('')">Clear Search</button>
+          </div>
         </div>
 
-        <!-- Loading State -->
-        <div *ngIf="isLoadingProviders()" class="providers-loading-pane">
-          <div class="spinner-small"></div>
-          <span>Loading available providers...</span>
-        </div>
+        <!-- MODE B: Direct Specialist Flow (Choose Specific Specialist) -->
+        <div *ngIf="bookingMode === 'direct'" class="direct-specialist-select-pane animate-fade-in">
+          <!-- Search & Service Type Dropdown Filter Bar -->
+          <div class="provider-filters-row">
+            <!-- Text Search Box -->
+            <div class="provider-search-box">
+              <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+              <input type="text" [ngModel]="providerSearchQuery()" (ngModelChange)="providerSearchQuery.set($event)"
+                placeholder="Search by name, service, location..." class="provider-search-input" />
+              <button *ngIf="providerSearchQuery()" type="button" class="btn-clear-mini-search"
+                (click)="providerSearchQuery.set('')" title="Clear search">✕</button>
+            </div>
 
-        <!-- Empty State -->
-        <div *ngIf="!isLoadingProviders() && filteredProviders().length === 0" class="providers-empty-pane">
-          <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none"
-            stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="11" cy="11" r="8" />
-            <line x1="21" y1="21" x2="16.65" y2="16.65" />
-          </svg>
-          <p>No active providers found matching your search or service filter.</p>
-          <button type="button" class="btn-reset-search" (click)="clearProviderSearch()">Clear Filters</button>
-        </div>
-
-        <!-- Provider Cards Grid: Comprehensive Info & Clean Selection -->
-        <div *ngIf="!isLoadingProviders() && filteredProviders().length > 0" class="provider-cards-grid">
-          <div *ngFor="let p of filteredProviders()" class="provider-select-card"
-            [class.selected]="selectedProviderId === p.id" (click)="selectProviderCard(p)">
-            <!-- Card Top: Avatar + Identity + Action Button -->
-            <div class="provider-card-top">
-              <div class="provider-card-identity">
-                <div class="card-avatar"
-                  [style.background]="p.profilePictureUrl ? 'transparent' : getAvatarGradient(p.name)">
-                  <img *ngIf="p.profilePictureUrl" [src]="p.profilePictureUrl" [alt]="p.name" class="avatar-img"
-                    (error)="p.profilePictureUrl = undefined" />
-                  <span *ngIf="!p.profilePictureUrl">{{ getInitials(p.name) }}</span>
+            <!-- Custom Glassmorphism Service Dropdown Filter (Matching Calendar Component) -->
+            <div class="custom-select-anchor service-select-anchor" [class.menu-open]="isServiceDropdownOpen"
+              [class.has-selection]="selectedServiceType() !== 'ALL'">
+              <button type="button" class="custom-select-trigger" (click)="toggleServiceDropdown($event)"
+                [title]="'Filter by service: ' + selectedServiceLabel()" aria-haspopup="listbox"
+                [attr.aria-expanded]="isServiceDropdownOpen">
+                <!-- Left Icon -->
+                <div class="trigger-icon-wrap">
+                  <span class="trigger-default-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                      stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
+                      <line x1="7" y1="7" x2="7.01" y2="7" />
+                    </svg>
+                  </span>
                 </div>
-                <div class="identity-text">
-                  <h4 class="card-provider-name">{{ p.name }}</h4>
-                  <div class="card-badges-row">
-                    <span class="card-service-type-badge">{{ p.serviceType || 'Provider' }}</span>
-                    <span *ngIf="p.chargesAmount" class="card-charges-badge">₹{{ p.chargesAmount | number }}</span>
+
+                <!-- Label Display -->
+                <div class="trigger-label-group">
+                  <span class="trigger-main-text">{{ selectedServiceLabel() }}</span>
+                </div>
+
+                <!-- Inline Clear Button (Reset service filter) -->
+                <span *ngIf="selectedServiceType() !== 'ALL'" class="trigger-clear-btn"
+                  (click)="clearServiceSelection($event)" title="Reset to All Services" role="button">✕</span>
+
+                <!-- Chevron Indicator -->
+                <svg class="trigger-chevron" [class.rotated]="isServiceDropdownOpen" xmlns="http://www.w3.org/2000/svg"
+                  width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="6 9 12 15 18 9" />
+                </svg>
+              </button>
+
+              <!-- Glassmorphism Dropdown Popover Menu -->
+              <div *ngIf="isServiceDropdownOpen" class="custom-dropdown-popover animate-scale-up"
+                (click)="$event.stopPropagation()">
+                <div class="popover-header">
+                  <span class="popover-header-title">Filter by Service</span>
+                  <div class="popover-header-right">
+                    <span class="popover-count-pill" *ngIf="selectedServiceType() === 'ALL'">
+                      {{ serviceTypes().length }} Total
+                    </span>
+
+                    <ng-container *ngIf="selectedServiceType() !== 'ALL'">
+                      <span class="popover-selected-pill">1 selected</span>
+                      <button type="button" class="btn-popover-reset" (click)="selectService('ALL', $event)"
+                        title="Reset to all services">
+                        Reset
+                      </button>
+                    </ng-container>
+                  </div>
+                </div>
+
+                <!-- Service Search Input Box (Shown if more than 3 services) -->
+                <div class="popover-search-container" *ngIf="serviceTypes().length > 3">
+                  <div class="popover-search-box">
+                    <svg class="popover-search-icon" xmlns="http://www.w3.org/2000/svg" width="13" height="13"
+                      viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"
+                      stroke-linejoin="round">
+                      <circle cx="11" cy="11" r="8"></circle>
+                      <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                    <input type="text" class="popover-search-input" placeholder="Search service or specialty..."
+                      [value]="serviceSearchQuery()" (input)="onServiceSearchInput($event)"
+                      (click)="$event.stopPropagation()" autocomplete="off" spellcheck="false" />
+                    <button *ngIf="serviceSearchQuery()" type="button" class="popover-search-clear"
+                      (click)="clearServiceSearch($event)" title="Clear search">✕</button>
+                  </div>
+                </div>
+
+                <div class="popover-items-list">
+                  <!-- All Services Option -->
+                  <button *ngIf="!serviceSearchQuery().trim()" type="button"
+                    class="popover-option-item all-services-item"
+                    [class.option-selected]="selectedServiceType() === 'ALL'" (click)="selectService('ALL', $event)">
+                    <div class="option-icon-box">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="3" width="7" height="7"></rect>
+                        <rect x="14" y="3" width="7" height="7"></rect>
+                        <rect x="14" y="14" width="7" height="7"></rect>
+                        <rect x="3" y="14" width="7" height="7"></rect>
+                      </svg>
+                    </div>
+                    <div class="option-info">
+                      <span class="option-title">All Services</span>
+                      <span class="option-desc">Show specialists across all specialties</span>
+                    </div>
+
+                    <div class="option-checkbox-indicator" [class.is-checked]="selectedServiceType() === 'ALL'">
+                      <svg *ngIf="selectedServiceType() === 'ALL'" class="checkbox-check-svg"
+                        xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                    </div>
+                  </button>
+
+                  <!-- Individual Services List -->
+                  <button *ngFor="let st of filteredServiceTypes()" type="button" class="popover-option-item"
+                    [class.option-selected]="selectedServiceType() === st" (click)="selectService(st, $event)">
+                    <div class="option-icon-box service-type-icon-box">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
+                        <line x1="7" y1="7" x2="7.01" y2="7" />
+                      </svg>
+                    </div>
+                    <div class="option-info">
+                      <span class="option-title">{{ st }}</span>
+                      <span class="option-desc">{{ getServiceSubtitle(st) }}</span>
+                    </div>
+
+                    <div class="option-checkbox-indicator" [class.is-checked]="selectedServiceType() === st">
+                      <svg *ngIf="selectedServiceType() === st" class="checkbox-check-svg"
+                        xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                    </div>
+                  </button>
+
+                  <!-- No Results State -->
+                  <div *ngIf="filteredServiceTypes().length === 0" class="popover-no-results">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <circle cx="11" cy="11" r="8"></circle>
+                      <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                    <span>No service found matching "{{ serviceSearchQuery() }}"</span>
                   </div>
                 </div>
               </div>
-
-              <!-- Action Button: [ Select ] or [ Selected ] (No check icon) -->
-              <button type="button" class="btn-select-provider" [class.is-selected]="selectedProviderId === p.id"
-                (click)="selectProviderCard(p); $event.stopPropagation()">
-                <span>{{ selectedProviderId === p.id ? 'Selected' : 'Select' }}</span>
-              </button>
             </div>
 
-            <!-- Provider Bio (if available) -->
-            <p *ngIf="p.bio" class="provider-card-bio">
-              {{ p.bio }}
-            </p>
+            <span class="providers-count-pill" *ngIf="!isLoadingProviders()">
+              {{ filteredProviders().length }} {{ filteredProviders().length === 1 ? 'provider' : 'providers' }}
+            </span>
+          </div>
 
-            <!-- Complete Contact Info Details -->
-            <div class="provider-details-list">
-              <div *ngIf="p.phoneNumber" class="provider-detail-item" title="Phone">
-                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none"
-                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path
-                    d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
-                </svg>
-                <span>{{ p.phoneNumber }}</span>
+          <!-- Loading State -->
+          <div *ngIf="isLoadingProviders()" class="providers-loading-pane">
+            <div class="spinner-small"></div>
+            <span>Loading available providers...</span>
+          </div>
+
+          <!-- Empty State -->
+          <div *ngIf="!isLoadingProviders() && filteredProviders().length === 0" class="providers-empty-pane">
+            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+            <p>No active providers found matching your search or service filter.</p>
+            <button type="button" class="btn-reset-search" (click)="clearProviderSearch()">Clear Filters</button>
+          </div>
+
+          <!-- Provider Cards Grid: Comprehensive Info & Clean Selection -->
+          <div *ngIf="!isLoadingProviders() && filteredProviders().length > 0" class="provider-cards-grid">
+            <div *ngFor="let p of filteredProviders()" class="provider-select-card"
+              [class.selected]="selectedProviderId === p.id" (click)="selectProviderCard(p)">
+              <!-- Card Top: Avatar + Identity + Action Button -->
+              <div class="provider-card-top">
+                <div class="provider-card-identity">
+                  <div class="card-avatar"
+                    [style.background]="p.profilePictureUrl ? 'transparent' : getAvatarGradient(p.name)">
+                    <img *ngIf="p.profilePictureUrl" [src]="p.profilePictureUrl" [alt]="p.name" class="avatar-img"
+                      (error)="p.profilePictureUrl = undefined" />
+                    <span *ngIf="!p.profilePictureUrl">{{ getInitials(p.name) }}</span>
+                  </div>
+                  <div class="identity-text">
+                    <h4 class="card-provider-name">{{ p.name }}</h4>
+                    <div class="card-badges-row">
+                      <span class="card-service-type-badge">{{ p.serviceType || 'Provider' }}</span>
+                      <span *ngIf="p.chargesAmount" class="card-charges-badge">₹{{ p.chargesAmount | number }}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Action Button: [ Select ] or [ Selected ] (No check icon) -->
+                <button type="button" class="btn-select-provider" [class.is-selected]="selectedProviderId === p.id"
+                  (click)="selectProviderCard(p); $event.stopPropagation()">
+                  <span>{{ selectedProviderId === p.id ? 'Selected' : 'Select' }}</span>
+                </button>
               </div>
 
-              <div *ngIf="p.email" class="provider-detail-item" title="Email">
-                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none"
-                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
-                  <polyline points="22,6 12,13 2,6" />
-                </svg>
-                <span>{{ p.email }}</span>
+              <!-- Provider Bio (if available) -->
+              <p *ngIf="p.bio" class="provider-card-bio">
+                {{ p.bio }}
+              </p>
+
+              <!-- Complete Contact Info Details -->
+              <div class="provider-details-list">
+                <div *ngIf="p.phoneNumber" class="provider-detail-item" title="Phone">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path
+                      d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+                  </svg>
+                  <span>{{ p.phoneNumber }}</span>
+                </div>
+
+                <div *ngIf="p.email" class="provider-detail-item" title="Email">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                    <polyline points="22,6 12,13 2,6" />
+                  </svg>
+                  <span>{{ p.email }}</span>
+                </div>
+
+                <div *ngIf="p.address" class="provider-detail-item" title="Address">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                    <circle cx="12" cy="10" r="3" />
+                  </svg>
+                  <span>{{ p.address }}</span>
+                </div>
               </div>
 
-              <div *ngIf="p.address" class="provider-detail-item" title="Address">
-                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none"
-                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
-                  <circle cx="12" cy="10" r="3" />
-                </svg>
-                <span>{{ p.address }}</span>
+              <!-- Card Bottom Meta: Status & Appointments Count -->
+              <div class="provider-card-footer-meta">
+                <span class="status-verified-tag">
+                  <span class="status-dot-pulse"></span>
+                  Active Provider
+                </span>
+                <span class="appointments-count-tag" *ngIf="p.totalAppointmentsCount !== undefined">
+                  {{ p.totalAppointmentsCount }} bookings served
+                </span>
               </div>
+
             </div>
-
-            <!-- Card Bottom Meta: Status & Appointments Count -->
-            <div class="provider-card-footer-meta">
-              <span class="status-verified-tag">
-                <span class="status-dot-pulse"></span>
-                Active Provider
-              </span>
-              <span class="appointments-count-tag" *ngIf="p.totalAppointmentsCount !== undefined">
-                {{ p.totalAppointmentsCount }} bookings served
-              </span>
-            </div>
-
           </div>
         </div>
 
@@ -335,27 +428,63 @@
       <!-- ======================================================== -->
       <div *ngIf="currentStep === 2" class="step-pane animate-fade-in">
 
-        <!-- Selected Provider Bar with Change Option -->
+        <!-- Selected Service / Provider Bar with Change Option -->
         <div class="selection-summary-card">
-          <div class="summary-left">
+          <!-- Broadcast Mode: Selected Service Summary -->
+          <div *ngIf="bookingMode === 'broadcast'" class="summary-left">
+            <div class="summary-avatar broadcast-summary-icon-wrap">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+              </svg>
+            </div>
+            <div class="summary-details">
+              <span class="summary-role">
+                <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+                </svg>
+                <span>Service Catalog Booking</span>
+              </span>
+              <div class="summary-name-row">
+                <h4 class="summary-name">{{ selectedService?.name }}</h4>
+                <span *ngIf="selectedService?.price" class="card-charges-badge">₹{{ selectedService?.price | number
+                  }}</span>
+                <span *ngIf="selectedService?.durationMinutes" class="card-service-type-badge">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10" />
+                    <polyline points="12 6 12 12 16 14" />
+                  </svg>
+                  <span>{{ selectedService?.durationMinutes }} mins</span>
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Direct Mode: Selected Provider Summary -->
+          <div *ngIf="bookingMode === 'direct'" class="summary-left">
             <div class="summary-avatar"
-              [style.background]="selectedProvider?.profilePictureUrl ? 'transparent' : getAvatarGradient(selectedProvider?.name || '')">
+              [style.background]="selectedProvider?.profilePictureUrl ? 'transparent' : getAvatarGradient(providerDisplayName)">
               <img *ngIf="selectedProvider?.profilePictureUrl" [src]="selectedProvider?.profilePictureUrl"
                 (error)="selectedProvider!.profilePictureUrl = undefined" [alt]="selectedProvider?.name"
                 class="avatar-img" />
-              <span *ngIf="!selectedProvider?.profilePictureUrl">{{ getInitials(selectedProvider?.name || '') }}</span>
+              <span *ngIf="!selectedProvider?.profilePictureUrl">{{ getInitials(providerDisplayName) }}</span>
             </div>
             <div class="summary-details">
-              <span class="summary-role">{{ selectedProvider?.serviceType || 'Provider' }}</span>
+              <span class="summary-role">{{ authService.isServiceProvider() ? ('Your Schedule · ' +
+                (selectedProvider?.serviceType || 'Specialist')) : (selectedProvider?.serviceType || 'Specialist')
+                }}</span>
               <div class="summary-name-row">
-                <h4 class="summary-name">{{ selectedProvider?.name }}</h4>
+                <h4 class="summary-name">{{ providerDisplayName }}</h4>
                 <span *ngIf="selectedProvider?.chargesAmount" class="card-charges-badge">₹{{
                   selectedProvider?.chargesAmount | number }}</span>
               </div>
             </div>
           </div>
 
-          <button type="button" class="btn-change-selection" (click)="backToStep1()" title="Change provider">
+          <button *ngIf="!authService.isServiceProvider()" type="button" class="btn-change-selection"
+            (click)="backToStep1()" [title]="bookingMode === 'broadcast' ? 'Change Service' : 'Change Provider'">
             <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none"
               stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
@@ -465,8 +594,8 @@
       <div *ngIf="currentStep === 3" class="step-pane animate-fade-in">
 
         <!-- Selected Appointment Context Strip -->
-        <div class="booking-context-strip" *ngIf="selectedProvider">
-          <div class="context-item">
+        <div class="booking-context-strip" *ngIf="selectedProvider || selectedService">
+          <div class="context-item" *ngIf="bookingMode === 'direct' && selectedProvider">
             <span class="context-label">Provider</span>
             <div class="context-val-with-avatar">
               <div class="mini-avatar"
@@ -476,9 +605,19 @@
                 <span *ngIf="!selectedProvider.profilePictureUrl">{{ getInitials(selectedProvider.name) }}</span>
               </div>
               <span class="context-text font-bold">{{ selectedProvider.name }}</span>
-              <span class="context-tag">{{ selectedProvider.serviceType || 'Provider' }}</span>
+              <span class="context-tag">{{ selectedProvider.serviceType || 'Specialist' }}</span>
               <span *ngIf="selectedProvider.chargesAmount" class="card-charges-badge">₹{{ selectedProvider.chargesAmount
                 | number }}</span>
+            </div>
+          </div>
+
+          <div class="context-item" *ngIf="bookingMode === 'broadcast' && selectedService">
+            <span class="context-label">Service</span>
+            <div class="context-val-with-avatar">
+              <span class="context-text font-bold">{{ selectedService.name }}</span>
+              <span class="context-tag">Service Booking</span>
+              <span *ngIf="selectedService.price" class="card-charges-badge">₹{{ selectedService.price | number
+                }}</span>
             </div>
           </div>
 
@@ -622,15 +761,23 @@
             <div class="form-group">
               <label class="form-label">{{ isStaffOrAdmin() ? 'Customer Email Address' : 'Email Address' }} <span
                   class="required">*</span></label>
-              <div class="field-icon-wrap">
+              <div class="field-icon-wrap" [class.field-invalid]="isEmailTouched && !isEmailValid">
                 <svg class="field-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
                   fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <rect width="20" height="16" x="2" y="4" rx="2" />
                   <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
                 </svg>
-                <input type="email" [(ngModel)]="customerEmail" (blur)="onEmailBlur()" (keyup.enter)="onEmailBlur()"
-                  placeholder="e.g. sita@example.com" class="form-control with-icon" autocomplete="off" />
+                <input type="email" [(ngModel)]="customerEmail" (input)="isEmailTouched = true"
+                  (blur)="isEmailTouched = true; onEmailBlur()" (keyup.enter)="onEmailBlur()"
+                  placeholder="e.g. sita@example.com" class="form-control with-icon"
+                  [class.is-invalid]="isEmailTouched && !isEmailValid" autocomplete="off" />
               </div>
+              <span *ngIf="isEmailTouched && !customerEmail.trim()" class="field-inline-error">
+                Email address is required.
+              </span>
+              <span *ngIf="isEmailTouched && customerEmail.trim() && !isEmailValid" class="field-inline-error">
+                Please enter a valid email address (e.g. name&#64;example.com).
+              </span>
             </div>
           </div>
 
@@ -670,9 +817,12 @@
             </div>
           </div>
 
-          <!-- Row 3: Reason for Visit / Appointment Purpose (REQUIRED) -->
+          <!-- Row 3: Reason for Visit / Appointment Purpose (OPTIONAL) -->
           <div class="form-group form-group-full">
-            <label class="form-label">Reason for Visit / Appointment Purpose <span class="required">*</span></label>
+            <label class="form-label">
+              Reason for Visit / Appointment Purpose
+              <span class="optional-tag">(Optional)</span>
+            </label>
             <div class="field-icon-wrap textarea-icon-wrap">
               <svg class="field-icon textarea-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16"
                 viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
@@ -704,7 +854,29 @@
 
           <!-- 1. Specialist & Schedule Hero Card -->
           <div class="review-card review-hero-card">
-            <div class="review-provider-header">
+            <!-- Broadcast Mode Hero Header -->
+            <div *ngIf="bookingMode === 'broadcast'" class="review-provider-header">
+              <div class="review-avatar broadcast-summary-icon-wrap">
+                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+                </svg>
+              </div>
+              <div class="review-provider-info">
+                <span class="review-caption">Service Category</span>
+                <h4 class="review-provider-name">{{ selectedService?.name }}</h4>
+                <span class="review-service-badge">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+                  </svg>
+                  <span>Service Dispatch (Qualified Specialists)</span>
+                </span>
+              </div>
+            </div>
+
+            <!-- Direct Specialist Hero Header -->
+            <div *ngIf="bookingMode === 'direct'" class="review-provider-header">
               <div class="review-avatar"
                 [style.background]="selectedProvider?.profilePictureUrl ? 'transparent' : getAvatarGradient(selectedProvider?.name || '')">
                 <img *ngIf="selectedProvider?.profilePictureUrl" [src]="selectedProvider?.profilePictureUrl"
@@ -833,7 +1005,13 @@
                     <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
                     <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
                   </svg>
-                  <span *ngIf="copiedRef" class="copy-success-text">✓ Copied</span>
+                  <span *ngIf="copiedRef" class="copy-success-text">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none"
+                      stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                    <span>Copied</span>
+                  </span>
                 </button>
               </div>
             </div>
@@ -933,9 +1111,10 @@
     <!-- Modal Footer Actions (Per Step) -->
     <div class="modal-footer" *ngIf="currentStep !== 2">
 
-      <!-- Step 1 Actions (Select Provider) -->
+      <!-- Step 1 Actions (Select Provider or Service) -->
       <div *ngIf="currentStep === 1" class="footer-actions-row flex-end">
-        <button type="button" class="btn btn-primary" [disabled]="!selectedProviderId || isLoadingProviders()"
+        <button type="button" class="btn btn-primary"
+          [disabled]="bookingMode === 'broadcast' ? (!selectedServiceId || isLoadingServices()) : (!selectedProviderId || isLoadingProviders())"
           (click)="goToStep2()">
           <span>Choose Date & Time</span>
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"

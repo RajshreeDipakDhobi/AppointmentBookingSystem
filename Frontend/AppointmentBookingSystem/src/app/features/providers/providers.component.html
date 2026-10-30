@@ -41,13 +41,13 @@
       <!-- Custom Glassmorphism Status Filter Dropdown -->
       <div class="custom-select-anchor status-filter-anchor" [class.menu-open]="isStatusFilterDropdownOpen()"
         [class.has-selection]="statusFilter !== 'all'">
-        <button type="button" class="custom-select-trigger filter-dropdown-trigger"
+        <button type="button" class="custom-select-trigger"
           (click)="toggleStatusFilterDropdown($event)" [title]="'Filter by status: ' + statusFilterLabel"
           aria-haspopup="listbox" [attr.aria-expanded]="isStatusFilterDropdownOpen()">
           <!-- Left Dynamic Status Indicator -->
           <div class="trigger-icon-wrap">
             <span *ngIf="statusFilter === 'all'" class="trigger-default-icon">
-              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none"
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
                 stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                 <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
               </svg>
@@ -63,7 +63,7 @@
 
           <!-- Chevron Indicator -->
           <svg class="trigger-chevron" [class.rotated]="isStatusFilterDropdownOpen()" xmlns="http://www.w3.org/2000/svg"
-            width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+            width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
             stroke-linecap="round" stroke-linejoin="round">
             <polyline points="6 9 12 15 18 9" />
           </svg>
@@ -160,7 +160,6 @@
         <thead>
           <tr>
             <th class="col-provider">Provider Name</th>
-            <th class="col-specialty">Specialization & Fee</th>
             <th class="col-contact">Contact Details</th>
             <th class="col-address">Cabin / Address</th>
             <th class="col-status">Status</th>
@@ -181,14 +180,6 @@
                 <div class="provider-info">
                   <span class="provider-name" [title]="provider.name">{{ provider.name }}</span>
                 </div>
-              </div>
-            </td>
-            <td class="col-specialty">
-              <div class="specialty-wrap">
-                <span class="specialty-chip" [title]="provider.serviceType">{{ provider.serviceType }}</span>
-                <span class="charges-chip" *ngIf="provider.chargesAmount"
-                  [title]="'Service Fee: ₹' + (provider.chargesAmount | number)">₹{{ provider.chargesAmount | number
-                  }}</span>
               </div>
             </td>
             <td class="col-contact">
@@ -281,7 +272,7 @@
 
           <!-- Empty State -->
           <tr *ngIf="providers().length === 0">
-            <td colspan="7" class="empty-cell">
+            <td colspan="6" class="empty-cell">
               <div class="empty-state">
                 <div class="empty-icon-wrap">
                   <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none"

@@ -26,5 +26,6 @@ public class User : BaseEntity
     // Navigations (Only strictly required)
     public virtual ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();
     public virtual ICollection<Appointment> CustomerAppointments { get; set; } = new List<Appointment>();
+    public virtual ICollection<Service> CreatedServices { get; set; } = new List<Service>();
     public virtual ServiceProvider? ServiceProvider { get; set; }
 }

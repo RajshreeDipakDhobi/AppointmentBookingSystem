@@ -1,8 +1,10 @@
-import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges, inject, signal } from '@angular/core';
+import { Component, EventEmitter, HostListener, Input, OnChanges, Output, SimpleChanges, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ServiceProviderDto, CreateServiceProviderRequestDto, UpdateServiceProviderRequestDto } from '../../../core/models/provider.models';
+import { ServiceDto } from '../../../core/models/service.models';
 import { ProviderService } from '../../../core/services/provider.service';
+import { ServiceCatalogService } from '../../../core/services/service-catalog.service';
 
 import { OnlyDigitsDirective } from '../../../shared/directives';
 import { AppInitialsPipe } from '../../../shared/pipes';
@@ -18,6 +20,7 @@ import { EMAIL_REGEX, PHONE_10_DIGIT_REGEX, filter10Digits, getAvatarGradient } 
 export class ProviderModalComponent implements OnChanges {
   private readonly fb = inject(FormBuilder);
   private readonly providerService = inject(ProviderService);
+  private readonly serviceCatalogService = inject(ServiceCatalogService);
   readonly getAvatarGradient = getAvatarGradient;
 
   @Input() isOpen = false;
@@ -34,13 +37,29 @@ export class ProviderModalComponent implements OnChanges {
   readonly isUploadingAvatar = signal<boolean>(false);
   readonly avatarError = signal<string | null>(null);
 
+  readonly availableServices = signal<ServiceDto[]>([]);
+  readonly selectedService = signal<ServiceDto | null>(null);
+  readonly isServiceDropdownOpen = signal<boolean>(false);
+  readonly serviceSearchQuery = signal<string>('');
+
+  readonly filteredServices = computed(() => {
+    const q = this.serviceSearchQuery().trim().toLowerCase();
+    const list = this.availableServices();
+    if (!q) return list;
+    return list.filter(s => 
+      s.name.toLowerCase().includes(q) || 
+      (s.description && s.description.toLowerCase().includes(q))
+    );
+  });
+
   constructor() {
     this.providerForm = this.fb.group({
       name: ['', [Validators.required, Validators.minLength(2)]],
-      serviceType: ['', [Validators.required]],
+      serviceId: [null, [Validators.required]],
+      serviceType: [''],
       email: ['', [Validators.required, Validators.pattern(EMAIL_REGEX)]],
       phoneNumber: ['', [Validators.required, Validators.pattern(PHONE_10_DIGIT_REGEX)]],
-      chargesAmount: [0, [Validators.required, Validators.min(0)]],
+      chargesAmount: [0],
       address: [''],
       bio: ['', [Validators.required, Validators.minLength(5)]],
       profilePictureUrl: ['']
@@ -50,8 +69,119 @@ export class ProviderModalComponent implements OnChanges {
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['isOpen'] || changes['providerToEdit'] || changes['mode']) {
       if (this.isOpen) {
+        this.loadActiveServices();
         this.resetAndInitForm();
       }
+    }
+  }
+
+  private loadActiveServices(): void {
+    const tenantId = this.providerToEdit?.tenantId;
+    this.serviceCatalogService.getActiveServices(tenantId).subscribe({
+      next: (services) => {
+        this.availableServices.set(services || []);
+        this.syncSelectedService();
+      },
+      error: () => {
+        // Non-blocking fallback
+      }
+    });
+  }
+
+  private syncSelectedService(): void {
+    const currentServiceId = this.providerForm.get('serviceId')?.value;
+    const services = this.availableServices();
+
+    if (currentServiceId && services.length > 0) {
+      const match = services.find(s => s.id === Number(currentServiceId));
+      if (match) {
+        this.selectedService.set(match);
+        return;
+      }
+    }
+
+    if (this.providerToEdit && services.length > 0) {
+      const match = services.find(s =>
+        (this.providerToEdit?.serviceId && s.id === this.providerToEdit.serviceId) ||
+        (this.providerToEdit?.serviceType && s.name.toLowerCase() === this.providerToEdit.serviceType.toLowerCase())
+      );
+      if (match) {
+        this.selectedService.set(match);
+        this.providerForm.patchValue({
+          serviceId: match.id,
+          serviceType: match.name,
+          chargesAmount: match.price
+        });
+      }
+    }
+  }
+
+  toggleServiceDropdown(event: Event): void {
+    event.stopPropagation();
+    this.isServiceDropdownOpen.update(v => !v);
+  }
+
+  selectService(service: ServiceDto, event?: Event): void {
+    if (event) event.stopPropagation();
+    this.selectedService.set(service);
+    this.providerForm.patchValue({
+      serviceId: service.id,
+      serviceType: service.name,
+      chargesAmount: service.price
+    });
+    this.providerForm.get('serviceId')?.markAsDirty();
+    this.providerForm.get('serviceId')?.markAsTouched();
+    this.isServiceDropdownOpen.set(false);
+    this.serviceSearchQuery.set('');
+  }
+
+  clearServiceSelection(event?: Event): void {
+    if (event) event.stopPropagation();
+    this.selectedService.set(null);
+    this.providerForm.patchValue({
+      serviceId: null,
+      serviceType: '',
+      chargesAmount: 0
+    });
+    this.providerForm.get('serviceId')?.markAsDirty();
+    this.providerForm.get('serviceId')?.markAsTouched();
+    this.isServiceDropdownOpen.set(false);
+  }
+
+  onServiceSearchInput(event: Event): void {
+    const val = (event.target as HTMLInputElement).value || '';
+    this.serviceSearchQuery.set(val);
+  }
+
+  clearServiceSearch(event: Event): void {
+    event.stopPropagation();
+    this.serviceSearchQuery.set('');
+  }
+
+  @HostListener('document:click')
+  onDocumentClick(): void {
+    this.isServiceDropdownOpen.set(false);
+  }
+
+  onServiceChange(event: Event): void {
+    const select = event.target as HTMLSelectElement;
+    const serviceId = Number(select.value);
+    const service = this.availableServices().find(s => s.id === serviceId);
+
+    if (service) {
+      this.selectedService.set(service);
+      this.providerForm.patchValue({
+        serviceId: service.id,
+        serviceType: service.name,
+        chargesAmount: service.price
+      });
+    } else {
+      this.selectedService.set(null);
+      this.providerForm.patchValue({
+        serviceId: null,
+        serviceType: '',
+        chargesAmount: 0
+      });
     }
   }
 
@@ -60,11 +190,15 @@ export class ProviderModalComponent implements OnChanges {
     this.avatarError.set(null);
     this.isSubmitting.set(false);
     this.isUploadingAvatar.set(false);
+    this.selectedService.set(null);
+    this.isServiceDropdownOpen.set(false);
+    this.serviceSearchQuery.set('');
 
     if (this.mode === 'edit' && this.providerToEdit) {
       this.previewAvatarUrl.set(this.providerToEdit.profilePictureUrl || null);
       this.providerForm.reset({
         name: this.providerToEdit.name || '',
+        serviceId: this.providerToEdit.serviceId || null,
         serviceType: this.providerToEdit.serviceType || '',
         email: this.providerToEdit.email || '',
         phoneNumber: filter10Digits(this.providerToEdit.phoneNumber) || '',
@@ -73,10 +207,12 @@ export class ProviderModalComponent implements OnChanges {
         bio: this.providerToEdit.bio || '',
         profilePictureUrl: this.providerToEdit.profilePictureUrl || ''
       });
+      this.syncSelectedService();
     } else {
       this.previewAvatarUrl.set(null);
       this.providerForm.reset({
         name: '',
+        serviceId: null,
         serviceType: '',
         email: '',
         phoneNumber: '',
@@ -120,10 +256,12 @@ export class ProviderModalComponent implements OnChanges {
     // Upload to server storage
     this.isUploadingAvatar.set(true);
     this.providerService.uploadAvatar(file).subscribe({
-      next: (res) => {
+      next: (res: any) => {
         this.isUploadingAvatar.set(false);
-        this.providerForm.patchValue({ profilePictureUrl: res.url });
-        // Retain client-side base64 preview so the image always displays without 404
+        const url = res?.url || res?.data?.url || (typeof res === 'string' ? res : '');
+        if (url) {
+          this.providerForm.patchValue({ profilePictureUrl: url });
+        }
       },
       error: (err) => {
         this.isUploadingAvatar.set(false);
@@ -133,7 +271,6 @@ export class ProviderModalComponent implements OnChanges {
   }
 
   onAvatarImgError(): void {
-    // If an image URL cannot be loaded by the browser, cleanly fall back to the placeholder icon
     this.previewAvatarUrl.set(null);
   }
 
@@ -143,13 +280,11 @@ export class ProviderModalComponent implements OnChanges {
     this.providerForm.patchValue({ profilePictureUrl: '' });
   }
 
-  onBackdropClick(_event: MouseEvent): void {
-    // Modal only closes via explicit close button
-  }
-
   onClose(): void {
     this.errorMessage.set(null);
     this.avatarError.set(null);
+    this.isServiceDropdownOpen.set(false);
+    this.serviceSearchQuery.set('');
     this.close.emit();
   }
 
@@ -168,7 +303,8 @@ export class ProviderModalComponent implements OnChanges {
     if (this.mode === 'create') {
       const createDto: CreateServiceProviderRequestDto = {
         name: val.name.trim(),
-        serviceType: val.serviceType.trim(),
+        serviceId: val.serviceId ? Number(val.serviceId) : undefined,
+        serviceType: val.serviceType ? val.serviceType.trim() : undefined,
         email: val.email.trim(),
         phoneNumber: val.phoneNumber.trim(),
         chargesAmount: val.chargesAmount != null ? Number(val.chargesAmount) : 0,
@@ -190,7 +326,8 @@ export class ProviderModalComponent implements OnChanges {
     } else if (this.mode === 'edit' && this.providerToEdit) {
       const updateDto: UpdateServiceProviderRequestDto = {
         name: val.name.trim(),
-        serviceType: val.serviceType.trim(),
+        serviceId: val.serviceId ? Number(val.serviceId) : undefined,
+        serviceType: val.serviceType ? val.serviceType.trim() : undefined,
         email: val.email.trim(),
         phoneNumber: val.phoneNumber.trim(),
         chargesAmount: val.chargesAmount != null ? Number(val.chargesAmount) : 0,

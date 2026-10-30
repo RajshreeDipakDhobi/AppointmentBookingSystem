@@ -61,6 +61,11 @@ export const routes: Routes = [
         canActivate: [superAdminGuard]
       },
       {
+        path: 'services',
+        loadComponent: () => import('./features/services/services.component').then(m => m.ServicesComponent),
+        canActivate: [tenantAdminGuard]
+      },
+      {
         path: 'providers',
         loadComponent: () => import('./features/providers/providers.component').then(m => m.ProvidersComponent),
         canActivate: [tenantAdminGuard]
@@ -96,6 +101,11 @@ export const routes: Routes = [
   {
     path: 'admin/tenants',
     redirectTo: 'tenants',
+    pathMatch: 'full'
+  },
+  {
+    path: 'admin/services',
+    redirectTo: 'services',
     pathMatch: 'full'
   },
   {

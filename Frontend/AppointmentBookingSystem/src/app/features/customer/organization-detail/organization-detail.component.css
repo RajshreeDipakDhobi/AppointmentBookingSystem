@@ -108,8 +108,17 @@
 }
 
 @keyframes dotPulse {
-  0%, 100% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(1.3); opacity: 0.7; }
+
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+
+  50% {
+    transform: scale(1.3);
+    opacity: 0.7;
+  }
 }
 
 /* ==========================================================================
@@ -441,13 +450,177 @@
 }
 
 /* ==========================================================================
-   PROVIDERS GRID & CARDS
+   SERVICES & PROVIDERS GRID & CARDS
    ========================================================================== */
 
+.services-grid,
 .providers-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
   gap: 1.25rem;
+}
+
+.service-card {
+  background: #ffffff;
+  border: 1.5px solid #e2ece6;
+  border-radius: 16px;
+  padding: 1.35rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 1rem;
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 2px 8px rgba(24, 59, 50, 0.04);
+}
+
+.service-card:hover {
+  border-color: #1e5142;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(24, 59, 50, 0.09);
+}
+
+.service-top {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+}
+
+.service-icon-wrap {
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #e8f5ed 0%, #d8ede2 100%);
+  color: #1e5142;
+  border: 1.5px solid #c2e2d2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+.service-card:hover .service-icon-wrap {
+  background: linear-gradient(135deg, #1e5142 0%, #2f7a65 100%);
+  color: #ffffff;
+  border-color: #1e5142;
+}
+
+.service-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 0;
+}
+
+.service-name {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #183b32;
+  margin: 0;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.service-badges-row {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+
+.service-price-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #134e4a;
+  background: #e6f4ea;
+  border: 1px solid #b7dfca;
+  padding: 0.15rem 0.55rem;
+  border-radius: 6px;
+}
+
+.service-duration-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: #475569;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  padding: 0.15rem 0.55rem;
+  border-radius: 6px;
+}
+
+.service-bio {
+  font-size: 0.82rem;
+  color: #5b756c;
+  line-height: 1.45;
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.service-bio.text-muted {
+  color: #7b948a;
+  font-style: italic;
+}
+
+.service-footer-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding-top: 0.65rem;
+  border-top: 1px solid #eef4f0;
+  margin-top: auto;
+}
+
+.service-specialist-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: #2e6050;
+}
+
+.btn-book-service {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.48rem 1rem;
+  border-radius: 8px;
+  background: #e8f3ee;
+  border: 1px solid #b8dacb;
+  color: #1e5142;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  white-space: nowrap;
+}
+
+.btn-book-service svg {
+  transition: transform 0.2s ease;
+}
+
+.btn-book-service:hover {
+  background: #1e5142;
+  border-color: #1e5142;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(30, 81, 66, 0.25);
+  transform: translateY(-1px);
+}
+
+.btn-book-service:hover svg {
+  transform: translateX(3px);
 }
 
 .provider-card {
@@ -782,7 +955,9 @@
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Toast */
@@ -809,24 +984,30 @@
     flex-direction: column;
     align-items: flex-start;
   }
+
   .org-header-right {
     width: 100%;
     align-items: stretch;
   }
+
   .btn-primary-action {
     width: 100%;
     justify-content: center;
   }
+
   .section-header {
     top: 68px;
     align-items: flex-start;
   }
+
   .provider-search-box {
     width: 100%;
   }
+
   .provider-search-box input {
     width: 100%;
   }
+
   .provider-search-box input:focus {
     width: 100%;
   }

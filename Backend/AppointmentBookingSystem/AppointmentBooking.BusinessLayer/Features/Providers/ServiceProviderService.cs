@@ -37,6 +37,7 @@ public class ServiceProviderService : IServiceProviderService
         var providers = await _unitOfWork.Repository<ServiceProvider>()
             .Query()
             .Include(p => p.User)
+            .Include(p => p.Service)
             .Include(p => p.Appointments)
             .Where(p => p.TenantId == tenantId)
             .OrderByDescending(p => p.CreatedAt)
@@ -54,6 +55,7 @@ public class ServiceProviderService : IServiceProviderService
         var query = _unitOfWork.Repository<ServiceProvider>()
             .Query()
             .Include(p => p.User)
+            .Include(p => p.Service)
             .Include(p => p.Appointments)
             .Where(p => p.TenantId == tenantId);
 
@@ -66,7 +68,7 @@ public class ServiceProviderService : IServiceProviderService
         {
             var search = paginationParams.Search.Trim().ToLower();
             query = query.Where(p => (p.User.FirstName + " " + p.User.LastName).ToLower().Contains(search)
-                                  || p.ServiceType.ToLower().Contains(search)
+                                  || (p.Service != null && p.Service.Name.ToLower().Contains(search))
                                   || p.User.Email.ToLower().Contains(search)
                                   || (p.User.PhoneNumber != null && p.User.PhoneNumber.Contains(search)));
         }
@@ -89,6 +91,7 @@ public class ServiceProviderService : IServiceProviderService
         var query = _unitOfWork.Repository<ServiceProvider>()
             .Query()
             .Include(p => p.User)
+            .Include(p => p.Service)
             .Where(p => p.Status == ProviderStatus.Active);
 
         if (tenantId.HasValue && tenantId.Value > 0)
@@ -108,6 +111,7 @@ public class ServiceProviderService : IServiceProviderService
         var provider = await _unitOfWork.Repository<ServiceProvider>()
             .Query()
             .Include(p => p.User)
+            .Include(p => p.Service)
             .Include(p => p.Appointments)
             .FirstOrDefaultAsync(p => p.Id == id && p.TenantId == tenantId, cancellationToken);
 
@@ -167,6 +171,17 @@ public class ServiceProviderService : IServiceProviderService
                 provider.CreatedAt = DateTime.UtcNow;
                 provider.CreatedBy = createdBy;
 
+                if (!provider.ServiceId.HasValue && !string.IsNullOrWhiteSpace(request.ServiceType))
+                {
+                    var matchingService = await _unitOfWork.Repository<Service>()
+                        .Query()
+                        .FirstOrDefaultAsync(s => s.Name.ToLower() == request.ServiceType.Trim().ToLower() && !s.IsDeleted, cancellationToken);
+                    if (matchingService != null)
+                    {
+                        provider.ServiceId = matchingService.Id;
+                    }
+                }
+
                 await _unitOfWork.Repository<ServiceProvider>().AddAsync(provider, cancellationToken);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 
@@ -217,6 +232,21 @@ public class ServiceProviderService : IServiceProviderService
         _mapper.Map(request, provider);
         provider.UpdatedAt = DateTime.UtcNow;
 
+        if (request.ServiceId.HasValue)
+        {
+            provider.ServiceId = request.ServiceId.Value > 0 ? request.ServiceId.Value : null;
+        }
+        else if (!string.IsNullOrWhiteSpace(request.ServiceType))
+        {
+            var matchingService = await _unitOfWork.Repository<Service>()
+                .Query()
+                .FirstOrDefaultAsync(s => s.Name.ToLower() == request.ServiceType.Trim().ToLower() && !s.IsDeleted, cancellationToken);
+            if (matchingService != null)
+            {
+                provider.ServiceId = matchingService.Id;
+            }
+        }
+
         if (provider.UserId > 0)
         {
             var user = await _unitOfWork.Repository<User>().GetByIdAsync(provider.UserId, cancellationToken);
@@ -235,6 +265,26 @@ public class ServiceProviderService : IServiceProviderService
         }
 
         _unitOfWork.Repository<ServiceProvider>().Update(provider);
+
+        if (provider.ServiceId.HasValue)
+        {
+            var newService = await _unitOfWork.Repository<Service>().GetByIdAsync(provider.ServiceId.Value, cancellationToken);
+            if (newService != null && newService.DurationMinutes > 0)
+            {
+                var availabilities = await _unitOfWork.Repository<ProviderAvailability>()
+                    .Query()
+                    .Where(pa => pa.ServiceProviderId == provider.Id)
+                    .ToListAsync(cancellationToken);
+
+                foreach (var pa in availabilities)
+                {
+                    pa.SlotDurationMinutes = newService.DurationMinutes;
+                    pa.UpdatedAt = DateTime.UtcNow;
+                    _unitOfWork.Repository<ProviderAvailability>().Update(pa);
+                }
+            }
+        }
+
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return _mapper.Map<ServiceProviderDto>(provider);

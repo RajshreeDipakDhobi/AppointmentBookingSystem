@@ -109,7 +109,7 @@
           <span>{{ avatarError() }}</span>
         </div>
 
-        <!-- Row 1: Full Name & Specialization -->
+        <!-- Row 1: Full Name & Master Service Selection -->
         <div class="form-row">
           <div class="form-group flex-1">
             <label class="form-label">Full Name <span class="required-star">*</span></label>
@@ -125,16 +125,121 @@
           </div>
 
           <div class="form-group flex-1">
-            <label class="form-label">Specialization / Service Type <span class="required-star">*</span></label>
-            <input 
-              type="text" 
-              formControlName="serviceType" 
-              class="form-input" 
-              placeholder="e.g. General Dentistry, Hair Stylist" 
-            />
-            <div *ngIf="providerForm.get('serviceType')?.touched && providerForm.get('serviceType')?.invalid" class="form-error">
-              Specialization is required.
+            <label class="form-label">Assigned Service <span class="required-star">*</span></label>
+            
+            <div class="custom-select-anchor service-picker-anchor" [class.menu-open]="isServiceDropdownOpen()">
+              <button 
+                type="button" 
+                class="custom-select-trigger form-dropdown-trigger" 
+                (click)="toggleServiceDropdown($event)"
+                [class.has-selection]="selectedService()" 
+                [attr.aria-expanded]="isServiceDropdownOpen()"
+                title="Select service for this provider"
+              >
+                <div class="trigger-icon-wrap">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
+                    <line x1="7" y1="7" x2="7.01" y2="7"/>
+                  </svg>
+                </div>
+                
+                <span class="trigger-main-text" [class.placeholder-text]="!selectedService()">
+                  {{ selectedService() ? selectedService()!.name : '-- Select Service --' }}
+                </span>
+
+                <span *ngIf="selectedService()" class="trigger-price-badge">
+                  ₹{{ selectedService()!.price | number }}
+                </span>
+
+                <svg class="trigger-chevron" [class.rotated]="isServiceDropdownOpen()" xmlns="http://www.w3.org/2000/svg"
+                  width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="6 9 12 15 18 9" />
+                </svg>
+              </button>
+
+              <!-- Luxury Floating Popover -->
+              <div *ngIf="isServiceDropdownOpen()" class="custom-dropdown-popover service-picker-popover animate-scale-up"
+                (click)="$event.stopPropagation()">
+                <div class="popover-header">
+                  <span class="popover-header-title">Available Services</span>
+                  <span class="popover-count-pill">{{ availableServices().length }} Services</span>
+                </div>
+
+                <!-- Search Input if more than 3 services -->
+                <div class="popover-search-container" *ngIf="availableServices().length > 3">
+                  <div class="popover-search-box">
+                    <svg class="popover-search-icon" xmlns="http://www.w3.org/2000/svg" width="13" height="13"
+                      viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"
+                      stroke-linejoin="round">
+                      <circle cx="11" cy="11" r="8"></circle>
+                      <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                    <input 
+                      type="text" 
+                      class="popover-search-input" 
+                      placeholder="Search service..."
+                      [value]="serviceSearchQuery()" 
+                      (input)="onServiceSearchInput($event)"
+                      (click)="$event.stopPropagation()" 
+                      autocomplete="off" 
+                      spellcheck="false" 
+                    />
+                    <button *ngIf="serviceSearchQuery()" type="button" class="popover-search-clear"
+                      (click)="clearServiceSearch($event)" title="Clear search">✕</button>
+                  </div>
+                </div>
+
+                <!-- Services Option List -->
+                <div class="popover-items-list service-items-scroll">
+                  <button 
+                    type="button" 
+                    *ngFor="let s of filteredServices()"
+                    class="popover-option-item"
+                    [class.option-selected]="selectedService()?.id === s.id"
+                    (click)="selectService(s, $event)"
+                  >
+                    <div class="option-icon-box">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
+                        <line x1="7" y1="7" x2="7.01" y2="7"/>
+                      </svg>
+                    </div>
+                    <div class="option-info">
+                      <span class="option-title">{{ s.name }}</span>
+                      <span class="option-desc">₹{{ s.price | number }} · ⏱️ {{ s.durationMinutes }} mins</span>
+                    </div>
+                    <svg *ngIf="selectedService()?.id === s.id" class="option-check-icon"
+                      xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                      stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                  </button>
+
+                  <div *ngIf="filteredServices().length === 0" class="popover-empty-state">
+                    No services matching "{{ serviceSearchQuery() }}"
+                  </div>
+                </div>
+              </div>
             </div>
+
+            <div *ngIf="providerForm.get('serviceId')?.touched && providerForm.get('serviceId')?.invalid" class="form-error">
+              Please assign a master service to this provider.
+            </div>
+          </div>
+        </div>
+
+        <!-- Master Service Live Pricing Preview Banner -->
+        <div *ngIf="selectedService()" class="service-pricing-preview animate-fade-in">
+          <div class="pricing-preview-left">
+            <span class="preview-tag">Catalog Pricing</span>
+            <span class="preview-service-name">{{ selectedService()?.name }}</span>
+          </div>
+          <div class="pricing-preview-right">
+            <span class="preview-price">₹{{ selectedService()?.price | number }}</span>
+            <span class="preview-duration">⏱️ {{ selectedService()?.durationMinutes }} mins</span>
           </div>
         </div>
 
@@ -175,32 +280,7 @@
           </div>
         </div>
 
-        <!-- Row 3: Consultation Charges -->
-        <div class="form-row">
-          <div class="form-group flex-1">
-            <label class="form-label">
-              Consultation Charges <span class="required-star">*</span>
-            </label>
-            <div class="currency-input-group">
-              <span class="currency-prefix">₹</span>
-              <input 
-                type="number" 
-                formControlName="chargesAmount" 
-                class="form-input" 
-                min="0"
-                step="50"
-                placeholder="0.00" 
-              />
-            </div>
-            <div *ngIf="providerForm.get('chargesAmount')?.touched && providerForm.get('chargesAmount')?.invalid" class="form-error">
-              <span *ngIf="providerForm.get('chargesAmount')?.hasError('required')">Charges amount is required.</span>
-              <span *ngIf="providerForm.get('chargesAmount')?.hasError('min')">Amount must be 0 or greater.</span>
-            </div>
-          </div>
-          <div class="form-group flex-1"></div>
-        </div>
-
-        <!-- Row 4: Cabin / Room / Office Address (Optional) -->
+        <!-- Cabin / Room / Office Address (Optional) -->
         <div class="form-group">
           <label class="form-label">Cabin / Room / Office Address <span class="avatar-compact-tag">Optional</span></label>
           <textarea 

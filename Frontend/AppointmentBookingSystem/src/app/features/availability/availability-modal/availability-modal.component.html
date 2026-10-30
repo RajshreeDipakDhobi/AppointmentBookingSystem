@@ -226,11 +226,20 @@
               <!-- UNIFIED WORKING HOURS & SLOT DURATION ROW (Side by Side) -->
               <div class="unified-timing-card">
                 <div class="timing-card-top">
-                  <span class="card-section-label">Shift Hours & Slot Duration</span>
-                  <span class="shift-total-pill">
-                    {{ formatDurationText(calculateMinutesDiff(currentEditingDay.startTime, currentEditingDay.endTime))
-                    }} Shift
-                  </span>
+                  <span class="card-section-label">Shift Hours & Working Window</span>
+                  <div class="timing-badges-wrap">
+                    <span class="service-slot-pill" [title]="'Service slot duration linked to ' + (currentProvider?.specialization || 'Master Service')">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10" />
+                        <polyline points="12 6 12 12 16 14" />
+                      </svg>
+                      <span>Service Slot: {{ currentEditingDay.slotDurationMinutes || 30 }}m</span>
+                    </span>
+                    <span class="shift-total-pill">
+                      {{ formatDurationText(calculateMinutesDiff(currentEditingDay.startTime, currentEditingDay.endTime)) }} Shift
+                    </span>
+                  </div>
                 </div>
 
                 <div class="timing-controls-row">
@@ -249,24 +258,6 @@
 
                     <ng-container
                       *ngTemplateOutlet="timeDropdownPicker; context: { field: 'endTime', label: 'END TIME', value: currentEditingDay.endTime, align: 'right', isAmber: false }"></ng-container>
-                  </div>
-
-                  <!-- Slot Duration Dropdown (30 Mins Auto-selected) -->
-                  <div class="slot-duration-group">
-                    <span class="control-micro-title">SLOT DURATION</span>
-                    <div class="custom-select-wrapper">
-                      <select class="slot-duration-select" [ngModel]="currentEditingDay.slotDurationMinutes || 30"
-                        (ngModelChange)="selectDuration($event)">
-                        <option *ngFor="let opt of durationOptions" [value]="opt.value">
-                          {{ opt.label }}
-                        </option>
-                      </select>
-                      <svg class="custom-select-arrow" xmlns="http://www.w3.org/2000/svg" width="13" height="13"
-                        viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"
-                        stroke-linejoin="round">
-                        <polyline points="6 9 12 15 18 9" />
-                      </svg>
-                    </div>
                   </div>
                 </div>
               </div>
@@ -425,24 +416,31 @@
         <!-- Compact 1-Row Date Selection & Action Bar -->
         <div class="date-selection-bar glass-card">
           <div class="date-bar-left">
-            <!-- Sleek Date Capsule (Formatted Display + Hidden Native Picker Trigger) -->
-            <label class="date-capsule-picker" title="Click to choose a date">
-              <svg class="calendar-icon" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
-                fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                <rect width="18" height="18" x="3" y="4" rx="2" ry="2" />
-                <line x1="16" x2="16" y1="2" y2="6" />
-                <line x1="8" x2="8" y1="2" y2="6" />
-                <line x1="3" x2="21" y1="10" y2="10" />
-              </svg>
-              <span class="date-capsule-text">{{ formatDisplayDate(selectedDate) }}</span>
-              <svg class="date-capsule-chevron" xmlns="http://www.w3.org/2000/svg" width="12" height="12"
-                viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"
-                stroke-linejoin="round">
-                <polyline points="6 9 12 15 18 9" />
-              </svg>
-              <input type="date" class="date-capsule-hidden-input" [min]="minDate" [ngModel]="selectedDate"
-                (ngModelChange)="onDatePicked($event)" />
-            </label>
+            <!-- Date Picker Pill Button (Matching Calendar Component UI) -->
+            <div class="date-picker-anchor">
+              <input class="datepicker-anchor-input" [matDatepicker]="dateOverridePicker" [value]="selectedDateObject"
+                (dateChange)="onMaterialDateChange($event)" (dateInput)="onMaterialDateChange($event)" aria-label="Select date" readonly tabindex="-1">
+
+              <button type="button" class="btn-date-pill" (click)="dateOverridePicker.open()" [class.active]="dateOverridePicker.opened"
+                title="Click to open calendar date picker">
+                <svg class="calendar-icon" xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24"
+                  fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                  <line x1="16" y1="2" x2="16" y2="6" />
+                  <line x1="8" y1="2" x2="8" y2="6" />
+                  <line x1="3" y1="10" x2="21" y2="10" />
+                </svg>
+                <span class="date-pill-text">{{ formatDisplayDate(selectedDate) }}</span>
+                <svg class="chevron-mini" [class.rotated]="dateOverridePicker.opened" xmlns="http://www.w3.org/2000/svg"
+                  width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="6 9 12 15 18 9" />
+                </svg>
+              </button>
+
+              <mat-datepicker #dateOverridePicker panelClass="luxury-dark-datepicker" [startAt]="selectedDateObject"
+                [restoreFocus]="false"></mat-datepicker>
+            </div>
 
             <!-- Quick Jump Pills -->
             <div class="quick-jump-pills">
@@ -472,7 +470,7 @@
                 </span>
                 <span *ngIf="item.isAvailable" class="badge-hours-tag">
                   {{ formatTo12Hour(item.startTime) }} &ndash; {{ formatTo12Hour(item.endTime) }}
-                  <span class="item-slot-count">({{ item.totalCalculatedSlots }} slots &bull; {{ item.slotDurationMinutes }}m)</span>
+                  <span class="item-slot-count">({{ item.totalCalculatedSlots }} slots)</span>
                 </span>
                 <span *ngIf="getBlockedSlotsCount(item) > 0" class="badge-blocked-tag">
                   {{ getBlockedSlotsCount(item) }} blocked
@@ -532,10 +530,20 @@
                 <!-- Unified Shift Row for Date -->
                 <div class="unified-timing-card">
                   <div class="timing-card-top">
-                    <span class="card-section-label">Hours & Slot Duration for this Date</span>
-                    <span class="shift-total-pill">
-                      {{ formatDurationText(calculateMinutesDiff(dateSchedule.startTime, dateSchedule.endTime)) }}
-                    </span>
+                    <span class="card-section-label">Shift Hours & Working Window</span>
+                    <div class="timing-badges-wrap">
+                      <span class="service-slot-pill" [title]="'Service slot duration linked to ' + (currentProvider?.specialization || 'Master Service')">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none"
+                          stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                          <circle cx="12" cy="12" r="10" />
+                          <polyline points="12 6 12 12 16 14" />
+                        </svg>
+                        <span>Service Slot: {{ dateSchedule.slotDurationMinutes || currentProvider?.slotDurationMinutes || 30 }}m</span>
+                      </span>
+                      <span class="shift-total-pill">
+                        {{ formatDurationText(calculateMinutesDiff(dateSchedule.startTime, dateSchedule.endTime)) }} Shift
+                      </span>
+                    </div>
                   </div>
 
                   <div class="timing-controls-row">
@@ -554,24 +562,6 @@
 
                       <ng-container
                         *ngTemplateOutlet="timeDropdownPicker; context: { field: 'endTime', label: 'END TIME', value: dateSchedule.endTime, align: 'right', isAmber: false }"></ng-container>
-                    </div>
-
-                    <!-- Slot Duration Dropdown -->
-                    <div class="slot-duration-group">
-                      <span class="control-micro-title">SLOT DURATION</span>
-                      <div class="custom-select-wrapper">
-                        <select class="slot-duration-select" [ngModel]="dateSchedule.slotDurationMinutes || 30"
-                          (ngModelChange)="selectDuration($event)">
-                          <option *ngFor="let opt of durationOptions" [value]="opt.value">
-                            {{ opt.label }}
-                          </option>
-                        </select>
-                        <svg class="custom-select-arrow" xmlns="http://www.w3.org/2000/svg" width="13" height="13"
-                          viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
-                          stroke-linecap="round" stroke-linejoin="round">
-                          <polyline points="6 9 12 15 18 9" />
-                        </svg>
-                      </div>
                     </div>
                   </div>
                 </div>
@@ -713,13 +703,7 @@
     <!-- MODAL FOOTER                                             -->
     <!-- ======================================================== -->
     <div class="modal-footer-bar">
-      <div class="footer-summary-text">
-        <ng-container *ngIf="activeTab === 'date-wise'">
-          <span>
-            Schedule Setup for <strong>{{ formatDisplayDate(selectedDate) }}</strong>
-          </span>
-        </ng-container>
-      </div>
+      <div class="footer-summary-text"></div>
 
       <div class="footer-actions-group">
         <button type="button" class="btn btn-secondary" (click)="onClose()">Close</button>

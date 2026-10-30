@@ -6,7 +6,10 @@ export enum ProviderStatus {
 export interface ServiceProviderDto {
   id: number;
   tenantId: number;
+  userId?: number;
   name: string;
+  serviceId?: number;
+  serviceName?: string;
   serviceType: string;
   email: string;
   phoneNumber: string;
@@ -22,10 +25,11 @@ export interface ServiceProviderDto {
 
 export interface CreateServiceProviderRequestDto {
   name: string;
-  serviceType: string;
+  serviceId?: number;
+  serviceType?: string;
   email: string;
   phoneNumber: string;
-  chargesAmount: number;
+  chargesAmount?: number;
   address?: string;
   bio?: string;
   profilePictureUrl?: string;
@@ -33,7 +37,8 @@ export interface CreateServiceProviderRequestDto {
 
 export interface UpdateServiceProviderRequestDto {
   name: string;
-  serviceType: string;
+  serviceId?: number;
+  serviceType?: string;
   email: string;
   phoneNumber: string;
   chargesAmount?: number;

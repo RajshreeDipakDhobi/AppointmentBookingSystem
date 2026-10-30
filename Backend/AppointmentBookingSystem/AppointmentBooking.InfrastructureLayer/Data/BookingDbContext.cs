@@ -17,6 +17,7 @@ public class BookingDbContext : DbContext
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
 
     // Service Provider & Catalog Tables (Module 1 & 2)
+    public DbSet<Service> Services => Set<Service>();
     public DbSet<ServiceProvider> ServiceProviders => Set<ServiceProvider>();
     public DbSet<ProviderAvailability> ProviderAvailabilities => Set<ProviderAvailability>();
 
@@ -105,9 +106,7 @@ public class BookingDbContext : DbContext
         {
             entity.ToTable("ServiceProviders");
             entity.HasKey(sp => sp.Id);
-            entity.Property(sp => sp.ServiceType).IsRequired().HasMaxLength(100);
             entity.Property(sp => sp.Bio).HasMaxLength(1000);
-            entity.Property(sp => sp.ChargesAmount).HasColumnType("decimal(18,2)").HasDefaultValue(0.00m);
             entity.Property(sp => sp.Status).IsRequired();
 
             entity.HasOne<Tenant>()
@@ -119,6 +118,29 @@ public class BookingDbContext : DbContext
                   .WithOne(u => u.ServiceProvider)
                   .HasForeignKey<ServiceProvider>(sp => sp.UserId)
                   .IsRequired()
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(sp => sp.Service)
+                  .WithMany(s => s.ServiceProviders)
+                  .HasForeignKey(sp => sp.ServiceId)
+                  .IsRequired(false)
+                  .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        // 6. Service Configuration (Master Service Catalog linked to User)
+        modelBuilder.Entity<Service>(entity =>
+        {
+            entity.ToTable("Services");
+            entity.HasKey(s => s.Id);
+            entity.Property(s => s.Name).IsRequired().HasMaxLength(150);
+            entity.Property(s => s.Description).HasMaxLength(1000);
+            entity.Property(s => s.Price).HasColumnType("decimal(18,2)").HasDefaultValue(0.00m);
+            entity.Property(s => s.DurationMinutes).IsRequired().HasDefaultValue(30);
+            entity.Property(s => s.IsActive).IsRequired().HasDefaultValue(true);
+
+            entity.HasOne(s => s.User)
+                  .WithMany(u => u.CreatedServices)
+                  .HasForeignKey(s => s.UserId)
                   .OnDelete(DeleteBehavior.Restrict);
         });
 
@@ -164,7 +186,7 @@ public class BookingDbContext : DbContext
 
             // Database-Level Concurrency Unique Filtered Index to prevent double booking race conditions
             entity.HasIndex(a => new { a.ServiceProviderId, a.AppointmentDate, a.StartTime })
-                  .HasFilter("[Status] <> 3 AND [Status] <> 4 AND [Status] <> 6 AND [IsDeleted] = 0")
+                  .HasFilter("[ServiceProviderId] IS NOT NULL AND [Status] <> 3 AND [Status] <> 4 AND [Status] <> 6 AND [IsDeleted] = 0")
                   .IsUnique();
 
             entity.Property(a => a.Reason).HasMaxLength(500);
@@ -182,7 +204,14 @@ public class BookingDbContext : DbContext
             entity.HasOne(a => a.ServiceProvider)
                   .WithMany(sp => sp.Appointments)
                   .HasForeignKey(a => a.ServiceProviderId)
-                  .OnDelete(DeleteBehavior.Cascade);
+                  .IsRequired(false)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(a => a.Service)
+                  .WithMany(s => s.Appointments)
+                  .HasForeignKey(a => a.ServiceId)
+                  .IsRequired(false)
+                  .OnDelete(DeleteBehavior.SetNull);
 
 
             entity.HasOne(a => a.Customer)
