@@ -137,18 +137,25 @@ export class LoginComponent implements OnInit {
     const userRole = user?.role;
     const isCustomer = userRole === UserRole.Customer || (userRole as unknown) === 4 || (userRole as unknown) === '4';
 
-    // Customers must always be directed to their appointments view upon login, never the booking portal
-    if (isCustomer) {
-      sessionStorage.removeItem('pending_booking_draft');
-      this.router.navigate(['/my-appointments']);
-      return;
+    // 1. If user was in the middle of booking an appointment, resume their booking!
+    const pendingDraftRaw = sessionStorage.getItem('pending_booking_draft');
+    const isResume = this.isResumingBooking || !!pendingDraftRaw;
+
+    if (isResume && pendingDraftRaw) {
+      try {
+        const draft = JSON.parse(pendingDraftRaw);
+        const targetUrl = draft.returnUrl || this.route.snapshot.queryParamMap.get('returnUrl') || '/booking-portal';
+        const separator = targetUrl.includes('?') ? '&' : '?';
+        this.router.navigateByUrl(`${targetUrl}${separator}resumeBooking=true`);
+        return;
+      } catch {
+        sessionStorage.removeItem('pending_booking_draft');
+      }
     }
 
-    const hasPendingDraft = !!sessionStorage.getItem('pending_booking_draft');
-    const isResume = this.isResumingBooking && hasPendingDraft;
-
-    if (isResume) {
-      this.router.navigate(['/book'], { queryParams: { resumeBooking: 'true' } });
+    // 2. Normal customer login (no pending draft) -> My Appointments
+    if (isCustomer) {
+      this.router.navigate(['/my-appointments']);
       return;
     }
 

@@ -4,6 +4,7 @@ import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { TenantService } from '../../../core/services/tenant.service';
 import { ProviderService } from '../../../core/services/provider.service';
+import { AuthService } from '../../../core/services/auth.service';
 import { TenantDto } from '../../../core/models/tenant.models';
 import { ServiceProviderDto } from '../../../core/models/provider.models';
 import { AppointmentDto } from '../../../core/models/appointment.models';
@@ -31,6 +32,7 @@ export class OrganizationDetailComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly tenantService = inject(TenantService);
   private readonly providerService = inject(ProviderService);
+  private readonly authService = inject(AuthService);
 
   readonly tenant = signal<TenantDto | null>(null);
   readonly providers = signal<ServiceProviderDto[]>([]);
@@ -109,11 +111,28 @@ export class OrganizationDetailComponent implements OnInit {
         const tenantSpecific = (list || []).filter(p => !tenantId || p.tenantId === tenantId);
         this.providers.set(tenantSpecific);
         this.isLoadingProviders.set(false);
+        this.checkResumeBooking();
       },
       error: () => {
         this.isLoadingProviders.set(false);
       }
     });
+  }
+
+  private checkResumeBooking(): void {
+    const isResume = this.route.snapshot.queryParamMap.get('resumeBooking') === 'true';
+    const draftRaw = sessionStorage.getItem('pending_booking_draft');
+
+    if (draftRaw && (isResume || this.authService.isAuthenticated())) {
+      try {
+        const draft = JSON.parse(draftRaw);
+        if (draft && draft.providerId) {
+          this.openBookingModal(draft.providerId);
+        }
+      } catch {
+        sessionStorage.removeItem('pending_booking_draft');
+      }
+    }
   }
 
   onSearchInput(value: string): void {
@@ -139,9 +158,10 @@ export class OrganizationDetailComponent implements OnInit {
     this.isBookingModalOpen.set(false);
   }
 
-  onAppointmentBooked(appointment: AppointmentDto): void {
+  onAppointmentBooked(_appointment: AppointmentDto): void {
     this.closeBookingModal();
-    this.showToast(`Appointment booked successfully! Reference #: ${appointment.appointmentNumber || '#' + appointment.id}`);
+    sessionStorage.removeItem('pending_booking_draft');
+    this.router.navigate(['/my-appointments']);
   }
 
   showToast(msg: string): void {

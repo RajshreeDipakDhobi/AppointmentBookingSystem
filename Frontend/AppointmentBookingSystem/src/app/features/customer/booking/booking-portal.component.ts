@@ -158,7 +158,9 @@ export class BookingPortalComponent implements OnInit, OnDestroy {
   }
 
   onAppointmentBooked(_appointment: AppointmentDto): void {
-    // Confirmed via booking modal
+    this.closeBookingModal();
+    sessionStorage.removeItem('pending_booking_draft');
+    this.router.navigate(['/my-appointments']);
   }
 
   // Drawer Auth Handlers

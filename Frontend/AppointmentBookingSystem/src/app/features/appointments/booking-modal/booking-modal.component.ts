@@ -374,7 +374,6 @@ export class BookingModalComponent implements OnInit {
   checkAndResumeDraft(): void {
     // Only resume draft if user has completed authentication!
     if (!this.authService.isAuthenticated()) {
-      sessionStorage.removeItem('pending_booking_draft');
       return;
     }
 
@@ -391,8 +390,6 @@ export class BookingModalComponent implements OnInit {
         this.currentStep = 3;
       }
     } catch {
-      sessionStorage.removeItem('pending_booking_draft');
-    } finally {
       sessionStorage.removeItem('pending_booking_draft');
     }
   }
@@ -731,14 +728,17 @@ export class BookingModalComponent implements OnInit {
       providerId: this.selectedProviderId,
       provider: this.selectedProvider,
       selectedDate: this.selectedDate,
-      slot: this.selectedSlot
+      slot: this.selectedSlot,
+      tenantId: this.tenantId,
+      returnUrl: this.router.url
     };
     sessionStorage.setItem('pending_booking_draft', JSON.stringify(draft));
     this.close.emit();
     this.router.navigate(['/login'], {
       queryParams: {
         mode: mode,
-        resumeBooking: 'true'
+        resumeBooking: 'true',
+        returnUrl: this.router.url
       }
     });
   }
