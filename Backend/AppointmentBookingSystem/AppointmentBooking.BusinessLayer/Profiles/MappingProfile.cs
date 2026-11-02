@@ -108,7 +108,7 @@ public class MappingProfile : Profile
             .ForMember(dest => dest.ServiceProviderName, opt => opt.MapFrom(src => 
                 src.ServiceProvider != null && src.ServiceProvider.User != null 
                     ? $"{src.ServiceProvider.User.FirstName} {src.ServiceProvider.User.LastName}".Trim() 
-                    : (!src.ServiceProviderId.HasValue ? "Broadcasting to specialists..." : string.Empty)))
+                    : (!src.ServiceProviderId.HasValue ? "Dispatching Specialist..." : string.Empty)))
             .ForMember(dest => dest.ServiceProviderType, opt => opt.MapFrom(src => 
                 src.ServiceProvider != null && src.ServiceProvider.Service != null 
                     ? src.ServiceProvider.Service.Name 
@@ -129,6 +129,10 @@ public class MappingProfile : Profile
             .ForMember(dest => dest.StartTime, opt => opt.MapFrom(src => src.StartTime.ToString(@"hh\:mm")))
             .ForMember(dest => dest.EndTime, opt => opt.MapFrom(src => src.EndTime.ToString(@"hh\:mm")))
             .ForMember(dest => dest.ProposedStartTime, opt => opt.MapFrom(src => src.ProposedStartTime.HasValue ? src.ProposedStartTime.Value.ToString(@"hh\:mm") : null))
-            .ForMember(dest => dest.ProposedEndTime, opt => opt.MapFrom(src => src.ProposedEndTime.HasValue ? src.ProposedEndTime.Value.ToString(@"hh\:mm") : null));
+            .ForMember(dest => dest.ProposedEndTime, opt => opt.MapFrom(src => src.ProposedEndTime.HasValue ? src.ProposedEndTime.Value.ToString(@"hh\:mm") : null))
+            .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => DateTime.SpecifyKind(src.CreatedAt, DateTimeKind.Utc)))
+            .ForMember(dest => dest.ApprovedAt, opt => opt.MapFrom(src => src.ApprovedAt.HasValue ? DateTime.SpecifyKind(src.ApprovedAt.Value, DateTimeKind.Utc) : (DateTime?)null))
+            .ForMember(dest => dest.CancelledAt, opt => opt.MapFrom(src => src.CancelledAt.HasValue ? DateTime.SpecifyKind(src.CancelledAt.Value, DateTimeKind.Utc) : (DateTime?)null))
+            .ForMember(dest => dest.RejectedAt, opt => opt.MapFrom(src => src.RejectedAt.HasValue ? DateTime.SpecifyKind(src.RejectedAt.Value, DateTimeKind.Utc) : (DateTime?)null));
     }
 }

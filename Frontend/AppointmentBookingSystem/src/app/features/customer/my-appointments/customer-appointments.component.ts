@@ -13,7 +13,7 @@ import { RescheduleModalComponent } from '../../appointments/reschedule-modal/re
 import { CancelModalComponent } from '../../appointments/cancel-modal/cancel-modal.component';
 import { AppDatePipe, AppTimePipe, AppStatusBadgePipe, AppInitialsPipe } from '../../../shared/pipes';
 import { CopyToClipboardDirective } from '../../../shared/directives';
-import { getAvatarGradient, isAppointmentPast, canModifyAppointment, canCancelAppointment } from '../../../core/constants/app.constants';
+import { getAvatarGradient, isAppointmentPast, canModifyAppointment, canCancelAppointment, parseServerUtcDate } from '../../../core/constants/app.constants';
 
 @Component({
   selector: 'app-customer-appointments',
@@ -87,6 +87,7 @@ export class CustomerAppointmentsComponent implements OnInit, OnDestroy {
 
   // Modals state
   readonly isBookingModalOpen = signal<boolean>(false);
+  readonly selectedServiceIdForModal = signal<number | null>(null);
   readonly selectedTicket = signal<AppointmentDto | null>(null);
   readonly activeRescheduleAppt = signal<AppointmentDto | null>(null);
   readonly activeCancelAppt = signal<AppointmentDto | null>(null);
@@ -94,6 +95,9 @@ export class CustomerAppointmentsComponent implements OnInit, OnDestroy {
   readonly isAppointmentPast = isAppointmentPast;
   readonly canModify = canModifyAppointment;
   readonly canCancel = canCancelAppointment;
+  readonly now = signal<number>(Date.now());
+  private timerIntervalId: any = null;
+  private pollIntervalId: any = null;
 
   get user() {
     return this.authService.currentUser();
@@ -115,10 +119,91 @@ export class CustomerAppointmentsComponent implements OnInit, OnDestroy {
     this.bookingModalSub = this.layoutService.openBookingModal$.subscribe(() => {
       this.openBookingModal();
     });
+
+    this.timerIntervalId = setInterval(() => {
+      this.now.set(Date.now());
+    }, 1000);
+
+    this.pollIntervalId = setInterval(() => {
+      const hasAwaiting = this.appointments().some(a => this.isAwaitingSpecialist(a));
+      if (hasAwaiting) {
+        this.silentReloadAppointments();
+      }
+    }, 8000);
   }
 
   ngOnDestroy(): void {
     this.bookingModalSub?.unsubscribe();
+    if (this.timerIntervalId) clearInterval(this.timerIntervalId);
+    if (this.pollIntervalId) clearInterval(this.pollIntervalId);
+  }
+
+  silentReloadAppointments(): void {
+    let status: AppointmentStatus | undefined;
+    if (this.selectedStatusFilter() === 'UPCOMING') status = AppointmentStatus.Booked;
+    else if (this.selectedStatusFilter() === 'COMPLETED') status = AppointmentStatus.Completed;
+    else if (this.selectedStatusFilter() === 'CANCELLED') status = AppointmentStatus.Cancelled;
+
+    this.appointmentService.getMyAppointments(
+      {
+        pageNumber: 1,
+        pageSize: 100,
+        search: this.searchQuery().trim() || undefined
+      },
+      status
+    ).subscribe({
+      next: (res) => {
+        this.appointments.set(res.items);
+        this.totalCount.set(res.totalCount);
+      }
+    });
+  }
+
+  getRemainingSeconds(apt: AppointmentDto): number {
+    if (!apt.createdAt) return 0;
+    const createdTime = parseServerUtcDate(apt.createdAt);
+    if (!createdTime) return 0;
+    const diffSeconds = Math.floor((this.now() - createdTime) / 1000);
+    return Math.min(600, Math.max(0, 10 * 60 - diffSeconds));
+  }
+
+  getRemainingPercent(apt: AppointmentDto): number {
+    const rem = this.getRemainingSeconds(apt);
+    return Math.max(0, Math.min(100, Math.round((rem / 600) * 100)));
+  }
+
+  getRemainingTimeDisplay(apt: AppointmentDto): string {
+    const rem = this.getRemainingSeconds(apt);
+    const mins = Math.floor(rem / 60);
+    const secs = rem % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')} remaining`;
+  }
+
+  isAwaitingSpecialist(apt: AppointmentDto): boolean {
+    if (apt.serviceProviderId) return false;
+    if (apt.status !== AppointmentStatus.Booked) return false;
+    return this.getRemainingSeconds(apt) > 0;
+  }
+
+  isExpired(apt: AppointmentDto): boolean {
+    if (apt.serviceProviderId) return false;
+    if (apt.status === AppointmentStatus.Cancelled) {
+      return !!(apt.cancellationReason && (apt.cancellationReason.includes('10 minutes') || apt.cancellationReason.includes('specialist')));
+    }
+    if (apt.status === AppointmentStatus.Booked) {
+      return this.getRemainingSeconds(apt) <= 0;
+    }
+    return false;
+  }
+
+  rebookService(apt: AppointmentDto): void {
+    this.selectedServiceIdForModal.set(apt.serviceId || null);
+    this.isBookingModalOpen.set(true);
+  }
+
+  openBookingModal(serviceId?: number): void {
+    this.selectedServiceIdForModal.set(serviceId || null);
+    this.isBookingModalOpen.set(true);
   }
 
   loadStats(): void {
@@ -165,11 +250,6 @@ export class CustomerAppointmentsComponent implements OnInit, OnDestroy {
   onSearchChange(query: string): void {
     this.searchQuery.set(query);
     this.loadAppointments();
-  }
-
-  // --- Modal Openers ---
-  openBookingModal(): void {
-    this.isBookingModalOpen.set(true);
   }
 
   onAppointmentBooked(apt: AppointmentDto): void {

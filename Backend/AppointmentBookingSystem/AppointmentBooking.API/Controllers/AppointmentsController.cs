@@ -324,8 +324,8 @@ public class AppointmentsController : BaseApiController
             return ErrorResponse("Tenant context is required.");
         }
 
-        // Service providers are strictly scoped to their own appointments
-        var targetProviderId = IsServiceProvider ? CurrentProviderId : providerId;
+        // Service providers are strictly scoped to their own appointments (never see unassigned broadcast requests)
+        var targetProviderId = IsServiceProvider ? (CurrentProviderId ?? -1) : providerId;
 
         var result = await _appointmentService.GetAppointmentsPagedAsync(
             activeTenantId.Value, 

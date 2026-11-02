@@ -18,6 +18,16 @@ public class AppointmentDto
     public decimal? ServicePrice { get; set; }
     public int? ServiceDurationMinutes { get; set; }
     public bool IsBroadcast => !ServiceProviderId.HasValue;
+    
+    private DateTime UtcCreatedAt => CreatedAt.Kind == DateTimeKind.Utc 
+        ? CreatedAt 
+        : DateTime.SpecifyKind(CreatedAt, DateTimeKind.Utc);
+
+    public bool IsExpired => Status == AppointmentStatus.Booked && !ServiceProviderId.HasValue && UtcCreatedAt.AddMinutes(10) < DateTime.UtcNow;
+    public bool IsAcceptanceWindowActive => !ServiceProviderId.HasValue && Status == AppointmentStatus.Booked && UtcCreatedAt.AddMinutes(10) >= DateTime.UtcNow;
+    public int? RemainingSeconds => (!ServiceProviderId.HasValue && Status == AppointmentStatus.Booked)
+        ? Math.Max(0, (int)(UtcCreatedAt.AddMinutes(10) - DateTime.UtcNow).TotalSeconds)
+        : null;
 
     public int? CustomerId { get; set; }
     public string CustomerName { get; set; } = string.Empty;
@@ -35,7 +45,9 @@ public class AppointmentDto
     public AppointmentStatus Status { get; set; }
     public string StatusText => Status switch
     {
-        AppointmentStatus.Pending when !ServiceProviderId.HasValue => "Broadcasting",
+        AppointmentStatus.Cancelled when CancellationReason != null && CancellationReason.Contains("10 minutes") => "Specialist Unavailable",
+        AppointmentStatus.Pending when !ServiceProviderId.HasValue && UtcCreatedAt.AddMinutes(10) < DateTime.UtcNow => "Specialist Unavailable",
+        AppointmentStatus.Pending when !ServiceProviderId.HasValue => "Awaiting Specialist",
         AppointmentStatus.Pending => "Booked",
         AppointmentStatus.Approved => "Approved",
         AppointmentStatus.Completed => "Completed",

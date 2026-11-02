@@ -164,6 +164,7 @@
   font-weight: 700;
 }
 
+.pill-customer,
 .pill-service {
   max-width: 140px;
   overflow: hidden;

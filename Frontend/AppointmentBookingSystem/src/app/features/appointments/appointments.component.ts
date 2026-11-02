@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal, HostListener } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, signal, computed, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AppointmentService, AppointmentFilterParams } from '../../core/services/appointment.service';
@@ -17,7 +17,7 @@ import { ServiceDispatchModalComponent } from './service-dispatch-modal/service-
 import { PaginationComponent } from '../../shared/components/pagination/pagination.component';
 import { AppDatePipe, AppTimePipe, AppStatusBadgePipe, AppInitialsPipe, AppPhonePipe } from '../../shared/pipes';
 import { CopyToClipboardDirective } from '../../shared/directives';
-import { getAvatarGradient, getInitials, isAppointmentPast, canModifyAppointment, canCancelAppointment } from '../../core/constants/app.constants';
+import { getAvatarGradient, getInitials, isAppointmentPast, canModifyAppointment, canCancelAppointment, parseServerUtcDate } from '../../core/constants/app.constants';
 import { ConfirmService } from '../../shared/components/confirmation-modal/confirm.service';
 import { AuthService } from '../../core/services/auth.service';
 
@@ -42,13 +42,15 @@ import { AuthService } from '../../core/services/auth.service';
   templateUrl: './appointments.component.html',
   styleUrls: ['./appointments.component.css']
 })
-export class AppointmentsComponent implements OnInit {
+export class AppointmentsComponent implements OnInit, OnDestroy {
   private readonly appointmentService = inject(AppointmentService);
   private readonly providerService = inject(ProviderService);
   private readonly confirmService = inject(ConfirmService);
   private readonly authService = inject(AuthService);
   readonly getAvatarGradient = getAvatarGradient;
   readonly getInitials = getInitials;
+  readonly now = signal<number>(Date.now());
+  private timerId: any = null;
 
   readonly isAdmin = this.authService.isAdmin;
 
@@ -184,6 +186,13 @@ export class AppointmentsComponent implements OnInit {
   readonly isAppointmentPast = isAppointmentPast;
   readonly canCancel = canCancelAppointment;
 
+  // Service providers strictly see ONLY their own appointments in the table
+  readonly displayedAppointments = computed(() => {
+    const list = this.appointments();
+    if (this.isAdmin()) return list;
+    return list.filter(a => !!a.serviceProviderId);
+  });
+
   ngOnInit(): void {
     this.loadProviders();
     this.loadStats();
@@ -191,12 +200,56 @@ export class AppointmentsComponent implements OnInit {
     if (this.isServiceProvider) {
       this.loadIncomingRequests();
     }
+    this.timerId = setInterval(() => {
+      this.now.set(Date.now());
+      if (this.isServiceProvider) {
+        this.loadIncomingRequests();
+      }
+    }, 5000);
+  }
+
+  ngOnDestroy(): void {
+    if (this.timerId) {
+      clearInterval(this.timerId);
+    }
+  }
+
+  isExpired(apt: AppointmentDto): boolean {
+    if (apt.serviceProviderId) return false;
+    if (apt.status === AppointmentStatus.Cancelled) {
+      return !!(apt.cancellationReason && (apt.cancellationReason.includes('10 minutes') || apt.cancellationReason.includes('specialist')));
+    }
+    if (!apt.createdAt) return false;
+    const createdTime = parseServerUtcDate(apt.createdAt);
+    if (!createdTime) return false;
+    return (this.now() - createdTime) >= 10 * 60 * 1000;
+  }
+
+  getDispatchBadgeText(apt: AppointmentDto): string {
+    if (this.isExpired(apt)) return 'Expired';
+    if (!apt.createdAt) return 'Open Dispatch';
+    const createdTime = parseServerUtcDate(apt.createdAt);
+    if (!createdTime) return 'Open Dispatch';
+    const remainingSec = Math.min(600, Math.max(0, 10 * 60 - Math.floor((this.now() - createdTime) / 1000)));
+    const mins = Math.floor(remainingSec / 60);
+    const secs = remainingSec % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')} left`;
+  }
+
+  getDispatchTooltip(apt: AppointmentDto): string {
+    if (this.isExpired(apt)) {
+      return '10-minute acceptance window has elapsed without specialist confirmation.';
+    }
+    return 'Broadcast request active for specialists to accept.';
   }
 
   loadIncomingRequests(): void {
     if (!this.isServiceProvider) return;
     this.appointmentService.getIncomingBroadcastRequests().subscribe({
-      next: (requests) => this.incomingRequests.set(requests || []),
+      next: (requests) => {
+        const activeRequests = (requests || []).filter(r => !this.isExpired(r));
+        this.incomingRequests.set(activeRequests);
+      },
       error: (err) => console.error('Failed to load incoming broadcast requests', err)
     });
   }
@@ -209,6 +262,7 @@ export class AppointmentsComponent implements OnInit {
   closeDispatchModal(): void {
     this.showDispatchModal = false;
     this.selectedDispatchRequest = null;
+    this.loadIncomingRequests();
   }
 
   onDispatchAccepted(apt: AppointmentDto): void {

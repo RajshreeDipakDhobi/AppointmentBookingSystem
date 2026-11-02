@@ -4,6 +4,7 @@ import { AppointmentService } from '../../../core/services/appointment.service';
 import { AppointmentDto } from '../../../core/models/appointment.models';
 import { AppDatePipe, AppTimePipe, AppPhonePipe } from '../../../shared/pipes';
 import { ConfirmService } from '../../../shared/components/confirmation-modal/confirm.service';
+import { parseServerUtcDate } from '../../../core/constants/app.constants';
 
 @Component({
   selector: 'app-service-dispatch-modal',
@@ -24,12 +25,30 @@ export class ServiceDispatchModalComponent {
   readonly isAcceptingId = signal<number | null>(null);
   readonly errorMessage = signal<string>('');
 
+  isRequestExpired(req: AppointmentDto): boolean {
+    if (!req.createdAt) return false;
+    const createdTime = parseServerUtcDate(req.createdAt);
+    if (!createdTime) return false;
+    return (Date.now() - createdTime) >= 10 * 60 * 1000;
+  }
+
+  get activeRequestsList(): AppointmentDto[] {
+    return (this.requests || []).filter(r => !this.isRequestExpired(r));
+  }
+
   get activeRequest(): AppointmentDto | null {
-    if (this.selectedRequest) return this.selectedRequest;
-    return this.requests.length > 0 ? this.requests[0] : null;
+    const list = this.activeRequestsList;
+    if (this.selectedRequest && !this.isRequestExpired(this.selectedRequest) && list.some(r => r.id === this.selectedRequest!.id)) {
+      return this.selectedRequest;
+    }
+    return list.length > 0 ? list[0] : null;
   }
 
   selectRequest(req: AppointmentDto): void {
+    if (this.isRequestExpired(req)) {
+      this.declineCurrent();
+      return;
+    }
     this.selectedRequest = req;
     this.errorMessage.set('');
   }
@@ -41,8 +60,9 @@ export class ServiceDispatchModalComponent {
     }
     const currentId = this.activeRequest.id;
     this.requests = this.requests.filter(r => r.id !== currentId);
-    if (this.requests.length > 0) {
-      this.selectedRequest = this.requests[0];
+    const remaining = this.activeRequestsList;
+    if (remaining.length > 0) {
+      this.selectedRequest = remaining[0];
     } else {
       this.selectedRequest = null;
       this.onClose();
@@ -50,6 +70,25 @@ export class ServiceDispatchModalComponent {
   }
 
   acceptRequest(req: AppointmentDto): void {
+    if (this.isRequestExpired(req)) {
+      const errorMsg = 'This request has expired. The 10-minute specialist acceptance window has elapsed.';
+      this.requests = this.requests.filter(r => r.id !== req.id);
+      const remaining = this.activeRequestsList;
+      if (remaining.length > 0) {
+        this.selectedRequest = remaining[0];
+        this.errorMessage.set(errorMsg);
+      } else {
+        this.selectedRequest = null;
+        this.onClose();
+      }
+      this.confirmService.alert({
+        title: 'Request Expired',
+        message: errorMsg,
+        variant: 'warning'
+      });
+      return;
+    }
+
     this.isAcceptingId.set(req.id);
     this.errorMessage.set('');
 
@@ -60,8 +99,20 @@ export class ServiceDispatchModalComponent {
       },
       error: (err) => {
         this.isAcceptingId.set(null);
-        const errorMsg = err.error?.message || 'This request could not be accepted. It may have already been accepted by another specialist.';
-        this.errorMessage.set(errorMsg);
+        const errorMsg = err.error?.message || 'This appointment request has already been accepted and confirmed by another specialist.';
+        
+        // Immediately remove this already-accepted request from the UI
+        this.requests = this.requests.filter(r => r.id !== req.id);
+        const remaining = this.activeRequestsList;
+        if (remaining.length > 0) {
+          this.selectedRequest = remaining[0];
+          this.errorMessage.set(errorMsg);
+        } else {
+          this.selectedRequest = null;
+          this.onClose();
+        }
+
+        // Show prominent warning modal on top
         this.confirmService.alert({
           title: 'Request Unavailable',
           message: errorMsg,

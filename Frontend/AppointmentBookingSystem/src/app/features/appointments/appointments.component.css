@@ -2616,7 +2616,16 @@
   box-shadow: 0 0 0 2px rgba(22, 163, 74, 0.25) !important;
 }
 
-/* Table Unassigned / Broadcast Badge */
+/* Table Unassigned / Dash styling */
+.unassigned-dash {
+  color: #94a3b8;
+  font-size: 1.15rem;
+  font-weight: 600;
+  display: inline-block;
+  padding: 0.2rem 0.6rem;
+  letter-spacing: -0.02em;
+}
+
 .broadcast-unassigned-cell {
   display: flex;
   flex-direction: column;
@@ -2648,4 +2657,21 @@
   font-size: 0.72rem;
   color: #64748b;
   font-weight: 500;
+}
+
+.broadcast-table-tag.is-expired {
+  background: #fef2f2 !important;
+  border-color: #fecaca !important;
+  color: #991b1b !important;
+}
+
+.expired-mini-icon {
+  color: #ef4444;
+}
+
+.dispatch-timer-tag {
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: #15803d;
+  margin-left: 0.15rem;
 }

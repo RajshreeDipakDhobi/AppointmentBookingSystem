@@ -93,6 +93,23 @@ export function filter10Digits(val?: string | null): string {
 }
 
 /**
+ * Safely parses server UTC datetime strings into epoch milliseconds.
+ * If the string lacks a timezone offset (Z or +/-), it treats it as UTC.
+ */
+export function parseServerUtcDate(dateStr: string | Date | undefined | null): number {
+  if (!dateStr) return 0;
+  if (dateStr instanceof Date) return dateStr.getTime();
+  let s = String(dateStr).trim();
+  if (!s) return 0;
+  // If string has date & time without 'Z' or '+/-HH:mm' timezone offset, append 'Z' so it is parsed as UTC
+  if (!s.endsWith('Z') && !/[+-]\d{2}(:\d{2})?$/.test(s)) {
+    s += 'Z';
+  }
+  const t = new Date(s).getTime();
+  return isNaN(t) ? 0 : t;
+}
+
+/**
  * Accurately determines if an appointment's scheduled start time has passed,
  * matching backend C# logic:
  * appointment.AppointmentDate.Date < now.Date || 
@@ -167,8 +184,8 @@ export function isAppointmentPast(apt: { appointmentDate?: string | Date; startT
 export function canRescheduleAppointment(apt: AppointmentDto | null | undefined): boolean {
   if (!apt) return false;
 
-  // Unaccepted / Broadcasting requests cannot be rescheduled
-  if (!apt.serviceProviderId || apt.serviceProviderId <= 0 || apt.isBroadcast || apt.statusText?.toLowerCase() === 'broadcasting') {
+  // Unaccepted / Broadcasting / Awaiting Specialist requests cannot be rescheduled
+  if (!apt.serviceProviderId || apt.serviceProviderId <= 0 || apt.isBroadcast || apt.statusText?.toLowerCase() === 'broadcasting' || apt.statusText?.toLowerCase().includes('awaiting') || apt.statusText?.toLowerCase().includes('unavailable')) {
     return false;
   }
 

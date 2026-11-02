@@ -987,8 +987,12 @@ public class AppointmentService : IAppointmentService
         AppointmentStatus? status = null,
         CancellationToken cancellationToken = default)
     {
+        await SweepExpiredBroadcastAppointmentsAsync(cancellationToken);
+
         var query = _unitOfWork.Repository<Appointment>().Query()
             .Include(a => a.ServiceProvider).ThenInclude(sp => sp.User)
+            .Include(a => a.ServiceProvider).ThenInclude(sp => sp.Service)
+            .Include(a => a.Service)
             .Include(a => a.Customer)
             .Where(a => a.CustomerId == customerId);
 
@@ -1033,12 +1037,16 @@ public class AppointmentService : IAppointmentService
         string? search,
         CancellationToken cancellationToken = default)
     {
+        await SweepExpiredBroadcastAppointmentsAsync(cancellationToken);
+
         var query = _unitOfWork.Repository<Appointment>().Query()
             .Include(a => a.ServiceProvider).ThenInclude(sp => sp.User)
+            .Include(a => a.ServiceProvider).ThenInclude(sp => sp.Service)
+            .Include(a => a.Service)
             .Include(a => a.Customer)
             .Where(a => a.TenantId == tenantId);
 
-        if (providerId.HasValue && providerId.Value > 0)
+        if (providerId.HasValue)
         {
             query = query.Where(a => a.ServiceProviderId == providerId.Value);
         }
@@ -1084,12 +1092,16 @@ public class AppointmentService : IAppointmentService
         PaginationParams paginationParams,
         CancellationToken cancellationToken = default)
     {
+        await SweepExpiredBroadcastAppointmentsAsync(cancellationToken);
+
         var query = _unitOfWork.Repository<Appointment>().Query()
             .Include(a => a.ServiceProvider).ThenInclude(sp => sp.User)
+            .Include(a => a.ServiceProvider).ThenInclude(sp => sp.Service)
+            .Include(a => a.Service)
             .Include(a => a.Customer)
             .Where(a => a.TenantId == tenantId);
 
-        if (providerId.HasValue && providerId.Value > 0)
+        if (providerId.HasValue)
         {
             query = query.Where(a => a.ServiceProviderId == providerId.Value);
         }
@@ -1135,6 +1147,8 @@ public class AppointmentService : IAppointmentService
     {
         var appointment = await _unitOfWork.Repository<Appointment>().Query()
             .Include(a => a.ServiceProvider).ThenInclude(sp => sp.User)
+            .Include(a => a.ServiceProvider).ThenInclude(sp => sp.Service)
+            .Include(a => a.Service)
             .Include(a => a.Customer)
             .FirstOrDefaultAsync(a => a.Id == appointmentId && a.TenantId == tenantId, cancellationToken);
 
@@ -1423,21 +1437,55 @@ public class AppointmentService : IAppointmentService
         };
     }
 
+    private async Task SweepExpiredBroadcastAppointmentsAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var cutoffTime = DateTime.UtcNow.AddMinutes(-10);
+            var expired = await _unitOfWork.Repository<Appointment>().Query()
+                .Where(a => a.ServiceProviderId == null
+                         && a.Status == AppointmentStatus.Booked
+                         && a.CreatedAt < cutoffTime)
+                .ToListAsync(cancellationToken);
+
+            if (expired.Count > 0)
+            {
+                foreach (var apt in expired)
+                {
+                    apt.Status = AppointmentStatus.Cancelled;
+                    apt.CancellationReason = "No specialist was available to accept within 10 minutes. (Cancelled by System)";
+                    apt.CancelledAt = DateTime.UtcNow;
+                    apt.UpdatedAt = DateTime.UtcNow;
+                    _unitOfWork.Repository<Appointment>().Update(apt);
+                }
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error sweeping expired broadcast appointments");
+        }
+    }
+
     public async Task<List<AppointmentDto>> GetIncomingBroadcastRequestsAsync(
         int? providerId, 
         int? tenantId, 
         CancellationToken cancellationToken = default)
     {
+        await SweepExpiredBroadcastAppointmentsAsync(cancellationToken);
+
         var today = _dateTimeProvider.Today;
         var nowTime = _dateTimeProvider.GetCurrentLocalTime().TimeOfDay;
+        var cutoffTime = DateTime.UtcNow.AddMinutes(-10);
 
-        // Base query for unassigned broadcast appointments
+        // Base query for unassigned broadcast appointments within active 10-minute window
         var query = _unitOfWork.Repository<Appointment>().Query()
             .Include(a => a.Service)
             .Include(a => a.Customer)
             .Include(a => a.ServiceProvider).ThenInclude(sp => sp!.User)
             .Where(a => a.ServiceProviderId == null 
                      && a.Status == AppointmentStatus.Booked
+                     && a.CreatedAt >= cutoffTime
                      && a.AppointmentDate.Date >= today);
 
         if (tenantId.HasValue && tenantId.Value > 0)
@@ -1547,6 +1595,18 @@ public class AppointmentService : IAppointmentService
                 return ApiResponse<AppointmentDto>.Fail("This appointment has already been cancelled.");
             }
 
+            if (appointment.CreatedAt.AddMinutes(10) < DateTime.UtcNow)
+            {
+                appointment.Status = AppointmentStatus.Cancelled;
+                appointment.CancellationReason = "No specialist was available to accept within 10 minutes. (Cancelled by System)";
+                appointment.CancelledAt = DateTime.UtcNow;
+                appointment.UpdatedAt = DateTime.UtcNow;
+                _unitOfWork.Repository<Appointment>().Update(appointment);
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+                await _unitOfWork.CommitTransactionAsync();
+                return ApiResponse<AppointmentDto>.Fail("This request has expired. The 10-minute specialist acceptance window has elapsed.");
+            }
+
             if (appointment.ServiceId.HasValue && provider.ServiceId.HasValue && appointment.ServiceId.Value != provider.ServiceId.Value)
             {
                 await _unitOfWork.RollbackTransactionAsync();
@@ -1587,6 +1647,11 @@ public class AppointmentService : IAppointmentService
 
             var providerName = provider.User != null ? $"{provider.User.FirstName} {provider.User.LastName}".Trim() : "Specialist";
             return ApiResponse<AppointmentDto>.Ok(_mapper.Map<AppointmentDto>(updated), $"Appointment successfully accepted and confirmed by {providerName}!");
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            await _unitOfWork.RollbackTransactionAsync();
+            return ApiResponse<AppointmentDto>.Fail("This appointment request has already been accepted and confirmed by another specialist.");
         }
         catch (Exception ex)
         {

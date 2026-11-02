@@ -6,8 +6,8 @@
       <div class="header-content">
         <div class="title-with-counter">
           <h3 class="modal-title">New Service Request</h3>
-          <span *ngIf="requests.length > 1" class="requests-count-badge">
-            {{ requests.length }} Requests
+          <span *ngIf="activeRequestsList.length > 1" class="requests-count-badge">
+            {{ activeRequestsList.length }} Requests
           </span>
         </div>
         <p class="modal-subtitle">Review incoming booking details to accept or decline.</p>
@@ -37,16 +37,16 @@
     <div class="modal-body custom-scrollbar" *ngIf="activeRequest as req">
 
       <!-- Multiple Requests Switcher Bar (Only shown if > 1 request exists) -->
-      <div *ngIf="requests.length > 1" class="requests-switcher-bar">
-        <button *ngFor="let r of requests; let idx = index"
+      <div *ngIf="activeRequestsList.length > 1" class="requests-switcher-bar">
+        <button *ngFor="let r of activeRequestsList; let idx = index"
           type="button"
           class="request-switcher-pill"
           [class.active]="req.id === r.id"
           (click)="selectRequest(r)"
-          [title]="'View request #' + (idx + 1) + ': ' + (r.serviceName || r.serviceProviderType)">
+          [title]="'View request #' + (idx + 1) + ': ' + (r.customerName || 'Customer') + ' (' + (r.serviceName || r.serviceProviderType) + ')'">
           <span class="pill-dot"></span>
           <span class="pill-number">#{{ idx + 1 }}</span>
-          <span class="pill-service">{{ r.serviceName || r.serviceProviderType }}</span>
+          <span class="pill-customer">{{ r.customerName || 'Customer' }}</span>
           <span *ngIf="r.servicePrice" class="pill-price">₹{{ r.servicePrice | number }}</span>
         </button>
       </div>

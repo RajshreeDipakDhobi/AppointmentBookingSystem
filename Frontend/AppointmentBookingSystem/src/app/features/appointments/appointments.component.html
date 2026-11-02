@@ -389,7 +389,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let apt of appointments(); let i = index; let count = count" class="appointment-row"
+            <tr *ngFor="let apt of displayedAppointments(); let i = index; let count = count" class="appointment-row"
               [class.has-open-dropdown]="openActionDropdownId() === apt.id">
               <!-- 1. Appointment ID -->
               <td class="td-id">
@@ -439,13 +439,7 @@
 
               <!-- 3. Service Provider (Hidden for Service Provider themselves) -->
               <td *ngIf="!isServiceProvider" class="td-provider">
-                <div *ngIf="!apt.serviceProviderId" class="broadcast-unassigned-cell">
-                  <span class="broadcast-table-tag">
-                    <span class="live-ping-dot-mini"></span>
-                    <span>Broadcasting</span>
-                  </span>
-                  <span class="broadcast-service-sub" *ngIf="apt.serviceName">{{ apt.serviceName }}</span>
-                </div>
+                <span *ngIf="!apt.serviceProviderId" class="unassigned-dash" title="No specialist assigned">—</span>
 
                 <div *ngIf="apt.serviceProviderId" class="provider-cell">
                   <div class="provider-avatar-circle"
@@ -458,13 +452,13 @@
                   <div class="provider-meta">
                     <span class="provider-name" [title]="apt.serviceProviderName || 'Specialist'">{{
                       apt.serviceProviderName || 'Specialist' }}</span>
-                    <span class="provider-specialty-pill" [title]="apt.serviceProviderType || 'Specialist'">
+                    <span class="provider-specialty-pill" [title]="apt.serviceProviderType || apt.serviceName || 'Specialist'">
                       <svg xmlns="http://www.w3.org/2000/svg" width="9" height="9" viewBox="0 0 24 24" fill="none"
                         stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                         <polygon
                           points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
                       </svg>
-                      <span>{{ apt.serviceProviderType || 'Specialist' }}</span>
+                      <span>{{ apt.serviceProviderType || apt.serviceName || 'Specialist' }}</span>
                     </span>
                   </div>
                 </div>
@@ -496,9 +490,9 @@
 
               <!-- 5. Status -->
               <td class="td-status">
-                <span *ngIf="!apt.serviceProviderId" class="badge badge-dispatch-open" title="Broadcast request open for specialists">
+                <span *ngIf="!apt.serviceProviderId" class="badge" [ngClass]="isExpired(apt) ? 'badge-cancelled' : 'badge-dispatch-open'" [title]="getDispatchTooltip(apt)">
                   <span class="dot"></span>
-                  <span>Awaiting Specialist</span>
+                  <span>{{ isExpired(apt) ? 'Specialist Unavailable' : 'Awaiting Specialist' }}</span>
                 </span>
                 <span *ngIf="apt.serviceProviderId" class="badge" [ngClass]="apt.status | appStatusBadge"
                   [title]="apt.status === AppointmentStatus.RescheduleProposed && apt.proposedDate ? ('Proposed Slot: ' + (apt.proposedDate | appDate) + ' ' + (apt.proposedStartTime | appTime) + ' – ' + (apt.proposedEndTime | appTime) + (apt.rescheduleNotes ? ' | Note: ' + apt.rescheduleNotes : '')) : ''">
@@ -511,16 +505,6 @@
               <!-- 6. Actions (Direct View for Admin & Terminal Statuses, Manage Dropdown for Provider on Active Bookings) -->
               <td class="td-actions text-right">
                 <div class="row-actions-group">
-                  <!-- Specialist Review Dispatch Button for Unassigned Broadcast Appointments -->
-                  <button *ngIf="isServiceProvider && !apt.serviceProviderId" type="button" class="btn-dispatch-table-review"
-                    (click)="openDispatchModal(apt)" title="Review and accept dispatch">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none"
-                      stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                      <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
-                    </svg>
-                    <span>Review Dispatch</span>
-                  </button>
-
                   <!-- Direct View Button (Admin always; Service Provider when in terminal status: Cancelled, Completed, Rejected) -->
                   <button *ngIf="isAdmin() || (isTerminalStatus(apt.status) && apt.serviceProviderId)" type="button" class="btn-direct-view"
                     (click)="viewDetails(apt)" title="View Details">
@@ -821,10 +805,9 @@
             <div class="section-card-body">
               <div class="info-row">
                 <span class="info-label">Specialist</span>
-                <span class="info-val info-val-strong">{{ selectedAppointmentForDetail.serviceProviderName ||
-                  'Specialist' }}</span>
+                <span class="info-val info-val-strong">{{ selectedAppointmentForDetail.serviceProviderId ? selectedAppointmentForDetail.serviceProviderName : '—' }}</span>
               </div>
-              <div class="info-row">
+              <div class="info-row" *ngIf="selectedAppointmentForDetail.serviceProviderType">
                 <span class="info-label">Specialization</span>
                 <span class="info-val">
                   <span class="provider-specialty-pill">{{ selectedAppointmentForDetail.serviceProviderType }}</span>

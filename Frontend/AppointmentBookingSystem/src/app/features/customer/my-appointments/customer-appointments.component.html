@@ -143,11 +143,26 @@
     <div *ngFor="let apt of filteredAppointments()" class="customer-card glass-card">
       <!-- Top Row: Status Badge & Appointment ID -->
       <div class="card-top-bar">
-        <span *ngIf="apt.status === AppointmentStatus.Booked && isAppointmentPast(apt)" class="badge badge-overdue">
+        <!-- 1. Actively Awaiting Specialist within 10 minutes -->
+        <span *ngIf="isAwaitingSpecialist(apt)" class="badge badge-dispatching">
+          <span class="pulse-dot"></span>
+          <span>Assigning Specialist</span>
+        </span>
+
+        <!-- 2. Timeout / Unavailable State -->
+        <span *ngIf="isExpired(apt)" class="badge badge-unavailable">
+          <span class="dot dot-unavailable"></span>
+          <span>Specialist Unavailable</span>
+        </span>
+
+        <!-- 3. Overdue Booked (For direct provider appointments whose scheduled slot passed) -->
+        <span *ngIf="!isAwaitingSpecialist(apt) && !isExpired(apt) && apt.status === AppointmentStatus.Booked && isAppointmentPast(apt)" class="badge badge-overdue">
           <span class="dot dot-overdue"></span>
           <span>Booked (Past)</span>
         </span>
-        <span *ngIf="!(apt.status === AppointmentStatus.Booked && isAppointmentPast(apt))" class="badge"
+
+        <!-- 4. Normal Status -->
+        <span *ngIf="!isExpired(apt) && !isAwaitingSpecialist(apt) && !(apt.status === AppointmentStatus.Booked && isAppointmentPast(apt))" class="badge"
           [ngClass]="apt.status | appStatusBadge">
           <span class="dot"></span>
           <span *ngIf="apt.status === AppointmentStatus.Approved">Confirmed</span>
@@ -160,7 +175,39 @@
       </div>
 
       <!-- Main Body: Provider Info -->
-      <div class="card-provider-box">
+      <!-- Case A: Actively Dispatching -->
+      <div *ngIf="isAwaitingSpecialist(apt)" class="card-provider-box dispatching-box">
+        <div class="dispatch-radar-circle">
+          <span class="radar-ping"></span>
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+          </svg>
+        </div>
+        <div class="provider-text-wrap">
+          <h3 class="card-provider-name">Assigning Specialist...</h3>
+          <span class="card-specialty-chip">{{ apt.serviceName || apt.serviceProviderType }}</span>
+        </div>
+      </div>
+
+      <!-- Case B: Timeout Expired / Unavailable -->
+      <div *ngIf="isExpired(apt)" class="card-provider-box unavailable-box">
+        <div class="unavailable-icon-circle">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="8" x2="12" y2="12" />
+            <line x1="12" y1="16" x2="12.01" y2="16" />
+          </svg>
+        </div>
+        <div class="provider-text-wrap">
+          <h3 class="card-provider-name">No Specialist Available</h3>
+          <span class="card-specialty-chip">{{ apt.serviceName || apt.serviceProviderType }}</span>
+        </div>
+      </div>
+
+      <!-- Case C: Assigned Provider -->
+      <div *ngIf="!isAwaitingSpecialist(apt) && !isExpired(apt)" class="card-provider-box">
         <div class="provider-avatar-circle"
           [style.background]="apt.serviceProviderProfilePictureUrl ? 'transparent' : getGradient(apt.serviceProviderName)">
           <img *ngIf="apt.serviceProviderProfilePictureUrl" [src]="apt.serviceProviderProfilePictureUrl"
@@ -172,6 +219,39 @@
           <h3 class="card-provider-name">{{ apt.serviceProviderName }}</h3>
           <span class="card-specialty-chip">{{ apt.serviceProviderType }}</span>
         </div>
+      </div>
+
+      <!-- Live 10-Minute Countdown Strip when Awaiting Specialist -->
+      <div *ngIf="isAwaitingSpecialist(apt)" class="acceptance-countdown-strip">
+        <div class="countdown-progress-bar">
+          <div class="countdown-fill" [style.width.%]="getRemainingPercent(apt)"></div>
+        </div>
+        <div class="countdown-text-row">
+          <span class="countdown-label">
+            <svg class="pulse-spin" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <polyline points="12 6 12 12 16 14" />
+            </svg>
+            Awaiting specialist acceptance
+          </span>
+          <span class="countdown-time">{{ getRemainingTimeDisplay(apt) }}</span>
+        </div>
+      </div>
+
+      <!-- Unavailable / Rebook Notice Box when Expired -->
+      <div *ngIf="isExpired(apt)" class="unavailable-notice-box">
+        <p class="unavailable-msg">
+          We apologize! None of our specialists could accept your booking within the 10-minute window. Your slot has been released.
+        </p>
+        <button type="button" class="btn-rebook-slot" (click)="rebookService(apt)">
+          <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
+            <path d="M21 3v5h-5" />
+          </svg>
+          <span>Book Another Slot</span>
+        </button>
       </div>
 
       <!-- Schedule Strip: Date & Time in compact row -->
@@ -411,7 +491,7 @@
     (cancelled)="onCancelled($event)"></app-cancel-modal>
 
   <!-- Global Modals -->
-  <app-booking-modal *ngIf="isBookingModalOpen()" (close)="isBookingModalOpen.set(false)"
+  <app-booking-modal *ngIf="isBookingModalOpen()" [initialServiceId]="selectedServiceIdForModal()" (close)="isBookingModalOpen.set(false)"
     (booked)="onAppointmentBooked($event)"></app-booking-modal>
 
 </div>

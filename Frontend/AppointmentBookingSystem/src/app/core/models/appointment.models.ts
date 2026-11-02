@@ -43,6 +43,9 @@ export interface AppointmentDto {
   servicePrice?: number;
   serviceDurationMinutes?: number;
   isBroadcast?: boolean;
+  isExpired?: boolean;
+  isAcceptanceWindowActive?: boolean;
+  remainingSeconds?: number;
   customerId?: number;
   customerName: string;
   customerEmail: string;
