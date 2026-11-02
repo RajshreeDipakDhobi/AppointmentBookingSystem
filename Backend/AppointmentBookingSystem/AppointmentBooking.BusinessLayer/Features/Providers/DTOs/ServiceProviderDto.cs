@@ -8,6 +8,9 @@ public class ServiceProviderDto
     public int TenantId { get; set; }
     public int? ServiceId { get; set; }
     public string? ServiceName { get; set; }
+    public List<ProviderServiceSummaryDto> AssignedServices { get; set; } = new();
+    public List<int> ServiceIds => AssignedServices.Select(s => s.Id).ToList();
+    public List<string> ServiceNames => AssignedServices.Select(s => s.Name).ToList();
     public string Name { get; set; } = string.Empty;
     public string ServiceType { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;

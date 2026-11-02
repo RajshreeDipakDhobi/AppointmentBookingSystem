@@ -91,6 +91,7 @@ export class AvailabilityModalComponent implements OnChanges {
 
   selectedProviderId: number | null = null;
   isProviderMenuOpen = false;
+  isSlotDurationDropdownOpen = false;
 
   // Modern Navigation: 'weekly' (Standard Weekly Hours) vs 'date-wise' (Special Dates & Holidays)
   activeTab: 'weekly' | 'date-wise' = 'weekly';
@@ -239,7 +240,7 @@ export class AvailabilityModalComponent implements OnChanges {
     if (match) {
       this.providerName = match.providerName;
       this.providerRole = match.specialization || 'Specialist';
-      const provDur = match.slotDurationMinutes || 30;
+      const provDur = (match.slotDurationMinutes > 0 && match.slotDurationMinutes !== 90) ? match.slotDurationMinutes : 30;
       this.days.forEach(d => {
         d.slotDurationMinutes = provDur;
       });
@@ -261,7 +262,7 @@ export class AvailabilityModalComponent implements OnChanges {
     this.selectedProviderId = p.providerId;
     this.providerName = p.providerName;
     this.providerRole = p.specialization || 'Specialist';
-    const provDur = p.slotDurationMinutes || 30;
+    const provDur = (p.slotDurationMinutes > 0 && p.slotDurationMinutes !== 90) ? p.slotDurationMinutes : 30;
     this.days.forEach(d => {
       d.slotDurationMinutes = provDur;
     });
@@ -311,14 +312,16 @@ export class AvailabilityModalComponent implements OnChanges {
           }
         });
 
-        const provDur = this.currentProvider?.slotDurationMinutes || 30;
+        const provDur = 30; // Default base slot step is 30m (not 90m)
         this.days.forEach(day => {
           const matched = (schedules || []).find(s => s.dayOfWeek === day.dayOfWeek);
           if (matched && matched.id > 0 && matched.isAvailable) {
             day.isActive = true;
             day.startTime = this.normalizeTime(matched.startTime) || '10:00';
             day.endTime = this.normalizeTime(matched.endTime) || '17:00';
-            day.slotDurationMinutes = matched.slotDurationMinutes || provDur;
+            day.slotDurationMinutes = (matched.slotDurationMinutes > 0 && matched.slotDurationMinutes !== 90)
+              ? matched.slotDurationMinutes
+              : 30;
             day.blockedSlots = matched.blockedSlotList || (matched.blockedSlots ? matched.blockedSlots.split(',').map(s => s.trim()) : []);
 
             if (matched.breakStartTime && matched.breakEndTime) {
@@ -902,6 +905,36 @@ export class AvailabilityModalComponent implements OnChanges {
     this.openTimeDropdown = field;
   }
 
+  toggleSlotDurationDropdown(event: MouseEvent): void {
+    event.stopPropagation();
+    this.openTimeDropdown = null;
+    this.isProviderMenuOpen = false;
+    this.isSlotDurationDropdownOpen = !this.isSlotDurationDropdownOpen;
+  }
+
+  selectSlotDuration(mins: number, applyToAllDays: boolean = false, event?: MouseEvent): void {
+    if (event) event.stopPropagation();
+    this.isSlotDurationDropdownOpen = false;
+    this.currentEditingDay.slotDurationMinutes = mins;
+    if (applyToAllDays) {
+      this.days.forEach(d => {
+        d.slotDurationMinutes = mins;
+        if (d.isActive) {
+          this.recalculateSlotsForDay(d);
+        }
+      });
+    } else {
+      this.recalculateSlotsForDay(this.currentEditingDay);
+    }
+  }
+
+  selectDateSlotDuration(mins: number, event?: MouseEvent): void {
+    if (event) event.stopPropagation();
+    this.isSlotDurationDropdownOpen = false;
+    this.dateSchedule.slotDurationMinutes = mins;
+    this.recalculateDateSlots();
+  }
+
   @HostListener('document:click')
   onDocumentClick(): void {
     if (this.openTimeDropdown) {
@@ -910,12 +943,16 @@ export class AvailabilityModalComponent implements OnChanges {
     if (this.isProviderMenuOpen) {
       this.isProviderMenuOpen = false;
     }
+    if (this.isSlotDurationDropdownOpen) {
+      this.isSlotDurationDropdownOpen = false;
+    }
   }
 
   @HostListener('document:keydown.escape')
   onEscapeKey(): void {
     this.openTimeDropdown = null;
     this.isProviderMenuOpen = false;
+    this.isSlotDurationDropdownOpen = false;
   }
 
   onBackdropClick(_event: MouseEvent): void {
@@ -925,6 +962,7 @@ export class AvailabilityModalComponent implements OnChanges {
   onClose(): void {
     this.openTimeDropdown = null;
     this.isProviderMenuOpen = false;
+    this.isSlotDurationDropdownOpen = false;
     this.close.emit();
   }
 

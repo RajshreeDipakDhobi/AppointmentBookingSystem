@@ -1,0 +1,368 @@
+<div class="provider-services-container">
+
+  <!-- Standard Page Header (Matching Services, Providers & Appointments) -->
+  <div class="page-header">
+    <div class="header-titles">
+      <h2>My Services</h2>
+      <p>Certified services catalog, today's schedule, and real-time workload.</p>
+    </div>
+
+    <!-- Header Actions Dock -->
+    <div class="header-actions">
+      <!-- Live Status Badge (Pulse dot + Status) -->
+      <div *ngIf="overview() as data" class="status-indicator-pill" [ngClass]="getStatusBadgeClass(data.currentWorkStatus)">
+        <span class="status-dot-pulse" *ngIf="data.currentWorkStatus === 'Busy' || data.currentWorkStatus === 'Available'"></span>
+        <span class="status-dot-static" *ngIf="data.currentWorkStatus !== 'Busy' && data.currentWorkStatus !== 'Available'"></span>
+        <span class="status-pill-text">{{ getDisplayStatus(data.currentWorkStatus) }}</span>
+      </div>
+
+      <!-- Refresh Button -->
+      <button type="button" class="btn btn-secondary btn-refresh" (click)="loadOverview()" [disabled]="isLoading()" title="Refresh Schedule & Services">
+        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" [class.spin]="isLoading()">
+          <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+          <path d="M3 3v5h5"/>
+          <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/>
+          <path d="M16 21h5v-5"/>
+        </svg>
+        <span>Refresh</span>
+      </button>
+
+      <!-- View Appointments Button -->
+      <button type="button" class="btn btn-primary" (click)="viewAllAppointments()">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <rect width="18" height="18" x="3" y="4" rx="2" ry="2"/>
+          <line x1="16" y1="2" x2="16" y2="6"/>
+          <line x1="8" y1="2" x2="8" y2="6"/>
+          <line x1="3" y1="10" x2="21" y2="10"/>
+        </svg>
+        <span>View Appointments</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Error Notification Alert -->
+  <div *ngIf="errorMessage() && !isLoading()" class="alert alert-error animate-fade-in">
+    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="10"/>
+      <line x1="12" y1="8" x2="12" y2="12"/>
+      <line x1="12" y1="16" x2="12.01" y2="16"/>
+    </svg>
+    <span>{{ errorMessage() }}</span>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="isLoading()" class="loading-state glass-card">
+    <div class="spinner"></div>
+    <p>Loading your assigned services and schedule...</p>
+  </div>
+
+  <ng-container *ngIf="overview() as data">
+    <!-- Stats Metric Cards (100% Matching Services / Providers / Dashboard) -->
+    <div class="stats-grid">
+      <!-- Card 1: Assigned Services -->
+      <div class="stat-card glass-card">
+        <div class="stat-icon-wrap icon-primary">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect width="18" height="18" x="3" y="3" rx="2" />
+            <path d="M7 7h10" />
+            <path d="M7 12h10" />
+            <path d="M7 17h10" />
+          </svg>
+        </div>
+        <div class="stat-details">
+          <span class="stat-value">{{ data.totalServicesCount }}</span>
+          <span class="stat-label">Assigned Services</span>
+        </div>
+      </div>
+
+      <!-- Card 2: Today's Bookings -->
+      <div class="stat-card glass-card">
+        <div class="stat-icon-wrap icon-warning">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect width="18" height="18" x="3" y="4" rx="2" ry="2"/>
+            <line x1="16" y1="2" x2="16" y2="6"/>
+            <line x1="8" y1="2" x2="8" y2="6"/>
+            <line x1="3" y1="10" x2="21" y2="10"/>
+            <path d="m9 16 2 2 4-4"/>
+          </svg>
+        </div>
+        <div class="stat-details">
+          <span class="stat-value">{{ data.todayAppointmentsCount }}</span>
+          <span class="stat-label">Today's Bookings ({{ data.completedTodayCount }} completed)</span>
+        </div>
+      </div>
+
+      <!-- Card 3: Today's Shift -->
+      <div class="stat-card glass-card">
+        <div class="stat-icon-wrap icon-purple">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <polyline points="12 6 12 12 16 14"/>
+          </svg>
+        </div>
+        <div class="stat-details">
+          <span class="stat-value font-compact">{{ data.isWorkingToday ? data.workingHours : 'Off Today' }}</span>
+          <span class="stat-label">{{ data.isWorkingToday ? (data.breakHours ? 'Break: ' + data.breakHours : 'Continuous Shift') : 'Scheduled Day Off' }}</span>
+        </div>
+      </div>
+
+      <!-- Card 4: Current Availability -->
+      <div class="stat-card glass-card">
+        <div class="stat-icon-wrap" [ngClass]="getStatusIconClass(data.currentWorkStatus)">
+          <svg *ngIf="data.currentWorkStatus === 'Busy'" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="8" x2="12" y2="12"/>
+            <line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+          <svg *ngIf="data.currentWorkStatus === 'OnBreak'" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M17 8h1a4 4 0 1 1 0 8h-1"/>
+            <path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"/>
+            <line x1="6" x2="6" y1="2" y2="4"/>
+            <line x1="10" x2="10" y1="2" y2="4"/>
+            <line x1="14" x2="14" y1="2" y2="4"/>
+          </svg>
+          <svg *ngIf="data.currentWorkStatus !== 'Busy' && data.currentWorkStatus !== 'OnBreak'" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+            <polyline points="22 4 12 14.01 9 11.01"/>
+          </svg>
+        </div>
+        <div class="stat-details">
+          <span class="stat-value font-compact" [ngClass]="{'text-busy': data.currentWorkStatus === 'Busy'}">
+            {{ getDisplayStatus(data.currentWorkStatus) }}
+          </span>
+          <span class="stat-label truncate" [title]="data.currentStatusNote">{{ data.currentStatusNote }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Active Live Session Banner (When in-session right now) -->
+    <div *ngIf="ongoingBooking() as ongoing" class="live-in-progress-banner animate-fade-in">
+      <div class="live-banner-left">
+        <span class="live-badge-glow">IN PROGRESS</span>
+        <div class="live-banner-info">
+          <span class="client-title">{{ ongoing.customerName }}</span>
+          <span class="service-pill">{{ ongoing.serviceName }}</span>
+          <span class="time-range">{{ ongoing.startTime }} – {{ ongoing.endTime }}</span>
+        </div>
+      </div>
+      <div class="live-banner-right">
+        <span class="remaining-chip">{{ ongoing.progressOrRemainingNote }}</span>
+        <button type="button" class="btn btn-sm btn-view-live" (click)="viewAllAppointments()">View Details</button>
+      </div>
+    </div>
+
+    <!-- Filter Bar / Command Dock (Matching Services & Providers) -->
+    <div class="filter-bar glass-card">
+      <div class="search-box">
+        <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8" />
+          <line x1="21" y1="21" x2="16.65" y2="16.65" />
+        </svg>
+        <input type="text" [ngModel]="searchQuery()" (ngModelChange)="searchQuery.set($event)" class="search-input"
+          placeholder="Search assigned services by title or description..." />
+        <button *ngIf="searchQuery()" type="button" class="btn-clear-search" (click)="searchQuery.set('')" title="Clear search">✕</button>
+      </div>
+
+      <div class="filter-controls">
+        <div class="date-chip">
+          <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+            <line x1="16" y1="2" x2="16" y2="6"/>
+            <line x1="8" y1="2" x2="8" y2="6"/>
+            <line x1="3" y1="10" x2="21" y2="10"/>
+          </svg>
+          <span>{{ data.todayDateFormatted }}</span>
+        </div>
+        <div class="services-count">
+          <span>Showing: <strong>{{ filteredServices().length }}</strong> of {{ data.totalServicesCount }} Services</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Workspace Split Layout: Today's Schedule on Left, Services Grid on Right -->
+    <div class="workspace-grid">
+
+      <!-- LEFT COLUMN: Today's Schedule & Busy Timeline (Clean, Luxury & Compact) -->
+      <aside class="schedule-column glass-card">
+        <div class="column-header">
+          <div class="header-main">
+            <h3>Today's Schedule</h3>
+            <span class="schedule-date">{{ data.dayName }}</span>
+          </div>
+          <span class="shift-status-pill" [ngClass]="data.isWorkingToday ? 'pill-shift-on' : 'pill-shift-off'">
+            {{ data.isWorkingToday ? 'ON SHIFT' : 'OFF TODAY' }}
+          </span>
+        </div>
+
+        <!-- Shift Timing Subheader -->
+        <div class="shift-sub-bar">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <polyline points="12 6 12 12 16 14"/>
+          </svg>
+          <span>{{ data.workingHours }}</span>
+          <span *ngIf="data.breakHours" class="break-tag">· Break: {{ data.breakHours }}</span>
+        </div>
+
+        <!-- Timeline Body -->
+        <div class="timeline-body">
+          <!-- Off Today State -->
+          <div *ngIf="!data.isWorkingToday" class="schedule-empty-state">
+            <div class="empty-icon-emerald">
+              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                <line x1="16" y1="2" x2="16" y2="6"/>
+                <line x1="8" y1="2" x2="8" y2="6"/>
+                <line x1="3" y1="10" x2="21" y2="10"/>
+              </svg>
+            </div>
+            <h4>Scheduled Day Off</h4>
+            <p>You have no working shifts or client appointments scheduled for today.</p>
+          </div>
+
+          <!-- Working Today: Has Bookings -->
+          <div *ngIf="data.isWorkingToday && data.todayTimeline.length > 0" class="timeline-list">
+            <div *ngFor="let item of data.todayTimeline" class="timeline-card"
+                 [ngClass]="{
+                   'card-ongoing': item.isOngoingNow,
+                   'card-completed': item.isCompleted,
+                   'card-upcoming': item.isUpcoming
+                 }">
+              <div class="time-pillar">
+                <span class="time-start">{{ item.startTime }}</span>
+                <div class="time-track-line">
+                  <span class="track-node"></span>
+                </div>
+                <span class="time-end">{{ item.endTime }}</span>
+              </div>
+
+              <div class="appointment-details">
+                <div class="app-top-row">
+                  <span class="client-name">{{ item.customerName }}</span>
+                  <span class="app-status-badge" [ngClass]="item.isOngoingNow ? 'status-ongoing' : (item.isCompleted ? 'status-done' : 'status-upcoming')">
+                    {{ item.isOngoingNow ? 'IN PROGRESS' : (item.isCompleted ? 'DONE' : item.progressOrRemainingNote) }}
+                  </span>
+                </div>
+                <div class="app-service-name">
+                  <span>{{ item.serviceName }}</span>
+                  <span class="dot-sep">•</span>
+                  <span class="duration-text">{{ item.durationMinutes }}m</span>
+                </div>
+                <div *ngIf="item.customerPhone" class="app-contact">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+                  </svg>
+                  <span>{{ item.customerPhone }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Working Today: 0 Bookings -->
+          <div *ngIf="data.isWorkingToday && data.todayTimeline.length === 0" class="schedule-empty-state">
+            <div class="empty-icon-emerald">
+              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <polyline points="12 6 12 12 16 14"/>
+              </svg>
+            </div>
+            <h4>All Slots Available</h4>
+            <p>You have no appointments booked yet today. You are fully ready to take new client bookings during your shift ({{ data.workingHours }}).</p>
+          </div>
+        </div>
+      </aside>
+
+      <!-- RIGHT COLUMN: Assigned Services Catalog -->
+      <section class="services-column">
+        <div class="section-top-bar">
+          <div class="section-title-wrap">
+            <h3>Assigned Services</h3>
+            <p>Certified services you are authorized to deliver under this organization</p>
+          </div>
+          <span class="services-badge-counter">{{ filteredServices().length }} Services</span>
+        </div>
+
+        <!-- Empty Filter Results -->
+        <div *ngIf="filteredServices().length === 0" class="empty-state glass-card">
+          <div class="empty-icon-wrap">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8"/>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+          </div>
+          <h4>No Services Found</h4>
+          <p>No assigned services match "{{ searchQuery() }}". Try clearing the search filter.</p>
+          <button type="button" class="btn btn-secondary btn-sm" (click)="searchQuery.set('')">Clear Filter</button>
+        </div>
+
+        <!-- Modern Luxury Assigned Service Cards Grid -->
+        <div *ngIf="filteredServices().length > 0" class="assigned-services-grid">
+          <div *ngFor="let s of filteredServices()" class="assigned-service-card glass-card">
+            
+            <!-- Card Header: Title + Status Pill -->
+            <div class="card-head">
+              <div class="service-icon-box">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
+                  <line x1="7" y1="7" x2="7.01" y2="7"/>
+                </svg>
+              </div>
+              <div class="service-title-info">
+                <h4 class="service-name">{{ s.name }}</h4>
+              </div>
+              <span class="status-chip" [ngClass]="s.isActive ? 'chip-active' : 'chip-inactive'">
+                <span class="chip-dot"></span>
+                <span>{{ s.isActive ? 'Active' : 'Inactive' }}</span>
+              </span>
+            </div>
+
+            <!-- Card Body: Description -->
+            <p class="service-desc" [title]="s.description || 'Professional service'">
+              {{ s.description || 'Standardized certified clinic service.' }}
+            </p>
+
+            <!-- Card Pricing & Duration Strip -->
+            <div class="service-specs-strip">
+              <div class="spec-price">
+                <span class="price-val">₹{{ s.price | number }}</span>
+                <span class="price-lbl">Standard Fee</span>
+              </div>
+              <div class="spec-divider"></div>
+              <div class="spec-duration">
+                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10"/>
+                  <polyline points="12 6 12 12 16 14"/>
+                </svg>
+                <span>{{ formatDuration(s.durationMinutes) }}</span>
+              </div>
+            </div>
+
+            <!-- Card Footer: Stats & Action Button -->
+            <div class="card-foot">
+              <div class="foot-stats">
+                <span class="stat-pill">
+                  <strong>{{ s.todayBookingsCount }}</strong> today
+                </span>
+                <span class="stat-pill-sub">
+                  <strong>{{ s.allTimeBookingsCount }}</strong> total served
+                </span>
+              </div>
+
+              <button type="button" class="btn-card-action" (click)="viewAllAppointments()" title="View appointments for this service">
+                <span>View Bookings</span>
+                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="5" y1="12" x2="19" y2="12"/>
+                  <polyline points="12 5 19 12 12 19"/>
+                </svg>
+              </button>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </ng-container>
+
+</div>

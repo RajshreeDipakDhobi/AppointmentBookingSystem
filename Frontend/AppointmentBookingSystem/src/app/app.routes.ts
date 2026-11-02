@@ -83,6 +83,11 @@ export const routes: Routes = [
       {
         path: 'my-appointments',
         loadComponent: () => import('./features/customer/my-appointments/customer-appointments.component').then(m => m.CustomerAppointmentsComponent)
+      },
+      {
+        path: 'my-services',
+        loadComponent: () => import('./features/provider-services/provider-services.component').then(m => m.ProviderServicesComponent),
+        canActivate: [adminGuard]
       }
     ]
   },

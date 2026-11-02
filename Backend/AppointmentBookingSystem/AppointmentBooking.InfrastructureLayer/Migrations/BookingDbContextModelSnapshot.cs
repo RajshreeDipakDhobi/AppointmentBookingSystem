@@ -220,6 +220,51 @@ namespace AppointmentBooking.InfrastructureLayer.Migrations
                     b.ToTable("ProviderAvailabilities", (string)null);
                 });
 
+            modelBuilder.Entity("AppointmentBooking.DomainLayer.Entities.ProviderServiceLink", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DeletedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("ServiceId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ServiceProviderId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ServiceId");
+
+                    b.HasIndex("ServiceProviderId", "ServiceId")
+                        .IsUnique();
+
+                    b.ToTable("ProviderServiceLinks", (string)null);
+                });
+
             modelBuilder.Entity("AppointmentBooking.DomainLayer.Entities.RefreshToken", b =>
                 {
                     b.Property<int>("Id")
@@ -593,6 +638,25 @@ namespace AppointmentBooking.InfrastructureLayer.Migrations
                     b.Navigation("ServiceProvider");
                 });
 
+            modelBuilder.Entity("AppointmentBooking.DomainLayer.Entities.ProviderServiceLink", b =>
+                {
+                    b.HasOne("AppointmentBooking.DomainLayer.Entities.Service", "Service")
+                        .WithMany("ProviderServiceLinks")
+                        .HasForeignKey("ServiceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("AppointmentBooking.DomainLayer.Entities.ServiceProvider", "ServiceProvider")
+                        .WithMany("ProviderServiceLinks")
+                        .HasForeignKey("ServiceProviderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Service");
+
+                    b.Navigation("ServiceProvider");
+                });
+
             modelBuilder.Entity("AppointmentBooking.DomainLayer.Entities.RefreshToken", b =>
                 {
                     b.HasOne("AppointmentBooking.DomainLayer.Entities.User", "User")
@@ -653,6 +717,8 @@ namespace AppointmentBooking.InfrastructureLayer.Migrations
                 {
                     b.Navigation("Appointments");
 
+                    b.Navigation("ProviderServiceLinks");
+
                     b.Navigation("ServiceProviders");
                 });
 
@@ -661,6 +727,8 @@ namespace AppointmentBooking.InfrastructureLayer.Migrations
                     b.Navigation("Appointments");
 
                     b.Navigation("Availabilities");
+
+                    b.Navigation("ProviderServiceLinks");
                 });
 
             modelBuilder.Entity("AppointmentBooking.DomainLayer.Entities.Tenant", b =>

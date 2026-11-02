@@ -29,6 +29,7 @@ export class ProviderModalComponent implements OnChanges {
 
   @Output() close = new EventEmitter<void>();
   @Output() saved = new EventEmitter<ServiceProviderDto>();
+  @Output() requestAddService = new EventEmitter<void>();
 
   providerForm: FormGroup;
   readonly isSubmitting = signal<boolean>(false);
@@ -38,9 +39,22 @@ export class ProviderModalComponent implements OnChanges {
   readonly avatarError = signal<string | null>(null);
 
   readonly availableServices = signal<ServiceDto[]>([]);
+  readonly selectedServiceIds = signal<number[]>([]);
   readonly selectedService = signal<ServiceDto | null>(null);
   readonly isServiceDropdownOpen = signal<boolean>(false);
   readonly serviceSearchQuery = signal<string>('');
+
+  // Weekly Working Days & Schedule Setup
+  readonly weekDaysList = [
+    { day: 1, name: 'Monday', short: 'Mon' },
+    { day: 2, name: 'Tuesday', short: 'Tue' },
+    { day: 3, name: 'Wednesday', short: 'Wed' },
+    { day: 4, name: 'Thursday', short: 'Thu' },
+    { day: 5, name: 'Friday', short: 'Fri' },
+    { day: 6, name: 'Saturday', short: 'Sat' },
+    { day: 0, name: 'Sunday', short: 'Sun' }
+  ];
+  readonly workingDays = signal<number[]>([1, 2, 3, 4, 5, 6, 0]); // All 7 days active by default, click any day to mark Off
 
   readonly filteredServices = computed(() => {
     const q = this.serviceSearchQuery().trim().toLowerCase();
@@ -52,10 +66,15 @@ export class ProviderModalComponent implements OnChanges {
     );
   });
 
+  get selectedServicesList(): ServiceDto[] {
+    const ids = this.selectedServiceIds();
+    return this.availableServices().filter(s => ids.includes(s.id));
+  }
+
   constructor() {
     this.providerForm = this.fb.group({
       name: ['', [Validators.required, Validators.minLength(2)]],
-      serviceId: [null, [Validators.required]],
+      serviceId: [null],
       serviceType: [''],
       email: ['', [Validators.required, Validators.pattern(EMAIL_REGEX)]],
       phoneNumber: ['', [Validators.required, Validators.pattern(PHONE_10_DIGIT_REGEX)]],
@@ -80,7 +99,7 @@ export class ProviderModalComponent implements OnChanges {
     this.serviceCatalogService.getActiveServices(tenantId).subscribe({
       next: (services) => {
         this.availableServices.set(services || []);
-        this.syncSelectedService();
+        this.syncSelectedServicesFromProvider();
       },
       error: () => {
         // Non-blocking fallback
@@ -88,30 +107,30 @@ export class ProviderModalComponent implements OnChanges {
     });
   }
 
-  private syncSelectedService(): void {
-    const currentServiceId = this.providerForm.get('serviceId')?.value;
+  private syncSelectedServicesFromProvider(): void {
     const services = this.availableServices();
+    if (services.length === 0) return;
 
-    if (currentServiceId && services.length > 0) {
-      const match = services.find(s => s.id === Number(currentServiceId));
-      if (match) {
-        this.selectedService.set(match);
-        return;
+    if (this.providerToEdit) {
+      let idsToSelect: number[] = [];
+
+      if (this.providerToEdit.serviceIds && this.providerToEdit.serviceIds.length > 0) {
+        idsToSelect = this.providerToEdit.serviceIds.filter(id => services.some(s => s.id === id));
+      } else if (this.providerToEdit.serviceId && services.some(s => s.id === this.providerToEdit!.serviceId)) {
+        idsToSelect = [this.providerToEdit.serviceId];
+      } else if (this.providerToEdit.serviceType) {
+        const match = services.find(s => s.name.toLowerCase() === this.providerToEdit!.serviceType.toLowerCase());
+        if (match) {
+          idsToSelect = [match.id];
+        }
       }
-    }
 
-    if (this.providerToEdit && services.length > 0) {
-      const match = services.find(s =>
-        (this.providerToEdit?.serviceId && s.id === this.providerToEdit.serviceId) ||
-        (this.providerToEdit?.serviceType && s.name.toLowerCase() === this.providerToEdit.serviceType.toLowerCase())
-      );
-      if (match) {
-        this.selectedService.set(match);
-        this.providerForm.patchValue({
-          serviceId: match.id,
-          serviceType: match.name,
-          chargesAmount: match.price
-        });
+      this.selectedServiceIds.set(idsToSelect);
+      this.syncFormWithSelectedServices();
+    } else {
+      const currentIds = this.selectedServiceIds();
+      if (currentIds.length > 0) {
+        this.syncFormWithSelectedServices();
       }
     }
   }
@@ -121,31 +140,72 @@ export class ProviderModalComponent implements OnChanges {
     this.isServiceDropdownOpen.update(v => !v);
   }
 
-  selectService(service: ServiceDto, event?: Event): void {
+  toggleService(serviceId: number, event?: Event): void {
     if (event) event.stopPropagation();
-    this.selectedService.set(service);
-    this.providerForm.patchValue({
-      serviceId: service.id,
-      serviceType: service.name,
-      chargesAmount: service.price
-    });
-    this.providerForm.get('serviceId')?.markAsDirty();
-    this.providerForm.get('serviceId')?.markAsTouched();
-    this.isServiceDropdownOpen.set(false);
-    this.serviceSearchQuery.set('');
+    const current = [...this.selectedServiceIds()];
+    const index = current.indexOf(serviceId);
+    if (index > -1) {
+      current.splice(index, 1);
+    } else {
+      current.push(serviceId);
+    }
+    this.selectedServiceIds.set(current);
+    this.syncFormWithSelectedServices();
   }
 
-  clearServiceSelection(event?: Event): void {
+  removeService(serviceId: number, event?: Event): void {
     if (event) event.stopPropagation();
-    this.selectedService.set(null);
+    this.selectedServiceIds.update(ids => ids.filter(id => id !== serviceId));
+    this.syncFormWithSelectedServices();
+  }
+
+  selectAllFilteredServices(event?: Event): void {
+    if (event) event.stopPropagation();
+    const filteredIds = this.filteredServices().map(s => s.id);
+    const merged = Array.from(new Set([...this.selectedServiceIds(), ...filteredIds]));
+    this.selectedServiceIds.set(merged);
+    this.syncFormWithSelectedServices();
+  }
+
+  clearAllServices(event?: Event): void {
+    if (event) event.stopPropagation();
+    this.selectedServiceIds.set([]);
+    this.syncFormWithSelectedServices();
+  }
+
+  onAddServiceClick(event: Event): void {
+    event.stopPropagation();
+    this.isServiceDropdownOpen.set(false);
+    this.requestAddService.emit();
+  }
+
+  /**
+   * Called by parent component when a new service is created on-the-fly.
+   */
+  onNewServiceAdded(newService: ServiceDto): void {
+    const currentList = this.availableServices();
+    if (!currentList.some(s => s.id === newService.id)) {
+      this.availableServices.set([...currentList, newService]);
+    }
+    if (!this.selectedServiceIds().includes(newService.id)) {
+      this.selectedServiceIds.update(ids => [...ids, newService.id]);
+    }
+    this.syncFormWithSelectedServices();
+  }
+
+  private syncFormWithSelectedServices(): void {
+    const ids = this.selectedServiceIds();
+    const list = this.availableServices().filter(s => ids.includes(s.id));
+    const primary = list[0] || null;
+
+    this.selectedService.set(primary);
     this.providerForm.patchValue({
-      serviceId: null,
-      serviceType: '',
-      chargesAmount: 0
+      serviceId: primary?.id ?? null,
+      serviceType: list.map(s => s.name).join(', '),
+      chargesAmount: primary?.price ?? 0
     });
     this.providerForm.get('serviceId')?.markAsDirty();
     this.providerForm.get('serviceId')?.markAsTouched();
-    this.isServiceDropdownOpen.set(false);
   }
 
   onServiceSearchInput(event: Event): void {
@@ -163,26 +223,21 @@ export class ProviderModalComponent implements OnChanges {
     this.isServiceDropdownOpen.set(false);
   }
 
-  onServiceChange(event: Event): void {
-    const select = event.target as HTMLSelectElement;
-    const serviceId = Number(select.value);
-    const service = this.availableServices().find(s => s.id === serviceId);
-
-    if (service) {
-      this.selectedService.set(service);
-      this.providerForm.patchValue({
-        serviceId: service.id,
-        serviceType: service.name,
-        chargesAmount: service.price
-      });
+  toggleWorkingDay(day: number): void {
+    const current = [...this.workingDays()];
+    const idx = current.indexOf(day);
+    if (idx > -1) {
+      if (current.length > 1) {
+        current.splice(idx, 1); // Mark Day Off
+      }
     } else {
-      this.selectedService.set(null);
-      this.providerForm.patchValue({
-        serviceId: null,
-        serviceType: '',
-        chargesAmount: 0
-      });
+      current.push(day); // Mark Working Day
     }
+    this.workingDays.set(current);
+  }
+
+  isDayWorking(day: number): boolean {
+    return this.workingDays().includes(day);
   }
 
   private resetAndInitForm(): void {
@@ -193,6 +248,7 @@ export class ProviderModalComponent implements OnChanges {
     this.selectedService.set(null);
     this.isServiceDropdownOpen.set(false);
     this.serviceSearchQuery.set('');
+    this.workingDays.set([1, 2, 3, 4, 5, 6, 0]);
 
     if (this.mode === 'edit' && this.providerToEdit) {
       this.previewAvatarUrl.set(this.providerToEdit.profilePictureUrl || null);
@@ -207,9 +263,10 @@ export class ProviderModalComponent implements OnChanges {
         bio: this.providerToEdit.bio || '',
         profilePictureUrl: this.providerToEdit.profilePictureUrl || ''
       });
-      this.syncSelectedService();
+      this.syncSelectedServicesFromProvider();
     } else {
       this.previewAvatarUrl.set(null);
+      this.selectedServiceIds.set([]);
       this.providerForm.reset({
         name: '',
         serviceId: null,
@@ -289,6 +346,12 @@ export class ProviderModalComponent implements OnChanges {
   }
 
   onSubmit(): void {
+    if (this.selectedServiceIds().length === 0) {
+      this.errorMessage.set('Please select at least one assigned service.');
+      this.providerForm.markAllAsTouched();
+      return;
+    }
+
     if (this.providerForm.invalid || this.isUploadingAvatar()) {
       this.providerForm.markAllAsTouched();
       return;
@@ -299,18 +362,29 @@ export class ProviderModalComponent implements OnChanges {
 
     const val = this.providerForm.value;
     const photoUrl = val.profilePictureUrl && val.profilePictureUrl.trim().length > 0 ? val.profilePictureUrl.trim() : undefined;
+    const serviceIds = this.selectedServiceIds();
+    const primaryServiceId = serviceIds[0];
 
     if (this.mode === 'create') {
+      const allDays = [0, 1, 2, 3, 4, 5, 6];
+      const offDays = allDays.filter(d => !this.workingDays().includes(d));
+
       const createDto: CreateServiceProviderRequestDto = {
         name: val.name.trim(),
-        serviceId: val.serviceId ? Number(val.serviceId) : undefined,
+        serviceId: primaryServiceId,
+        serviceIds: serviceIds,
         serviceType: val.serviceType ? val.serviceType.trim() : undefined,
         email: val.email.trim(),
         phoneNumber: val.phoneNumber.trim(),
         chargesAmount: val.chargesAmount != null ? Number(val.chargesAmount) : 0,
         address: val.address ? val.address.trim() : undefined,
         bio: val.bio ? val.bio.trim() : undefined,
-        profilePictureUrl: photoUrl
+        profilePictureUrl: photoUrl,
+        offDays: offDays,
+        startTime: '10:00',
+        endTime: '17:00',
+        breakStartTime: '13:00',
+        breakEndTime: '14:00'
       };
 
       this.providerService.createProvider(createDto).subscribe({
@@ -326,7 +400,8 @@ export class ProviderModalComponent implements OnChanges {
     } else if (this.mode === 'edit' && this.providerToEdit) {
       const updateDto: UpdateServiceProviderRequestDto = {
         name: val.name.trim(),
-        serviceId: val.serviceId ? Number(val.serviceId) : undefined,
+        serviceId: primaryServiceId,
+        serviceIds: serviceIds,
         serviceType: val.serviceType ? val.serviceType.trim() : undefined,
         email: val.email.trim(),
         phoneNumber: val.phoneNumber.trim(),

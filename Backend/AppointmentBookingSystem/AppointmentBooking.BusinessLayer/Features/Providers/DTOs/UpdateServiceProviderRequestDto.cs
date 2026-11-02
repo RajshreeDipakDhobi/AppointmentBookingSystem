@@ -14,6 +14,7 @@ public class UpdateServiceProviderRequestDto
     public string ServiceType { get; set; } = string.Empty;
 
     public int? ServiceId { get; set; }
+    public List<int>? ServiceIds { get; set; } = new();
 
     [Required(ErrorMessage = "Email is required")]
     [EmailAddress(ErrorMessage = "Invalid email address")]

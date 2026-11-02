@@ -18,5 +18,10 @@ public class UpdateServiceRequestDto
     public decimal Price { get; set; } = 0.00m;
 
     public bool IsActive { get; set; } = true;
+
+    /// <summary>
+    /// Optional list of Service Provider IDs to assign to this service.
+    /// </summary>
+    public List<int>? ProviderIds { get; set; }
 }
 

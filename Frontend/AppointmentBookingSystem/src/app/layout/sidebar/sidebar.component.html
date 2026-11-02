@@ -1,8 +1,8 @@
 <aside class="sidebar" [class.open]="layoutService.isSidebarOpen()">
   <!-- Brand Header -->
   <div class="sidebar-header">
-    <a [routerLink]="isCustomer ? '/my-appointments' : (isServiceProvider ? '/appointments' : '/dashboard')"
-      class="brand" [title]="isCustomer ? 'My Appointments' : 'Dashboard'">
+    <a [routerLink]="isCustomer ? '/my-appointments' : (isServiceProvider ? '/my-services' : '/dashboard')"
+      class="brand" [title]="isCustomer ? 'My Appointments' : (isServiceProvider ? 'My Services' : 'Dashboard')">
       <div class="brand-icon">
         <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none"
           stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
@@ -116,8 +116,15 @@
       </a>
     </ng-container>
 
-    <!-- Service Provider: My Appointments (No Dashboard) -->
+    <!-- Service Provider: My Assigned Services & Appointments -->
     <ng-container *ngIf="isServiceProvider">
+      <a routerLink="/my-services" routerLinkActive="active" class="nav-item" (click)="layoutService.closeSidebar()">
+        <svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+        </svg>
+        <span>My Services</span>
+      </a>
 
       <a routerLink="/appointments" routerLinkActive="active" class="nav-item" (click)="layoutService.closeSidebar()">
         <svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"

@@ -267,7 +267,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     if (this.isServiceProvider) {
-      this.router.navigate(['/appointments']);
+      this.router.navigate(['/my-services']);
       return;
     }
     if (this.isSuperAdmin) {

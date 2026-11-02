@@ -12,5 +12,6 @@ public interface IServiceCatalogService
     Task<ServiceDto?> UpdateServiceAsync(int id, UpdateServiceRequestDto request, string updatedBy, CancellationToken cancellationToken = default);
     Task<bool> ToggleServiceStatusAsync(int id, string updatedBy, CancellationToken cancellationToken = default);
     Task<bool> DeleteServiceAsync(int id, string deletedBy, CancellationToken cancellationToken = default);
+    Task<ProviderServicesOverviewDto?> GetProviderServicesOverviewAsync(int userId, int? targetProviderId = null, CancellationToken cancellationToken = default);
 }
 

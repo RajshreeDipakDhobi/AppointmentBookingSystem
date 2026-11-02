@@ -317,10 +317,42 @@
 .form-error {
   color: #dc2626;
   font-size: 0.73rem;
-  margin-top: 0.22rem;
+  margin-top: 0.25rem;
   display: flex;
   align-items: center;
-  gap: 0.25rem;
+  gap: 0.3rem;
+  line-height: 1.25;
+  font-weight: 500;
+}
+
+.form-success {
+  color: #16a34a;
+  font-size: 0.73rem;
+  margin-top: 0.25rem;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  line-height: 1.25;
+  font-weight: 500;
+}
+
+.form-input.is-invalid {
+  border-color: #ef4444 !important;
+  background-color: #fef2f2;
+}
+
+.form-input.is-invalid:focus {
+  border-color: #dc2626 !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15) !important;
+}
+
+.form-input.is-valid {
+  border-color: #10b981 !important;
+}
+
+.form-input.is-valid:focus {
+  border-color: #059669 !important;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15) !important;
 }
 
 /* Phone input group (Matching provider-modal) */

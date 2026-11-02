@@ -1,9 +1,11 @@
-import { Component, OnInit, inject, signal, HostListener } from '@angular/core';
+import { Component, OnInit, inject, signal, HostListener, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ProviderService } from '../../core/services/provider.service';
-import { ServiceProviderDto, ProviderStatus } from '../../core/models/provider.models';
+import { ServiceProviderDto, ProviderStatus, ProviderServiceSummaryDto } from '../../core/models/provider.models';
+import { ServiceDto } from '../../core/models/service.models';
 import { ProviderModalComponent } from './provider-modal/provider-modal.component';
+import { ServiceModalComponent } from '../services/service-modal/service-modal.component';
 import { PaginationComponent } from '../../shared/components/pagination/pagination.component';
 import { AppInitialsPipe, AppPhonePipe } from '../../shared/pipes';
 import { getAvatarGradient } from '../../core/constants/app.constants';
@@ -12,11 +14,13 @@ import { ConfirmService } from '../../shared/components/confirmation-modal/confi
 @Component({
   selector: 'app-providers',
   standalone: true,
-  imports: [CommonModule, FormsModule, ProviderModalComponent, PaginationComponent, AppInitialsPipe, AppPhonePipe],
+  imports: [CommonModule, FormsModule, ProviderModalComponent, ServiceModalComponent, PaginationComponent, AppInitialsPipe, AppPhonePipe],
   templateUrl: './providers.component.html',
   styleUrls: ['./providers.component.css']
 })
 export class ProvidersComponent implements OnInit {
+  @ViewChild(ProviderModalComponent) providerModalComponent?: ProviderModalComponent;
+
   private readonly providerService = inject(ProviderService);
   private readonly confirmService = inject(ConfirmService);
 
@@ -36,8 +40,12 @@ export class ProvidersComponent implements OnInit {
   readonly modalMode = signal<'create' | 'edit'>('create');
   readonly selectedProvider = signal<ServiceProviderDto | null>(null);
 
+  // Service Modal triggered from Provider Modal
+  readonly isServiceModalOpen = signal<boolean>(false);
+
   // Row Status Dropdown State
   readonly openStatusDropdownId = signal<number | null>(null);
+  readonly openServicesDropdownId = signal<number | null>(null);
 
   // Custom Status Filter Dropdown State
   readonly isStatusFilterDropdownOpen = signal<boolean>(false);
@@ -131,6 +139,19 @@ export class ProvidersComponent implements OnInit {
     this.selectedProvider.set(null);
   }
 
+  onRequestAddService(): void {
+    this.isServiceModalOpen.set(true);
+  }
+
+  onServiceModalClose(): void {
+    this.isServiceModalOpen.set(false);
+  }
+
+  onServiceCreatedFromProviderModal(newService: ServiceDto): void {
+    this.isServiceModalOpen.set(false);
+    this.providerModalComponent?.onNewServiceAdded(newService);
+  }
+
   onProviderSaved(savedProvider: ServiceProviderDto): void {
     this.isModalOpen.set(false);
     this.selectedProvider.set(null);
@@ -147,11 +168,46 @@ export class ProvidersComponent implements OnInit {
 
   toggleStatusDropdown(providerId: number, event: MouseEvent): void {
     event.stopPropagation();
+    this.openServicesDropdownId.set(null);
     if (this.openStatusDropdownId() === providerId) {
       this.openStatusDropdownId.set(null);
     } else {
       this.openStatusDropdownId.set(providerId);
     }
+  }
+
+  toggleServicesDropdown(providerId: number, event: MouseEvent): void {
+    event.stopPropagation();
+    this.closeStatusDropdown();
+    this.isStatusFilterDropdownOpen.set(false);
+    this.openServicesDropdownId.update(curr => (curr === providerId ? null : providerId));
+  }
+
+  getServicesCount(provider: ServiceProviderDto): number {
+    return provider.assignedServices?.length || provider.serviceNames?.length || (provider.serviceName ? 1 : 0);
+  }
+
+  getProviderServicesList(provider: ServiceProviderDto): ProviderServiceSummaryDto[] {
+    if (provider.assignedServices && provider.assignedServices.length > 0) {
+      return provider.assignedServices;
+    }
+    if (provider.serviceNames && provider.serviceNames.length > 0) {
+      return provider.serviceNames.map((name, idx) => ({
+        id: provider.serviceIds?.[idx] || idx + 1,
+        name,
+        durationMinutes: 30,
+        price: 0
+      }));
+    }
+    if (provider.serviceName) {
+      return [{
+        id: provider.serviceId || 1,
+        name: provider.serviceName,
+        durationMinutes: 30,
+        price: 0
+      }];
+    }
+    return [];
   }
 
   closeStatusDropdown(): void {
@@ -161,6 +217,7 @@ export class ProvidersComponent implements OnInit {
   @HostListener('document:click')
   onDocumentClick(): void {
     this.closeStatusDropdown();
+    this.openServicesDropdownId.set(null);
     this.isStatusFilterDropdownOpen.set(false);
   }
 
@@ -235,6 +292,12 @@ export class ProvidersComponent implements OnInit {
         });
       }
     });
+  }
+
+  isDropupRow(index: number, total: number): boolean {
+    if (total >= 4 && index >= total - 2) return true;
+    if (total === 3 && index === 2) return true;
+    return false;
   }
 
   readonly getAvatarGradient = getAvatarGradient;

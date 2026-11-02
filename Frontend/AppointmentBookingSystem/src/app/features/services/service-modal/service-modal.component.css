@@ -24,7 +24,7 @@
 /* Dialog Box Sizing */
 .modal-dialog {
   width: 100%;
-  max-width: 520px !important;
+  max-width: 620px !important;
   background: #ffffff !important;
   border: 1px solid #e2ece6 !important;
   border-radius: 16px !important;
@@ -590,4 +590,468 @@ input:checked + .slider:before {
 
 @keyframes spin {
   to { transform: rotate(360deg); }
+}
+
+/* ==========================================================================
+   Custom Duration Mode & Stepper Controls
+   ========================================================================== */
+.label-with-tag {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.28rem;
+}
+
+.label-with-tag .form-label {
+  margin-bottom: 0;
+}
+
+.btn-link-action {
+  background: transparent;
+  border: none;
+  color: #1e5142;
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.15rem 0.4rem;
+  border-radius: 6px;
+  transition: all 0.15s ease;
+}
+
+.btn-link-action:hover {
+  background: #f0fdf4;
+  color: #0f766e;
+  text-decoration: underline;
+}
+
+.popover-divider {
+  height: 1px;
+  background: #e2ece6;
+  margin: 0.35rem 0.6rem;
+}
+
+.custom-option-btn {
+  border-top: 1px dashed #d1e2d9;
+  background: #fbfdfc !important;
+}
+
+.custom-option-btn:hover {
+  background: #f0fdf4 !important;
+}
+
+.custom-icon-box {
+  background: #ecfdf5 !important;
+  color: #059669 !important;
+}
+
+.custom-duration-card {
+  background: #f9fbf9;
+  border: 1px solid #d1e2d9;
+  border-radius: 8px;
+  padding: 0.45rem 0.65rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.custom-duration-stepper {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.btn-stepper {
+  background: #ffffff;
+  border: 1px solid #d1e2d9;
+  border-radius: 6px;
+  color: #1e5142;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.35rem 0.5rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.btn-stepper:hover {
+  background: #1e5142;
+  color: #ffffff;
+  border-color: #1e5142;
+}
+
+.stepper-input-wrap {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
+
+.custom-duration-input {
+  text-align: center;
+  font-weight: 700;
+  color: #1e5142;
+  font-size: 0.95rem;
+  padding-right: 2.2rem !important;
+  height: 34px !important;
+}
+
+.stepper-unit {
+  position: absolute;
+  right: 0.6rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #64748b;
+  pointer-events: none;
+}
+
+.custom-duration-preview {
+  display: flex;
+  justify-content: center;
+}
+
+.preview-badge {
+  font-size: 0.73rem;
+  font-weight: 600;
+  color: #0f766e;
+  background: #f0fdfa;
+  border: 1px solid #ccfbf1;
+  padding: 0.15rem 0.55rem;
+  border-radius: 12px;
+}
+
+/* ==========================================================================
+   Specialists / Service Providers Multi-Select Dropdown & Chips
+   ========================================================================== */
+.selection-count-pill {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: #047857;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  padding: 0.1rem 0.45rem;
+  border-radius: 10px;
+  margin-left: 0.4rem;
+}
+
+.w-100 {
+  width: 100% !important;
+  display: block;
+}
+
+.provider-picker-anchor {
+  position: relative;
+  display: flex !important;
+  width: 100% !important;
+}
+
+.provider-picker-anchor.menu-open {
+  z-index: 1000;
+}
+
+.provider-picker-anchor .form-dropdown-trigger {
+  width: 100% !important;
+}
+
+.provider-dropdown-popover {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0 !important;
+  right: 0 !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.popover-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.popover-action-link {
+  background: transparent;
+  border: none;
+  color: #1e5142;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0.1rem 0.25rem;
+  border-radius: 4px;
+}
+
+.popover-action-link:hover {
+  background: #e2ece6;
+  text-decoration: underline;
+}
+
+.popover-action-sep {
+  color: #94a3b8;
+  font-size: 0.65rem;
+}
+
+.popover-search-container {
+  padding: 0.4rem 0.65rem;
+  border-bottom: 1px solid #eef4f0;
+}
+
+.popover-search-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  background: #f4f8f5;
+  border: 1px solid #d8e6de;
+  border-radius: 6px;
+  padding: 0.3rem 0.55rem;
+}
+
+.popover-search-input-wrap svg {
+  color: #7b948a;
+  flex-shrink: 0;
+}
+
+.popover-search-input {
+  width: 100%;
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: 0.78rem;
+  color: #183b32;
+  font-family: inherit;
+}
+
+.popover-search-input::placeholder {
+  color: #94a3b8;
+}
+
+.popover-search-clear {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  font-size: 0.75rem;
+  padding: 0 0.2rem;
+}
+
+.popover-search-clear:hover {
+  color: #183b32;
+}
+
+/* Quick Add Specialist right below search box */
+.popover-search-subbar {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  padding-top: 0.35rem;
+}
+
+.btn-subbar-add {
+  background: transparent;
+  border: 1px dashed #b8dacb;
+  border-radius: 6px;
+  color: #1e5142;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.22rem 0.55rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: inherit;
+}
+
+.btn-subbar-add:hover {
+  background: #eef5f1;
+  border-color: #1e5142;
+  color: #153c31;
+}
+
+.provider-items-scroll {
+  max-height: 190px !important;
+  overflow-y: auto;
+}
+
+.provider-option-item {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.48rem 0.75rem !important;
+  width: 100%;
+  text-align: left;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.provider-option-item:hover {
+  background: #f4f8f5 !important;
+}
+
+.provider-option-item.option-selected {
+  background: #e8f3ed !important;
+}
+
+.custom-checkbox {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  border: 1.5px solid #cbdcd2;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+}
+
+.custom-checkbox.checked {
+  background: #1e5142;
+  border-color: #1e5142;
+  color: #ffffff;
+}
+
+.provider-avatar-circle {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.provider-avatar-circle .avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.provider-avatar-circle .avatar-initials {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+/* Selected Provider Chips */
+.selected-chips-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+}
+
+.provider-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: #f0f7f3;
+  border: 1px solid #c7e1d3;
+  border-radius: 18px;
+  padding: 0.18rem 0.45rem 0.18rem 0.22rem;
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: #183b32;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+  animation: fadeIn 0.15s ease;
+}
+
+.chip-avatar {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.58rem;
+  font-weight: 700;
+  color: #ffffff;
+  flex-shrink: 0;
+}
+
+.chip-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.chip-label {
+  white-space: nowrap;
+}
+
+.chip-remove-btn {
+  background: transparent;
+  border: none;
+  color: #7b948a;
+  cursor: pointer;
+  font-size: 0.72rem;
+  padding: 0 0.15rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.15s ease;
+}
+
+.chip-remove-btn:hover {
+  color: #dc2626;
+  background: rgba(220, 38, 38, 0.1);
+}
+
+/* Empty Providers Card */
+.empty-providers-card {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: #f8faf9;
+  border: 1px dashed #d1e2d9;
+  border-radius: 8px;
+  padding: 0.6rem 0.85rem;
+}
+
+.empty-providers-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #eef4f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #7b948a;
+  flex-shrink: 0;
+}
+
+.empty-providers-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.empty-title {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #183b32;
+}
+
+.empty-desc {
+  font-size: 0.72rem;
+  color: #64748b;
+}
+
+.empty-providers-card .btn-sm {
+  padding: 0.32rem 0.65rem !important;
+  font-size: 0.75rem !important;
+  white-space: nowrap;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 0.35rem !important;
 }

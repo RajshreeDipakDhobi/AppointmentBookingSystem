@@ -18,5 +18,6 @@ public class Service : BaseEntity
     // Required Navigations
     public virtual ICollection<ServiceProvider> ServiceProviders { get; set; } = new List<ServiceProvider>();
     public virtual ICollection<Appointment> Appointments { get; set; } = new List<Appointment>();
+    public virtual ICollection<ProviderServiceLink> ProviderServiceLinks { get; set; } = new List<ProviderServiceLink>();
 }
 

@@ -70,16 +70,23 @@
             </div>
           </div>
 
-          <!-- Duration Custom Luxury Dropdown -->
+          <!-- Duration Custom Luxury Dropdown or Custom Input -->
           <div class="form-group flex-1">
-            <label class="form-label">Service Duration <span class="required-star">*</span></label>
-            <div class="custom-select-anchor duration-select-anchor" [class.menu-open]="isDurationDropdownOpen()">
+            <div class="label-with-tag">
+              <label class="form-label">Service Duration <span class="required-star">*</span></label>
+              <button *ngIf="isCustomDuration()" type="button" class="btn-link-action" (click)="disableCustomDuration(30)">
+                Switch to Presets
+              </button>
+            </div>
+
+            <!-- Mode 1: Presets Dropdown -->
+            <div *ngIf="!isCustomDuration()" class="custom-select-anchor duration-select-anchor" [class.menu-open]="isDurationDropdownOpen()">
               <button 
                 type="button" 
                 class="custom-select-trigger form-dropdown-trigger" 
                 (click)="toggleDurationDropdown($event)"
                 [attr.aria-expanded]="isDurationDropdownOpen()"
-                title="Choose standard service duration"
+                title="Choose service duration"
               >
                 <div class="trigger-icon-wrap">
                   <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
@@ -100,8 +107,8 @@
               <div *ngIf="isDurationDropdownOpen()" class="custom-dropdown-popover duration-dropdown-popover animate-scale-up"
                 (click)="$event.stopPropagation()">
                 <div class="popover-header">
-                  <span class="popover-header-title">Service Duration</span>
-                  <span class="popover-count-pill">{{ durationOptions.length }} Options</span>
+                  <span class="popover-header-title">Standard Durations</span>
+                  <span class="popover-count-pill">{{ durationOptions.length }} Presets</span>
                 </div>
                 <div class="popover-items-list duration-options-scroll">
                   <button 
@@ -127,13 +134,229 @@
                       <polyline points="20 6 9 17 4 12" />
                     </svg>
                   </button>
+
+                  <!-- Custom Duration Option -->
+                  <div class="popover-divider"></div>
+                  <button type="button" class="popover-option-item custom-option-btn" (click)="enableCustomDuration($event)">
+                    <div class="option-icon-box custom-icon-box">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10" />
+                        <line x1="12" y1="8" x2="12" y2="16" />
+                        <line x1="8" y1="12" x2="16" y2="12" />
+                      </svg>
+                    </div>
+                    <div class="option-info">
+                      <span class="option-title">Custom Duration...</span>
+                      <span class="option-subtitle">Specify custom slot minutes</span>
+                    </div>
+                  </button>
                 </div>
               </div>
             </div>
+
+            <!-- Mode 2: Custom Duration Input & Stepper -->
+            <div *ngIf="isCustomDuration()" class="custom-duration-card animate-fade-in">
+              <div class="custom-duration-stepper">
+                <button type="button" class="btn-stepper" (click)="stepCustomDuration(-15, $event)" title="-15 mins">-15m</button>
+                <button type="button" class="btn-stepper" (click)="stepCustomDuration(-5, $event)" title="-5 mins">-5m</button>
+                <div class="stepper-input-wrap">
+                  <input 
+                    type="number" 
+                    formControlName="durationMinutes" 
+                    class="form-input custom-duration-input" 
+                    min="5" 
+                    max="480" 
+                    step="5"
+                    (input)="setCustomDuration($any($event.target).value)"
+                  />
+                  <span class="stepper-unit">mins</span>
+                </div>
+                <button type="button" class="btn-stepper" (click)="stepCustomDuration(5, $event)" title="+5 mins">+5m</button>
+                <button type="button" class="btn-stepper" (click)="stepCustomDuration(15, $event)" title="+15 mins">+15m</button>
+              </div>
+              <div class="custom-duration-preview">
+                <span class="preview-badge">
+                  {{ formatDuration(serviceForm.get('durationMinutes')?.value) }} slot duration
+                </span>
+              </div>
+            </div>
+
             <div *ngIf="serviceForm.get('durationMinutes')?.touched && serviceForm.get('durationMinutes')?.invalid" class="form-error">
               <span *ngIf="serviceForm.get('durationMinutes')?.hasError('required')">Duration is required.</span>
+              <span *ngIf="serviceForm.get('durationMinutes')?.hasError('min')">Duration must be at least 5 minutes.</span>
+              <span *ngIf="serviceForm.get('durationMinutes')?.hasError('max')">Duration cannot exceed 480 minutes (8 hours).</span>
             </div>
           </div>
+        </div>
+
+        <!-- Specialists / Service Providers Multi-Select Section -->
+        <div class="form-group">
+          <label class="form-label">
+            Assign Specialists (Service Providers)
+            <span *ngIf="selectedProviderIds().length > 0" class="selection-count-pill">
+              {{ selectedProviderIds().length }} selected
+            </span>
+          </label>
+
+          <!-- If providers exist in system -->
+          <div *ngIf="availableProviders().length > 0; else noProvidersTemplate" class="w-100">
+            <!-- Custom Multi-Select Dropdown Anchor -->
+            <div class="custom-select-anchor provider-picker-anchor" [class.menu-open]="isProviderDropdownOpen()">
+              <button 
+                type="button" 
+                class="custom-select-trigger form-dropdown-trigger" 
+                (click)="toggleProviderDropdown($event)"
+                [attr.aria-expanded]="isProviderDropdownOpen()"
+                title="Select specialists for this service"
+              >
+                <div class="trigger-icon-wrap">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                    <circle cx="9" cy="7" r="4" />
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                  </svg>
+                </div>
+                
+                <span *ngIf="selectedProviderIds().length === 0" class="trigger-main-text placeholder-text">
+                  -- Select Specialists (Optional) --
+                </span>
+                <span *ngIf="selectedProviderIds().length === 1 && selectedProvidersList[0]" class="trigger-main-text">
+                  {{ selectedProvidersList[0].name }}
+                </span>
+                <span *ngIf="selectedProviderIds().length > 1" class="trigger-main-text">
+                  {{ selectedProviderIds().length }} Specialists Selected
+                </span>
+
+                <svg class="trigger-chevron" [class.rotated]="isProviderDropdownOpen()" xmlns="http://www.w3.org/2000/svg"
+                  width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="6 9 12 15 18 9" />
+                </svg>
+              </button>
+
+              <!-- Floating Popover -->
+              <div *ngIf="isProviderDropdownOpen()" class="custom-dropdown-popover provider-dropdown-popover animate-scale-up"
+                (click)="$event.stopPropagation()">
+                
+                <div class="popover-header">
+                  <span class="popover-header-title">Available Specialists</span>
+                  <div class="popover-actions">
+                    <button type="button" class="popover-action-link" (click)="selectAllFilteredProviders($event)">Select All</button>
+                    <span class="popover-action-sep">•</span>
+                    <button type="button" class="popover-action-link" (click)="clearAllProviders($event)">Clear</button>
+                  </div>
+                </div>
+
+                <!-- Live Search Input -->
+                <div class="popover-search-container">
+                  <div class="popover-search-input-wrap">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none"
+                      stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                      <circle cx="11" cy="11" r="8" />
+                      <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                    </svg>
+                    <input 
+                      type="text" 
+                      class="popover-search-input" 
+                      placeholder="Search specialist by name or email..." 
+                      [value]="providerSearchQuery()" 
+                      (input)="providerSearchQuery.set($any($event.target).value)" 
+                    />
+                    <button *ngIf="providerSearchQuery()" type="button" class="popover-search-clear" (click)="providerSearchQuery.set('')">✕</button>
+                  </div>
+
+                  <!-- Quick Add Specialist shortcut right below search box -->
+                  <div class="popover-search-subbar">
+                    <button type="button" class="btn-subbar-add" (click)="onAddProviderClick($event)">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="12" y1="5" x2="12" y2="19" />
+                        <line x1="5" y1="12" x2="19" y2="12" />
+                      </svg>
+                      <span>Add Specialist</span>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Provider Items List -->
+                <div class="popover-items-list provider-items-scroll">
+                  <button 
+                    type="button" 
+                    *ngFor="let p of filteredProviders"
+                    class="popover-option-item provider-option-item"
+                    [class.option-selected]="selectedProviderIds().includes(p.id)"
+                    (click)="toggleProvider(p.id, $event)"
+                  >
+                    <!-- Custom Checkbox -->
+                    <div class="custom-checkbox" [class.checked]="selectedProviderIds().includes(p.id)">
+                      <svg *ngIf="selectedProviderIds().includes(p.id)" xmlns="http://www.w3.org/2000/svg" width="10" height="10"
+                        viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                    </div>
+
+                    <!-- Avatar -->
+                    <div class="provider-avatar-circle" [style.background]="getAvatarGradient(p.name)">
+                      <img *ngIf="p.profilePictureUrl" [src]="p.profilePictureUrl" [alt]="p.name" class="avatar-img" />
+                      <span *ngIf="!p.profilePictureUrl" class="avatar-initials">{{ p.name | appInitials }}</span>
+                    </div>
+
+                    <!-- Details -->
+                    <div class="option-info">
+                      <span class="option-title">{{ p.name }}</span>
+                      <span class="option-subtitle">{{ p.email }}</span>
+                    </div>
+                  </button>
+
+                  <div *ngIf="filteredProviders.length === 0" class="popover-empty-state">
+                    No specialists matching "{{ providerSearchQuery() }}"
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Selected Providers Chips Bar -->
+            <div *ngIf="selectedProvidersList.length > 0" class="selected-chips-container animate-fade-in">
+              <div *ngFor="let p of selectedProvidersList" class="provider-chip">
+                <div class="chip-avatar" [style.background]="getAvatarGradient(p.name)">
+                  <img *ngIf="p.profilePictureUrl" [src]="p.profilePictureUrl" [alt]="p.name" />
+                  <span *ngIf="!p.profilePictureUrl">{{ p.name | appInitials }}</span>
+                </div>
+                <span class="chip-label">{{ p.name }}</span>
+                <button type="button" class="chip-remove-btn" (click)="removeProvider(p.id, $event)" title="Remove {{ p.name }}">
+                  ✕
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Empty state template when no providers in system -->
+          <ng-template #noProvidersTemplate>
+            <div class="empty-providers-card animate-fade-in">
+              <div class="empty-providers-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                  <circle cx="9" cy="7" r="4" />
+                </svg>
+              </div>
+              <div class="empty-providers-text">
+                <span class="empty-title">No specialists available in system</span>
+                <span class="empty-desc">Onboard a provider now or allocate later.</span>
+              </div>
+              <button type="button" class="btn btn-secondary btn-sm" (click)="onAddProviderClick($event)">
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="12" y1="5" x2="12" y2="19" />
+                  <line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
+                <span>Add Provider</span>
+              </button>
+            </div>
+          </ng-template>
         </div>
 
         <!-- Description (Placed Under Price & Duration) -->

@@ -198,5 +198,35 @@ public class ServicesController : BaseApiController
             return ErrorResponse(ex.Message, StatusCodes.Status400BadRequest);
         }
     }
+
+    /// <summary>
+    /// Get assigned services and today's live workload & timeline for the current Service Provider (or target provider)
+    /// </summary>
+    [HttpGet("my-assigned-services")]
+    [Authorize(Roles = AppRoles.AllStaff)]
+    [ProducesResponseType(typeof(ProviderServicesOverviewDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetMyAssignedServices(
+        [FromQuery] int? providerId,
+        CancellationToken cancellationToken)
+    {
+        var userId = CurrentUserId;
+        if (!userId.HasValue || userId.Value <= 0)
+        {
+            return ErrorResponse("Unable to identify current authenticated user.", StatusCodes.Status401Unauthorized);
+        }
+
+        var overview = await _serviceCatalogService.GetProviderServicesOverviewAsync(
+            userId.Value, 
+            providerId, 
+            cancellationToken);
+
+        if (overview == null)
+        {
+            return ErrorResponse("No specialist profile found associated with this account.", StatusCodes.Status404NotFound);
+        }
+
+        return OkResponse(overview);
+    }
 }
 

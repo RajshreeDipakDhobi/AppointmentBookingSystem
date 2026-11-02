@@ -29,7 +29,7 @@ export const guestGuard: CanActivateFn = () => {
 
   const getRedirect = (userRole?: UserRole) => {
     if (userRole === UserRole.ServiceProvider || (userRole as unknown) === 3 || (userRole as unknown) === '3') {
-      return router.createUrlTree(['/appointments']);
+      return router.createUrlTree(['/my-services']);
     }
     if (userRole === UserRole.Customer || (userRole as unknown) === 4 || (userRole as unknown) === '4') {
       return router.createUrlTree(['/my-appointments']);
@@ -57,7 +57,7 @@ export const dashboardGuard: CanActivateFn = () => {
   const checkDashboardAccess = (userRole?: UserRole) => {
     if (!userRole) return router.createUrlTree(['/login']);
     if (userRole === UserRole.ServiceProvider || (userRole as unknown) === 3 || (userRole as unknown) === '3') {
-      return router.createUrlTree(['/appointments']);
+      return router.createUrlTree(['/my-services']);
     }
     return true;
   };
@@ -105,7 +105,7 @@ export const tenantAdminGuard: CanActivateFn = () => {
   const checkAdminAccess = (userRole?: UserRole) => {
     if (!userRole) return router.createUrlTree(['/login']);
     if (userRole !== UserRole.SuperAdmin && userRole !== UserRole.Admin) {
-      return router.createUrlTree(userRole === UserRole.ServiceProvider ? ['/appointments'] : ['/dashboard']);
+      return router.createUrlTree(userRole === UserRole.ServiceProvider ? ['/my-services'] : ['/dashboard']);
     }
     return true;
   };

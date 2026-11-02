@@ -228,14 +228,43 @@
                 <div class="timing-card-top">
                   <span class="card-section-label">Shift Hours & Working Window</span>
                   <div class="timing-badges-wrap">
-                    <span class="service-slot-pill" [title]="'Service slot duration linked to ' + (currentProvider?.specialization || 'Master Service')">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none"
-                        stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="12" cy="12" r="10" />
-                        <polyline points="12 6 12 12 16 14" />
-                      </svg>
-                      <span>Service Slot: {{ currentEditingDay.slotDurationMinutes || 30 }}m</span>
-                    </span>
+                    <!-- Interactive Base Slot Grid Selector -->
+                    <div class="custom-select-anchor slot-duration-anchor" [class.menu-open]="isSlotDurationDropdownOpen">
+                      <button type="button" class="btn-slot-duration-trigger" (click)="toggleSlotDurationDropdown($event)" title="Change base slot duration">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none"
+                          stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                          <circle cx="12" cy="12" r="10" />
+                          <polyline points="12 6 12 12 16 14" />
+                        </svg>
+                        <span>Base Slot: {{ currentEditingDay.slotDurationMinutes || 30 }}m</span>
+                        <svg class="trigger-chevron" [class.rotated]="isSlotDurationDropdownOpen" xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                          <polyline points="6 9 12 15 18 9" />
+                        </svg>
+                      </button>
+
+                      <!-- Floating Luxury Compact Grid Popover -->
+                      <div *ngIf="isSlotDurationDropdownOpen" class="slot-duration-popover animate-scale-up" (click)="$event.stopPropagation()">
+                        <div class="popover-header">
+                          <span class="popover-header-title">Base Slot Step</span>
+                          <span class="popover-active-val">{{ currentEditingDay.slotDurationMinutes || 30 }}m</span>
+                        </div>
+                        <div class="popover-grid-list">
+                          <button type="button" *ngFor="let opt of durationOptions" 
+                            class="popover-grid-pill" 
+                            [class.pill-selected]="(currentEditingDay.slotDurationMinutes || 30) === opt.value"
+                            (click)="selectSlotDuration(opt.value, false, $event)"
+                            [title]="opt.label">
+                            <span>{{ opt.value }}m</span>
+                          </button>
+                        </div>
+                        <div class="popover-footer-action">
+                          <button type="button" class="btn-apply-all-days" (click)="selectSlotDuration(currentEditingDay.slotDurationMinutes || 30, true, $event)">
+                            Apply to All Active Days
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
                     <span class="shift-total-pill">
                       {{ formatDurationText(calculateMinutesDiff(currentEditingDay.startTime, currentEditingDay.endTime)) }} Shift
                     </span>
@@ -532,14 +561,38 @@
                   <div class="timing-card-top">
                     <span class="card-section-label">Shift Hours & Working Window</span>
                     <div class="timing-badges-wrap">
-                      <span class="service-slot-pill" [title]="'Service slot duration linked to ' + (currentProvider?.specialization || 'Master Service')">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none"
-                          stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                          <circle cx="12" cy="12" r="10" />
-                          <polyline points="12 6 12 12 16 14" />
-                        </svg>
-                        <span>Service Slot: {{ dateSchedule.slotDurationMinutes || currentProvider?.slotDurationMinutes || 30 }}m</span>
-                      </span>
+                      <!-- Interactive Date Slot Duration Selector -->
+                      <div class="custom-select-anchor slot-duration-anchor" [class.menu-open]="isSlotDurationDropdownOpen">
+                        <button type="button" class="btn-slot-duration-trigger" (click)="toggleSlotDurationDropdown($event)" title="Change base slot duration for this date">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10" />
+                            <polyline points="12 6 12 12 16 14" />
+                          </svg>
+                          <span>Base Slot: {{ dateSchedule.slotDurationMinutes || 30 }}m</span>
+                          <svg class="trigger-chevron" [class.rotated]="isSlotDurationDropdownOpen" xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="6 9 12 15 18 9" />
+                          </svg>
+                        </button>
+
+                        <!-- Floating Luxury Compact Grid Popover -->
+                        <div *ngIf="isSlotDurationDropdownOpen" class="slot-duration-popover animate-scale-up" (click)="$event.stopPropagation()">
+                          <div class="popover-header">
+                            <span class="popover-header-title">Base Slot Step</span>
+                            <span class="popover-active-val">{{ dateSchedule.slotDurationMinutes || 30 }}m</span>
+                          </div>
+                          <div class="popover-grid-list">
+                            <button type="button" *ngFor="let opt of durationOptions" 
+                              class="popover-grid-pill" 
+                              [class.pill-selected]="(dateSchedule.slotDurationMinutes || 30) === opt.value"
+                              (click)="selectDateSlotDuration(opt.value, $event)"
+                              [title]="opt.label">
+                              <span>{{ opt.value }}m</span>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+
                       <span class="shift-total-pill">
                         {{ formatDurationText(calculateMinutesDiff(dateSchedule.startTime, dateSchedule.endTime)) }} Shift
                       </span>

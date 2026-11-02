@@ -167,7 +167,7 @@ export class LoginComponent implements OnInit {
     }
 
     if (userRole === UserRole.ServiceProvider || (userRole as unknown) === 3 || (userRole as unknown) === '3') {
-      this.router.navigate(['/appointments']);
+      this.router.navigate(['/my-services']);
       return;
     }
 

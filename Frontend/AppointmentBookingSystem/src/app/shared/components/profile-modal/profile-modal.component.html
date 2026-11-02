@@ -256,6 +256,7 @@
             <label class="form-label">New Password <span class="required-star">*</span></label>
             <div class="password-input-group">
               <input [type]="showNewPassword() ? 'text' : 'password'" formControlName="newPassword" class="form-input"
+                [class.is-invalid]="isSameAsCurrentPassword || ((passwordForm.get('newPassword')?.dirty || passwordForm.get('newPassword')?.touched) && passwordForm.get('newPassword')?.invalid)"
                 placeholder="Min. 6 characters" />
               <button type="button" class="btn-eye-toggle" (click)="showNewPassword.set(!showNewPassword())"
                 tabindex="-1">
@@ -275,9 +276,34 @@
                 </svg>
               </button>
             </div>
-            <div *ngIf="passwordForm.get('newPassword')?.touched && passwordForm.get('newPassword')?.invalid"
+            <!-- Min length error (while typing) -->
+            <div *ngIf="(passwordForm.get('newPassword')?.dirty || passwordForm.get('newPassword')?.touched) && passwordForm.get('newPassword')?.errors?.['minlength']"
               class="form-error">
-              Password must be at least 6 characters.
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="12"></line>
+                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+              </svg>
+              <span>Password must be at least 6 characters.</span>
+            </div>
+            <!-- Same as current error (while typing) -->
+            <div *ngIf="isSameAsCurrentPassword" class="form-error">
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="12"></line>
+                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+              </svg>
+              <span>New password cannot be the same as current password.</span>
+            </div>
+            <!-- Required error (on blur) -->
+            <div *ngIf="passwordForm.get('newPassword')?.touched && passwordForm.get('newPassword')?.errors?.['required']"
+              class="form-error">
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="12"></line>
+                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+              </svg>
+              <span>New password is required.</span>
             </div>
           </div>
 
@@ -285,7 +311,10 @@
             <label class="form-label">Confirm Password <span class="required-star">*</span></label>
             <div class="password-input-group">
               <input [type]="showConfirmPassword() ? 'text' : 'password'" formControlName="confirmPassword"
-                class="form-input" placeholder="Re-type new password" />
+                class="form-input"
+                [class.is-invalid]="isPasswordMismatch || (passwordForm.get('confirmPassword')?.touched && passwordForm.get('confirmPassword')?.invalid)"
+                [class.is-valid]="isPasswordMatch"
+                placeholder="Re-type new password" />
               <button type="button" class="btn-eye-toggle" (click)="showConfirmPassword.set(!showConfirmPassword())"
                 tabindex="-1">
                 <svg *ngIf="!showConfirmPassword()" xmlns="http://www.w3.org/2000/svg" width="15" height="15"
@@ -304,9 +333,31 @@
                 </svg>
               </button>
             </div>
-            <div *ngIf="passwordForm.hasError('passwordMismatch') && passwordForm.get('confirmPassword')?.touched"
+            <!-- Passwords Mismatch error (while typing) -->
+            <div *ngIf="isPasswordMismatch" class="form-error">
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="12"></line>
+                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+              </svg>
+              <span>Passwords do not match.</span>
+            </div>
+            <!-- Passwords Match success indicator -->
+            <div *ngIf="isPasswordMatch" class="form-success">
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+              <span>Passwords match.</span>
+            </div>
+            <!-- Required error (on blur) -->
+            <div *ngIf="passwordForm.get('confirmPassword')?.touched && passwordForm.get('confirmPassword')?.errors?.['required'] && !isPasswordMismatch"
               class="form-error">
-              Passwords do not match.
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="12"></line>
+                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+              </svg>
+              <span>Confirm password is required.</span>
             </div>
           </div>
         </div>
@@ -323,7 +374,7 @@
 
       <button type="button" class="btn btn-primary"
         (click)="activeTab() === 'profile' ? onSaveProfile() : onChangePassword()"
-        [disabled]="activeTab() === 'profile' ? (profileForm.invalid || isSubmittingProfile() || isUploadingAvatar()) : (passwordForm.invalid || isSubmittingPassword())">
+        [disabled]="activeTab() === 'profile' ? (profileForm.invalid || isSubmittingProfile() || isUploadingAvatar()) : (passwordForm.invalid || isSameAsCurrentPassword || isPasswordMismatch || isSubmittingPassword())">
         <span *ngIf="!isSubmittingProfile() && !isSubmittingPassword()">
           {{ activeTab() === 'profile' ? 'Save Changes' : 'Update Password' }}
         </span>

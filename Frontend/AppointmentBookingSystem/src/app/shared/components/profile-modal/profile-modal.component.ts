@@ -1,4 +1,4 @@
-import { Component, EventEmitter, OnInit, Input, Output, inject, signal, computed } from '@angular/core';
+import { Component, EventEmitter, OnInit, OnDestroy, Input, Output, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { AuthService } from '../../../core/services/auth.service';
@@ -14,13 +14,15 @@ import { PHONE_10_DIGIT_REGEX, filter10Digits, getAvatarGradient } from '../../.
   templateUrl: './profile-modal.component.html',
   styleUrls: ['./profile-modal.component.css']
 })
-export class ProfileModalComponent implements OnInit {
+export class ProfileModalComponent implements OnInit, OnDestroy {
   private readonly fb = inject(FormBuilder);
   readonly authService = inject(AuthService);
   readonly getAvatarGradient = getAvatarGradient;
 
   @Input() initialTab: 'profile' | 'security' = 'profile';
   @Output() close = new EventEmitter<void>();
+
+  private closeTimer?: any;
 
   readonly currentUser = computed(() => this.authService.currentUser());
   readonly activeTab = signal<'profile' | 'security'>('profile');
@@ -69,16 +71,43 @@ export class ProfileModalComponent implements OnInit {
       currentPassword: ['', [Validators.required]],
       newPassword: ['', [Validators.required, Validators.minLength(6)]],
       confirmPassword: ['', [Validators.required]]
-    }, { validators: this.passwordMatchValidator });
+    }, { validators: this.passwordFormValidator.bind(this) });
   }
 
-  private passwordMatchValidator(group: FormGroup): { [key: string]: boolean } | null {
+  private passwordFormValidator(group: FormGroup): { [key: string]: boolean } | null {
+    const currentPass = group.get('currentPassword')?.value;
     const newPass = group.get('newPassword')?.value;
     const confirmPass = group.get('confirmPassword')?.value;
-    if (newPass && confirmPass && newPass !== confirmPass) {
-      return { passwordMismatch: true };
+
+    const errors: { [key: string]: boolean } = {};
+
+    if (currentPass && newPass && currentPass === newPass) {
+      errors['sameAsCurrent'] = true;
     }
-    return null;
+
+    if (confirmPass && newPass !== confirmPass) {
+      errors['passwordMismatch'] = true;
+    }
+
+    return Object.keys(errors).length > 0 ? errors : null;
+  }
+
+  get isSameAsCurrentPassword(): boolean {
+    const current = this.passwordForm?.get('currentPassword')?.value;
+    const next = this.passwordForm?.get('newPassword')?.value;
+    return !!current && !!next && current === next;
+  }
+
+  get isPasswordMismatch(): boolean {
+    const next = this.passwordForm?.get('newPassword')?.value || '';
+    const confirm = this.passwordForm?.get('confirmPassword')?.value || '';
+    return !!confirm && next !== confirm;
+  }
+
+  get isPasswordMatch(): boolean {
+    const next = this.passwordForm?.get('newPassword')?.value || '';
+    const confirm = this.passwordForm?.get('confirmPassword')?.value || '';
+    return !!confirm && !!next && next === confirm && next.length >= 6 && !this.isSameAsCurrentPassword;
   }
 
   setTab(tab: 'profile' | 'security'): void {
@@ -170,9 +199,11 @@ export class ProfileModalComponent implements OnInit {
   }
 
   onChangePassword(): void {
-    if (this.passwordForm.invalid) {
+    if (this.passwordForm.invalid || this.isSameAsCurrentPassword || this.isPasswordMismatch) {
       this.passwordForm.markAllAsTouched();
-      if (this.passwordForm.errors?.['passwordMismatch']) {
+      if (this.isSameAsCurrentPassword || this.passwordForm.hasError('sameAsCurrent')) {
+        this.alertMessage.set({ type: 'error', text: 'New password cannot be the same as your current password.' });
+      } else if (this.isPasswordMismatch || this.passwordForm.hasError('passwordMismatch')) {
         this.alertMessage.set({ type: 'error', text: 'New password and confirmation password do not match.' });
       } else {
         this.alertMessage.set({ type: 'error', text: 'Please fill in all password fields correctly.' });
@@ -181,11 +212,6 @@ export class ProfileModalComponent implements OnInit {
     }
 
     const val = this.passwordForm.value;
-    if (val.currentPassword === val.newPassword) {
-      this.alertMessage.set({ type: 'error', text: 'Your new password cannot be the same as your current password.' });
-      return;
-    }
-
     this.isSubmittingPassword.set(true);
     this.alertMessage.set(null);
 
@@ -199,13 +225,22 @@ export class ProfileModalComponent implements OnInit {
       next: () => {
         this.isSubmittingPassword.set(false);
         this.passwordForm.reset();
-        this.alertMessage.set({ type: 'success', text: 'Password successfully updated! You can use your new password next time you sign in.' });
+        this.alertMessage.set({ type: 'success', text: 'Password successfully updated! Closing...' });
+        this.closeTimer = setTimeout(() => {
+          this.close.emit();
+        }, 700);
       },
       error: (err) => {
         this.isSubmittingPassword.set(false);
         this.alertMessage.set({ type: 'error', text: err?.error?.message || 'Failed to change password. Please check your current password.' });
       }
     });
+  }
+
+  ngOnDestroy(): void {
+    if (this.closeTimer) {
+      clearTimeout(this.closeTimer);
+    }
   }
 
   onBackdropClick(event: MouseEvent): void {

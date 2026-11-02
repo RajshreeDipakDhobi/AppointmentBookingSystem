@@ -3,6 +3,13 @@ export enum ProviderStatus {
   Inactive = 2
 }
 
+export interface ProviderServiceSummaryDto {
+  id: number;
+  name: string;
+  durationMinutes: number;
+  price: number;
+}
+
 export interface ServiceProviderDto {
   id: number;
   tenantId: number;
@@ -10,6 +17,9 @@ export interface ServiceProviderDto {
   name: string;
   serviceId?: number;
   serviceName?: string;
+  serviceIds?: number[];
+  serviceNames?: string[];
+  assignedServices?: ProviderServiceSummaryDto[];
   serviceType: string;
   email: string;
   phoneNumber: string;
@@ -26,6 +36,7 @@ export interface ServiceProviderDto {
 export interface CreateServiceProviderRequestDto {
   name: string;
   serviceId?: number;
+  serviceIds?: number[];
   serviceType?: string;
   email: string;
   phoneNumber: string;
@@ -33,11 +44,18 @@ export interface CreateServiceProviderRequestDto {
   address?: string;
   bio?: string;
   profilePictureUrl?: string;
+  offDays?: number[];
+  startTime?: string;
+  endTime?: string;
+  breakStartTime?: string;
+  breakEndTime?: string;
+  slotDurationMinutes?: number;
 }
 
 export interface UpdateServiceProviderRequestDto {
   name: string;
   serviceId?: number;
+  serviceIds?: number[];
   serviceType?: string;
   email: string;
   phoneNumber: string;

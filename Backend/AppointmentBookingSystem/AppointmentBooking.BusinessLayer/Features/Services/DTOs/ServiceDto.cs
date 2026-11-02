@@ -11,6 +11,9 @@ public class ServiceDto
     public decimal Price { get; set; } = 0.00m;
     public bool IsActive { get; set; } = true;
     public int ProvidersCount { get; set; }
+    public List<ServiceSpecialistDto> AssignedProviders { get; set; } = new();
+    public List<int> AssignedProviderIds => AssignedProviders.Select(p => p.Id).ToList();
+    public List<string> AssignedProviderNames => AssignedProviders.Select(p => p.Name).ToList();
     public DateTime CreatedAt { get; set; }
 }
 

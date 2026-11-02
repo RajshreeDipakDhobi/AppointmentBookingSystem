@@ -44,6 +44,32 @@ public class MappingProfile : Profile
             .ForMember(dest => dest.ServiceName, opt => opt.MapFrom(src => src.Service != null ? src.Service.Name : string.Empty))
             .ForMember(dest => dest.ServiceType, opt => opt.MapFrom(src => src.Service != null ? src.Service.Name : string.Empty))
             .ForMember(dest => dest.ChargesAmount, opt => opt.MapFrom(src => src.Service != null ? src.Service.Price : 0.00m))
+            .ForMember(dest => dest.AssignedServices, opt => opt.MapFrom(src => 
+                src.ProviderServiceLinks != null && src.ProviderServiceLinks.Any(l => !l.IsDeleted)
+                    ? src.ProviderServiceLinks
+                        .Where(l => !l.IsDeleted && l.Service != null && !l.Service.IsDeleted)
+                        .Select(l => new ProviderServiceSummaryDto 
+                        { 
+                            Id = l.Service.Id, 
+                            Name = l.Service.Name, 
+                            DurationMinutes = l.Service.DurationMinutes, 
+                            Price = l.Service.Price 
+                        })
+                        .GroupBy(s => s.Id)
+                        .Select(g => g.First())
+                        .ToList()
+                    : (src.Service != null && !src.Service.IsDeleted
+                        ? new List<ProviderServiceSummaryDto> 
+                        { 
+                            new ProviderServiceSummaryDto 
+                            { 
+                                Id = src.Service.Id, 
+                                Name = src.Service.Name, 
+                                DurationMinutes = src.Service.DurationMinutes, 
+                                Price = src.Service.Price 
+                            } 
+                        } 
+                        : new List<ProviderServiceSummaryDto>())))
             .ForMember(dest => dest.TotalAppointmentsCount, opt => opt.MapFrom(src => 
                 src.Appointments != null 
                     ? src.Appointments.Count(a => 
@@ -63,7 +89,39 @@ public class MappingProfile : Profile
         // Master Service Mappings
         CreateMap<Service, ServiceDto>()
             .ForMember(dest => dest.CreatedByName, opt => opt.MapFrom(src => src.User != null ? $"{src.User.FirstName} {src.User.LastName}".Trim() : string.Empty))
-            .ForMember(dest => dest.ProvidersCount, opt => opt.MapFrom(src => src.ServiceProviders != null ? src.ServiceProviders.Count(sp => !sp.IsDeleted && sp.Status == ProviderStatus.Active) : 0));
+            .ForMember(dest => dest.ProvidersCount, opt => opt.MapFrom(src => 
+                (src.ProviderServiceLinks != null && src.ProviderServiceLinks.Any(l => !l.IsDeleted)
+                    ? src.ProviderServiceLinks.Where(l => !l.IsDeleted && l.ServiceProvider != null && !l.ServiceProvider.IsDeleted && l.ServiceProvider.Status == ProviderStatus.Active).Select(l => l.ServiceProviderId)
+                    : Enumerable.Empty<int>())
+                .Union(src.ServiceProviders != null ? src.ServiceProviders.Where(sp => !sp.IsDeleted && sp.Status == ProviderStatus.Active).Select(sp => sp.Id) : Enumerable.Empty<int>())
+                .Distinct()
+                .Count()))
+            .ForMember(dest => dest.AssignedProviders, opt => opt.MapFrom(src => 
+                (src.ProviderServiceLinks != null && src.ProviderServiceLinks.Any(l => !l.IsDeleted)
+                    ? src.ProviderServiceLinks
+                        .Where(l => !l.IsDeleted && l.ServiceProvider != null && !l.ServiceProvider.IsDeleted && l.ServiceProvider.Status == ProviderStatus.Active && l.ServiceProvider.User != null)
+                        .Select(l => new ServiceSpecialistDto
+                        {
+                            Id = l.ServiceProvider.Id,
+                            Name = $"{l.ServiceProvider.User.FirstName} {l.ServiceProvider.User.LastName}".Trim(),
+                            Email = l.ServiceProvider.User.Email ?? string.Empty,
+                            ProfilePictureUrl = l.ServiceProvider.User.ProfilePictureUrl
+                        })
+                    : Enumerable.Empty<ServiceSpecialistDto>())
+                .Union(src.ServiceProviders != null 
+                    ? src.ServiceProviders
+                        .Where(sp => !sp.IsDeleted && sp.Status == ProviderStatus.Active && sp.User != null)
+                        .Select(sp => new ServiceSpecialistDto
+                        {
+                            Id = sp.Id,
+                            Name = $"{sp.User.FirstName} {sp.User.LastName}".Trim(),
+                            Email = sp.User.Email ?? string.Empty,
+                            ProfilePictureUrl = sp.User.ProfilePictureUrl
+                        })
+                    : Enumerable.Empty<ServiceSpecialistDto>())
+                .GroupBy(p => p.Id)
+                .Select(g => g.First())
+                .ToList()));
 
         CreateMap<CreateServiceRequestDto, Service>()
             .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.Name.Trim()))

@@ -1325,6 +1325,158 @@
   letter-spacing: 0.01em;
 }
 
+/* Interactive Slot Duration Picker Dropdown */
+.slot-duration-anchor {
+  position: relative;
+  display: inline-block;
+}
+
+.btn-slot-duration-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  background: #eef7f2;
+  border: 1px solid #b8dacb;
+  color: #1e5142;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.btn-slot-duration-trigger:hover,
+.slot-duration-anchor.menu-open {
+  z-index: 1200;
+  position: relative;
+}
+
+.unified-timing-card:has(.slot-duration-anchor.menu-open) {
+  z-index: 90;
+  position: relative;
+}
+
+.slot-duration-anchor.menu-open .btn-slot-duration-trigger {
+  background: #1e5142;
+  border-color: #1e5142;
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(30, 81, 66, 0.15);
+}
+
+.btn-slot-duration-trigger .trigger-chevron {
+  transition: transform 0.2s ease;
+  stroke: currentColor;
+}
+
+.btn-slot-duration-trigger .trigger-chevron.rotated {
+  transform: rotate(180deg);
+}
+
+/* Compact Floating Popover - Opens DOWNWARDS cleanly without clipping */
+.slot-duration-popover {
+  position: absolute;
+  top: calc(100% + 5px);
+  left: 0;
+  z-index: 1300;
+  width: 205px;
+  background: #ffffff !important;
+  border: 1px solid #dce8e1 !important;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(24, 59, 50, 0.16), 0 2px 6px rgba(0, 0, 0, 0.04) !important;
+  overflow: hidden;
+  text-align: left;
+  transform-origin: top left;
+}
+
+.slot-duration-popover .popover-header {
+  padding: 0.4rem 0.65rem;
+  font-size: 0.66rem;
+  font-weight: 700;
+  color: #5b756c;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: #f8faf9;
+  border-bottom: 1px solid #e2ece6;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.slot-duration-popover .popover-active-val {
+  font-size: 0.62rem;
+  font-weight: 700;
+  background: #ebf7f0;
+  color: #166534;
+  padding: 0.06rem 0.35rem;
+  border-radius: 999px;
+  border: 1px solid #bbe5cb;
+}
+
+.slot-duration-popover .popover-grid-list {
+  padding: 0.45rem;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.35rem;
+}
+
+.slot-duration-popover .popover-grid-pill {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.35rem 0.2rem;
+  border-radius: 6px;
+  background: #f4f8f5;
+  border: 1px solid #dce8e1;
+  font-size: 0.72rem;
+  color: #183b32;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  line-height: 1;
+}
+
+.slot-duration-popover .popover-grid-pill:hover {
+  background: #e8f3ee;
+  border-color: #1e5142;
+  color: #1e5142;
+  transform: translateY(-1px);
+}
+
+.slot-duration-popover .popover-grid-pill.pill-selected {
+  background: #1e5142;
+  border-color: #1e5142;
+  color: #ffffff;
+  font-weight: 700;
+  box-shadow: 0 1px 4px rgba(30, 81, 66, 0.25);
+}
+
+.slot-duration-popover .popover-footer-action {
+  padding: 0.35rem 0.45rem;
+  border-top: 1px solid #e2ece6;
+  background: #fafcfb;
+}
+
+.btn-apply-all-days {
+  width: 100%;
+  padding: 0.32rem 0.45rem;
+  font-size: 0.67rem;
+  font-weight: 600;
+  color: #1e5142;
+  background: #f4f8f5;
+  border: 1px dashed #b8dacb;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: center;
+}
+
+.btn-apply-all-days:hover {
+  background: #e8f3ee;
+  border-color: #1e5142;
+  border-style: solid;
+}
+
 .date-status-badge {
   font-size: 0.66rem;
   font-weight: 700;

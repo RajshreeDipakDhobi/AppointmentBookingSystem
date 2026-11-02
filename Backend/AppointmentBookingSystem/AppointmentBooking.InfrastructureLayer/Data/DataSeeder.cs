@@ -8,6 +8,7 @@ public static class DataSeeder
 {
     public const string SuperAdminEmail = "superadmin@platform.com";
     public const string SuperAdminPassword = "123456";
+    public const string DefaultTenantAdminPassword = "123456";
     public const string DefaultProviderPassword = "123456";
     public const string DefaultCustomerPassword = "123456";
 
@@ -17,6 +18,7 @@ public static class DataSeeder
     public static async Task SeedAsync(BookingDbContext context)
     {
         await SeedSuperAdminAsync(context);
+        await SeedFiveTenantsWithServicesAsync(context);
         //await SeedTenant1ProvidersAsync(context);
         //await SeedTenant1CustomersAsync(context);
         //await SeedCalendarAppointmentsAsync(context);
@@ -48,6 +50,230 @@ public static class DataSeeder
             };
 
             await context.Users.AddAsync(superAdmin);
+            await context.SaveChangesAsync();
+        }
+    }
+
+    /// <summary>
+    /// Seeds 5 distinct multi-tenant businesses and their complete Master Service Catalogs.
+    /// Strictly focuses ONLY on Tenants and their Services (with linked Tenant Admin).
+    /// Fully idempotent: safely updates or creates missing records without duplicates.
+    /// </summary>
+    public static async Task SeedFiveTenantsWithServicesAsync(BookingDbContext context)
+    {
+        var passwordHash = BCrypt.Net.BCrypt.HashPassword(DefaultTenantAdminPassword);
+
+        var tenantsSeedData = new[]
+        {
+            new
+            {
+                TenantCode = "apex-salon",
+                Name = "Apex Luxury Salon & Spa",
+                ContactEmail = "admin@apexsalon.com",
+                ContactPhone = "+91 98250 11001",
+                Address = "Plot 42, Bandra Kurla Complex, Bandra West, Mumbai, Maharashtra 400051",
+                LogoUrl = "https://images.unsplash.com/photo-1560066984-138dadb4c035?w=200&h=200&fit=crop",
+                AdminEmail = "admin@apexsalon.com",
+                AdminFirstName = "Apex",
+                AdminLastName = "Admin",
+                AdminPhone = "+91 98250 11000",
+                Services = new[]
+                {
+                    new { Name = "Nail Artist & Styling", Description = "Creative nail shaping, 3D gel art extensions, luxury manicures, and bespoke bridal nail styling.", Price = 600.00m, DurationMinutes = 45 },
+                    new { Name = "Bridal & HD Makeup", Description = "Premium HD airbrush bridal makeover with contouring, lashes, and hair setting.", Price = 2500.00m, DurationMinutes = 90 },
+                    new { Name = "Hydra-Facial & Skin Care", Description = "Multi-step medical grade facial cleansing, exfoliation, antioxidant infusion and deep skin hydration.", Price = 1500.00m, DurationMinutes = 60 },
+                    new { Name = "Hair Spa & Scalp Therapy", Description = "Intense keratin infusion, ozone steam therapy, and deep scalp revitalization treatment.", Price = 1200.00m, DurationMinutes = 60 },
+                    new { Name = "Master Barber & Grooming", Description = "Precision haircut, luxury beard shaping with hot towel therapy, and royal shaving experience.", Price = 350.00m, DurationMinutes = 30 }
+                }
+            },
+            new
+            {
+                TenantCode = "lumina-dental",
+                Name = "Lumina Dental & Orthodontics",
+                ContactEmail = "admin@luminadental.com",
+                ContactPhone = "+91 98250 22002",
+                Address = "Suite 305, Medical Square, Koregaon Park, Pune, Maharashtra 411001",
+                LogoUrl = "https://images.unsplash.com/photo-1629909613654-28e377c37b09?w=200&h=200&fit=crop",
+                AdminEmail = "admin@luminadental.com",
+                AdminFirstName = "Lumina",
+                AdminLastName = "Admin",
+                AdminPhone = "+91 98250 22000",
+                Services = new[]
+                {
+                    new { Name = "Comprehensive Dental Checkup", Description = "Full oral cavity examination, digital intraoral X-rays, and customized preventive treatment planning.", Price = 500.00m, DurationMinutes = 30 },
+                    new { Name = "Ultrasonic Teeth Cleaning & Scaling", Description = "Painless ultrasonic tartar and plaque removal, deep gum cleansing, and enamel polishing.", Price = 1200.00m, DurationMinutes = 45 },
+                    new { Name = "Laser Teeth Whitening", Description = "Professional in-clinic laser teeth whitening for up to 6 shades brighter smile in a single session.", Price = 3500.00m, DurationMinutes = 45 },
+                    new { Name = "Root Canal Therapy & Crown", Description = "Single-sitting rotary root canal treatment with biocompatible filling and ceramic crown consultation.", Price = 4200.00m, DurationMinutes = 60 },
+                    new { Name = "Invisible Braces Consultation", Description = "3D digital intraoral scanner scan, aligner treatment simulation, and customized orthodontic roadmap.", Price = 1000.00m, DurationMinutes = 30 }
+                }
+            },
+            new
+            {
+                TenantCode = "zenpulse-wellness",
+                Name = "ZenPulse Physiotherapy & Wellness",
+                ContactEmail = "admin@zenpulse.com",
+                ContactPhone = "+91 98250 33003",
+                Address = "108 Lotus Tower, Outer Ring Road, Indiranagar, Bengaluru, Karnataka 560038",
+                LogoUrl = "https://images.unsplash.com/photo-1540555700478-4be289fbecef?w=200&h=200&fit=crop",
+                AdminEmail = "admin@zenpulse.com",
+                AdminFirstName = "ZenPulse",
+                AdminLastName = "Admin",
+                AdminPhone = "+91 98250 33000",
+                Services = new[]
+                {
+                    new { Name = "Sports Injury & Spine Rehabilitation", Description = "Targeted kinesiology assessment, manual spine decompression, and sport recovery rehabilitation.", Price = 1200.00m, DurationMinutes = 45 },
+                    new { Name = "Deep Tissue Therapeutic Massage", Description = "Deep myofascial release targeting chronic muscle tension, knots, and improved blood circulation.", Price = 1600.00m, DurationMinutes = 60 },
+                    new { Name = "Ergonomic Posture Correction Therapy", Description = "Workplace desk posture evaluation, cervical and lumbar realignment, and mobility exercises.", Price = 800.00m, DurationMinutes = 30 },
+                    new { Name = "Acupuncture & Dry Needling", Description = "Targeted trigger point dry needling to relieve neuro-muscular pain, migraines, and joint stiffness.", Price = 1000.00m, DurationMinutes = 45 },
+                    new { Name = "Guided Yoga & Mindfulness Session", Description = "One-on-one breathing pranayama, restorative yoga asanas, and guided stress reduction session.", Price = 600.00m, DurationMinutes = 60 }
+                }
+            },
+            new
+            {
+                TenantCode = "elitedrive-autospa",
+                Name = "Elite Drive Auto Spa & Detailing",
+                ContactEmail = "admin@elitedrive.com",
+                ContactPhone = "+91 98250 44004",
+                Address = "Shed 14, Auto Hub Industrial Area, Sector 18, Gurugram, Haryana 122008",
+                LogoUrl = "https://images.unsplash.com/photo-1601362840469-51e4d8d58785?w=200&h=200&fit=crop",
+                AdminEmail = "admin@elitedrive.com",
+                AdminFirstName = "Elite",
+                AdminLastName = "Admin",
+                AdminPhone = "+91 98250 44000",
+                Services = new[]
+                {
+                    new { Name = "Premium Ceramic Coating (9H Armor)", Description = "Multi-layer 9H nano-ceramic surface protection offering hydrophobic gloss and UV scratch resistance.", Price = 12000.00m, DurationMinutes = 180 },
+                    new { Name = "Interior Deep Steam Sanitization", Description = "High-pressure 140°C steam extraction cleaning for leather/fabric upholstery, AC ducts, and roof liners.", Price = 2200.00m, DurationMinutes = 90 },
+                    new { Name = "High-Gloss Paint Protection Film (PPF)", Description = "Self-healing thermoplastic polyurethane film inspection, touch-up, and localized edge wrapping.", Price = 1500.00m, DurationMinutes = 60 },
+                    new { Name = "Full Body Snow Foam Wash & Wax", Description = "pH-neutral foam bath, underbody jet wash, alloy wheel de-greasing, and carnauba wax seal.", Price = 800.00m, DurationMinutes = 45 },
+                    new { Name = "Computerized Wheel Alignment & Balancing", Description = "3D sensor laser wheel alignment, dynamic digital tire balancing, and tire wear diagnostics.", Price = 1100.00m, DurationMinutes = 45 }
+                }
+            },
+            new
+            {
+                TenantCode = "paws-claws-pets",
+                Name = "Paws & Claws Veterinary & Pet Spa",
+                ContactEmail = "admin@pawsclaws.com",
+                ContactPhone = "+91 98250 55005",
+                Address = "Shop 4-6, Green Meadows, Jubilee Hills, Hyderabad, Telangana 500033",
+                LogoUrl = "https://images.unsplash.com/photo-1548767797-d8c844163c4c?w=200&h=200&fit=crop",
+                AdminEmail = "admin@pawsclaws.com",
+                AdminFirstName = "Paws",
+                AdminLastName = "Admin",
+                AdminPhone = "+91 98250 55000",
+                Services = new[]
+                {
+                    new { Name = "Complete Pet Health & Vaccination Checkup", Description = "Thorough veterinary physical examination, vitals screening, deworming, and core vaccination schedule.", Price = 700.00m, DurationMinutes = 30 },
+                    new { Name = "Deluxe Pet Grooming & Herbal Bath", Description = "Herbal coat conditioning bath, gentle blow dry, breed-standard haircut, ear cleaning, and paw pad balm.", Price = 1400.00m, DurationMinutes = 60 },
+                    new { Name = "Dental Scaling & Oral Hygiene for Pets", Description = "Ultrasonic plaque removal, tartar scrape, breath freshening rinse, and gum care treatment for pets.", Price = 1800.00m, DurationMinutes = 45 },
+                    new { Name = "Flea & Tick Medicated Bath Treatment", Description = "Medicated antiparasitic dip, gentle coat brushing, skin soothing lotion, and preventive tick spray.", Price = 950.00m, DurationMinutes = 45 },
+                    new { Name = "Puppy & Kitten Behavioral Consultation", Description = "Expert animal behaviorist guidance on socialization, crate training, nutrition, and anxiety management.", Price = 850.00m, DurationMinutes = 45 }
+                }
+            }
+        };
+
+        foreach (var item in tenantsSeedData)
+        {
+            var tenant = await context.Tenants
+                .IgnoreQueryFilters()
+                .FirstOrDefaultAsync(t => t.TenantCode.ToLower() == item.TenantCode.ToLower() || t.Name.ToLower() == item.Name.ToLower());
+
+            if (tenant == null)
+            {
+                tenant = new Tenant
+                {
+                    TenantCode = item.TenantCode,
+                    Name = item.Name,
+                    ContactEmail = item.ContactEmail,
+                    ContactPhone = item.ContactPhone,
+                    Address = item.Address,
+                    LogoUrl = item.LogoUrl,
+                    Status = TenantStatus.Active,
+                    CreatedAt = DateTime.UtcNow,
+                    CreatedBy = "System"
+                };
+
+                await context.Tenants.AddAsync(tenant);
+                await context.SaveChangesAsync();
+            }
+            else
+            {
+                tenant.Name = item.Name;
+                tenant.ContactEmail = item.ContactEmail;
+                tenant.ContactPhone = item.ContactPhone;
+                tenant.Address = item.Address;
+                tenant.LogoUrl = item.LogoUrl;
+                tenant.Status = TenantStatus.Active;
+                await context.SaveChangesAsync();
+            }
+
+            // Seed or link Tenant Admin User
+            var adminUser = await context.Users
+                .IgnoreQueryFilters()
+                .FirstOrDefaultAsync(u => u.Email.ToLower() == item.AdminEmail.ToLower());
+
+            if (adminUser == null)
+            {
+                adminUser = new User
+                {
+                    TenantId = tenant.Id,
+                    FirstName = item.AdminFirstName,
+                    LastName = item.AdminLastName,
+                    Email = item.AdminEmail.ToLower(),
+                    PhoneNumber = item.AdminPhone,
+                    PasswordHash = passwordHash,
+                    Role = UserRole.Admin,
+                    IsActive = true,
+                    CreatedAt = DateTime.UtcNow,
+                    CreatedBy = "System"
+                };
+
+                await context.Users.AddAsync(adminUser);
+                await context.SaveChangesAsync();
+            }
+            else
+            {
+                adminUser.TenantId = tenant.Id;
+                adminUser.Role = UserRole.Admin;
+                adminUser.IsActive = true;
+                await context.SaveChangesAsync();
+            }
+
+            // Seed Master Services for this Tenant
+            foreach (var svc in item.Services)
+            {
+                var existingService = await context.Services
+                    .IgnoreQueryFilters()
+                    .Include(s => s.User)
+                    .FirstOrDefaultAsync(s => (s.UserId == adminUser.Id || (s.User != null && s.User.TenantId == tenant.Id)) 
+                                           && s.Name.ToLower() == svc.Name.ToLower());
+
+                if (existingService == null)
+                {
+                    var newService = new Service
+                    {
+                        UserId = adminUser.Id,
+                        Name = svc.Name,
+                        Description = svc.Description,
+                        Price = svc.Price,
+                        DurationMinutes = svc.DurationMinutes,
+                        IsActive = true,
+                        CreatedAt = DateTime.UtcNow,
+                        CreatedBy = "System"
+                    };
+
+                    await context.Services.AddAsync(newService);
+                }
+                else
+                {
+                    existingService.UserId = adminUser.Id;
+                    existingService.Description = svc.Description;
+                    existingService.Price = svc.Price;
+                    existingService.DurationMinutes = svc.DurationMinutes;
+                    existingService.IsActive = true;
+                }
+            }
+
             await context.SaveChangesAsync();
         }
     }
@@ -232,6 +458,22 @@ public static class DataSeeder
                 existingProvider.ServiceId = masterService.Id;
                 existingProvider.Bio = item.Bio;
                 existingProvider.Status = ProviderStatus.Active;
+                await context.SaveChangesAsync();
+            }
+
+            // Ensure ProviderServiceLink exists
+            var hasLink = await context.ProviderServiceLinks
+                .IgnoreQueryFilters()
+                .AnyAsync(l => l.ServiceProviderId == existingProvider.Id && l.ServiceId == masterService.Id);
+            if (!hasLink)
+            {
+                await context.ProviderServiceLinks.AddAsync(new ProviderServiceLink
+                {
+                    ServiceProviderId = existingProvider.Id,
+                    ServiceId = masterService.Id,
+                    CreatedAt = DateTime.UtcNow,
+                    CreatedBy = "System"
+                });
                 await context.SaveChangesAsync();
             }
 

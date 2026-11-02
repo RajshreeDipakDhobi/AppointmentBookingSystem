@@ -38,6 +38,8 @@ public class ServiceProviderService : IServiceProviderService
             .Query()
             .Include(p => p.User)
             .Include(p => p.Service)
+            .Include(p => p.ProviderServiceLinks)
+                .ThenInclude(l => l.Service)
             .Include(p => p.Appointments)
             .Where(p => p.TenantId == tenantId)
             .OrderByDescending(p => p.CreatedAt)
@@ -56,6 +58,8 @@ public class ServiceProviderService : IServiceProviderService
             .Query()
             .Include(p => p.User)
             .Include(p => p.Service)
+            .Include(p => p.ProviderServiceLinks)
+                .ThenInclude(l => l.Service)
             .Include(p => p.Appointments)
             .Where(p => p.TenantId == tenantId);
 
@@ -69,6 +73,7 @@ public class ServiceProviderService : IServiceProviderService
             var search = paginationParams.Search.Trim().ToLower();
             query = query.Where(p => (p.User.FirstName + " " + p.User.LastName).ToLower().Contains(search)
                                   || (p.Service != null && p.Service.Name.ToLower().Contains(search))
+                                  || p.ProviderServiceLinks.Any(l => !l.IsDeleted && l.Service != null && l.Service.Name.ToLower().Contains(search))
                                   || p.User.Email.ToLower().Contains(search)
                                   || (p.User.PhoneNumber != null && p.User.PhoneNumber.Contains(search)));
         }
@@ -92,6 +97,8 @@ public class ServiceProviderService : IServiceProviderService
             .Query()
             .Include(p => p.User)
             .Include(p => p.Service)
+            .Include(p => p.ProviderServiceLinks)
+                .ThenInclude(l => l.Service)
             .Where(p => p.Status == ProviderStatus.Active);
 
         if (tenantId.HasValue && tenantId.Value > 0)
@@ -112,6 +119,8 @@ public class ServiceProviderService : IServiceProviderService
             .Query()
             .Include(p => p.User)
             .Include(p => p.Service)
+            .Include(p => p.ProviderServiceLinks)
+                .ThenInclude(l => l.Service)
             .Include(p => p.Appointments)
             .FirstOrDefaultAsync(p => p.Id == id && p.TenantId == tenantId, cancellationToken);
 
@@ -171,7 +180,15 @@ public class ServiceProviderService : IServiceProviderService
                 provider.CreatedAt = DateTime.UtcNow;
                 provider.CreatedBy = createdBy;
 
-                if (!provider.ServiceId.HasValue && !string.IsNullOrWhiteSpace(request.ServiceType))
+                var serviceIds = request.ServiceIds != null && request.ServiceIds.Count > 0
+                    ? request.ServiceIds.Where(id => id > 0).Distinct().ToList()
+                    : (request.ServiceId.HasValue && request.ServiceId.Value > 0 ? new List<int> { request.ServiceId.Value } : new List<int>());
+
+                if (serviceIds.Count > 0)
+                {
+                    provider.ServiceId = serviceIds[0];
+                }
+                else if (!provider.ServiceId.HasValue && !string.IsNullOrWhiteSpace(request.ServiceType))
                 {
                     var matchingService = await _unitOfWork.Repository<Service>()
                         .Query()
@@ -179,13 +196,73 @@ public class ServiceProviderService : IServiceProviderService
                     if (matchingService != null)
                     {
                         provider.ServiceId = matchingService.Id;
+                        serviceIds.Add(matchingService.Id);
                     }
                 }
 
                 await _unitOfWork.Repository<ServiceProvider>().AddAsync(provider, cancellationToken);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 
+                // Add ProviderServiceLink records for all selected services
+                foreach (var sId in serviceIds)
+                {
+                    await _unitOfWork.Repository<ProviderServiceLink>().AddAsync(new ProviderServiceLink
+                    {
+                        ServiceProviderId = provider.Id,
+                        ServiceId = sId,
+                        CreatedAt = DateTime.UtcNow,
+                        CreatedBy = createdBy
+                    }, cancellationToken);
+                }
+
+                // 4. Automatically generate 7-day recurring weekly availability schedule (Shifts & Slots)
+                var offDaysList = request.OffDays ?? new List<int> { (int)DayOfWeek.Sunday }; // Sunday is default off
+                TimeSpan startTime = TimeSpan.TryParse(request.StartTime, out var sTime) ? sTime : new TimeSpan(10, 0, 0);
+                TimeSpan endTime = TimeSpan.TryParse(request.EndTime, out var eTime) ? eTime : new TimeSpan(17, 0, 0);
+                TimeSpan? breakStart = TimeSpan.TryParse(request.BreakStartTime, out var bsTime) ? bsTime : new TimeSpan(13, 0, 0);
+                TimeSpan? breakEnd = TimeSpan.TryParse(request.BreakEndTime, out var beTime) ? beTime : new TimeSpan(14, 0, 0);
+
+                // Determine base slot duration (defaults to 30 minutes, not service duration)
+                int slotDuration = request.SlotDurationMinutes.HasValue && request.SlotDurationMinutes.Value > 0
+                    ? request.SlotDurationMinutes.Value
+                    : 30;
+
+                // Generate for all 7 days of the week (Sunday = 0 to Saturday = 6)
+                foreach (DayOfWeek day in Enum.GetValues(typeof(DayOfWeek)))
+                {
+                    bool isWorkingDay = !offDaysList.Contains((int)day);
+                    var availability = new ProviderAvailability
+                    {
+                        TenantId = tenantId,
+                        ServiceProviderId = provider.Id,
+                        DayOfWeek = day,
+                        SpecificDate = null,
+                        StartTime = startTime,
+                        EndTime = endTime,
+                        BreakStartTime = isWorkingDay ? breakStart : null,
+                        BreakEndTime = isWorkingDay ? breakEnd : null,
+                        SlotDurationMinutes = slotDuration,
+                        BlockedSlots = null,
+                        IsAvailable = isWorkingDay,
+                        CreatedAt = DateTime.UtcNow,
+                        CreatedBy = createdBy
+                    };
+                    await _unitOfWork.Repository<ProviderAvailability>().AddAsync(availability, cancellationToken);
+                }
+
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+
                 await _unitOfWork.CommitTransactionAsync(cancellationToken);
+
+                // Fetch created provider with full includes for DTO mapping
+                var createdProvider = await _unitOfWork.Repository<ServiceProvider>()
+                    .Query()
+                    .Include(p => p.User)
+                    .Include(p => p.Service)
+                    .Include(p => p.ProviderServiceLinks)
+                        .ThenInclude(l => l.Service)
+                    .Include(p => p.Appointments)
+                    .FirstOrDefaultAsync(p => p.Id == provider.Id && p.TenantId == tenantId, cancellationToken);
 
                 // Dispatch Welcome & Credentials Email to newly created Service Provider
                 try
@@ -201,7 +278,7 @@ public class ServiceProviderService : IServiceProviderService
                     _logger.LogError(emailEx, "Failed to send welcome credentials email to Service Provider {Email}", user.Email);
                 }
 
-                return ApiResponse<ServiceProviderDto>.Ok(_mapper.Map<ServiceProviderDto>(provider), "Service provider created successfully.");
+                return ApiResponse<ServiceProviderDto>.Ok(_mapper.Map<ServiceProviderDto>(createdProvider ?? provider), "Service provider created successfully.");
             }
             catch (Exception ex)
             {
@@ -222,6 +299,7 @@ public class ServiceProviderService : IServiceProviderService
         var provider = await _unitOfWork.Repository<ServiceProvider>()
             .Query()
             .Include(p => p.Appointments)
+            .Include(p => p.ProviderServiceLinks)
             .FirstOrDefaultAsync(p => p.Id == id && p.TenantId == tenantId, cancellationToken);
 
         if (provider == null)
@@ -232,9 +310,13 @@ public class ServiceProviderService : IServiceProviderService
         _mapper.Map(request, provider);
         provider.UpdatedAt = DateTime.UtcNow;
 
-        if (request.ServiceId.HasValue)
+        var serviceIds = request.ServiceIds != null && request.ServiceIds.Count > 0
+            ? request.ServiceIds.Where(sId => sId > 0).Distinct().ToList()
+            : (request.ServiceId.HasValue && request.ServiceId.Value > 0 ? new List<int> { request.ServiceId.Value } : new List<int>());
+
+        if (serviceIds.Count > 0)
         {
-            provider.ServiceId = request.ServiceId.Value > 0 ? request.ServiceId.Value : null;
+            provider.ServiceId = serviceIds[0];
         }
         else if (!string.IsNullOrWhiteSpace(request.ServiceType))
         {
@@ -244,7 +326,41 @@ public class ServiceProviderService : IServiceProviderService
             if (matchingService != null)
             {
                 provider.ServiceId = matchingService.Id;
+                serviceIds.Add(matchingService.Id);
             }
+            else
+            {
+                provider.ServiceId = null;
+            }
+        }
+        else
+        {
+            provider.ServiceId = null;
+        }
+
+        // Synchronize ProviderServiceLinks (Many-to-Many join table)
+        var existingLinks = await _unitOfWork.Repository<ProviderServiceLink>()
+            .Query()
+            .Where(l => l.ServiceProviderId == provider.Id)
+            .ToListAsync(cancellationToken);
+
+        // Remove links that are deselected
+        foreach (var link in existingLinks.Where(l => !serviceIds.Contains(l.ServiceId)))
+        {
+            _unitOfWork.Repository<ProviderServiceLink>().Remove(link);
+        }
+
+        // Add newly selected links
+        var existingServiceIds = existingLinks.Where(l => !l.IsDeleted).Select(l => l.ServiceId).ToList();
+        foreach (var sId in serviceIds.Where(sid => !existingServiceIds.Contains(sid)))
+        {
+            await _unitOfWork.Repository<ProviderServiceLink>().AddAsync(new ProviderServiceLink
+            {
+                ServiceProviderId = provider.Id,
+                ServiceId = sId,
+                CreatedAt = DateTime.UtcNow,
+                CreatedBy = "System"
+            }, cancellationToken);
         }
 
         if (provider.UserId > 0)
@@ -266,28 +382,18 @@ public class ServiceProviderService : IServiceProviderService
 
         _unitOfWork.Repository<ServiceProvider>().Update(provider);
 
-        if (provider.ServiceId.HasValue)
-        {
-            var newService = await _unitOfWork.Repository<Service>().GetByIdAsync(provider.ServiceId.Value, cancellationToken);
-            if (newService != null && newService.DurationMinutes > 0)
-            {
-                var availabilities = await _unitOfWork.Repository<ProviderAvailability>()
-                    .Query()
-                    .Where(pa => pa.ServiceProviderId == provider.Id)
-                    .ToListAsync(cancellationToken);
-
-                foreach (var pa in availabilities)
-                {
-                    pa.SlotDurationMinutes = newService.DurationMinutes;
-                    pa.UpdatedAt = DateTime.UtcNow;
-                    _unitOfWork.Repository<ProviderAvailability>().Update(pa);
-                }
-            }
-        }
-
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return _mapper.Map<ServiceProviderDto>(provider);
+        var updatedProvider = await _unitOfWork.Repository<ServiceProvider>()
+            .Query()
+            .Include(p => p.User)
+            .Include(p => p.Service)
+            .Include(p => p.ProviderServiceLinks)
+                .ThenInclude(l => l.Service)
+            .Include(p => p.Appointments)
+            .FirstOrDefaultAsync(p => p.Id == id && p.TenantId == tenantId, cancellationToken);
+
+        return _mapper.Map<ServiceProviderDto>(updatedProvider ?? provider);
     }
 
     public async Task<bool> UpdateProviderStatusAsync(int id, int tenantId, ProviderStatus status, CancellationToken cancellationToken = default)
@@ -311,11 +417,40 @@ public class ServiceProviderService : IServiceProviderService
     public async Task<bool> DeleteProviderAsync(int id, int tenantId, CancellationToken cancellationToken = default)
     {
         var provider = await _unitOfWork.Repository<ServiceProvider>()
-            .FindAsync(p => p.Id == id && p.TenantId == tenantId, cancellationToken);
+            .Query()
+            .Include(p => p.User)
+            .Include(p => p.Appointments)
+            .Include(p => p.ProviderServiceLinks)
+            .FirstOrDefaultAsync(p => p.Id == id && p.TenantId == tenantId && !p.IsDeleted, cancellationToken);
 
         if (provider == null)
         {
             return false;
+        }
+
+        // Check if provider has active appointments
+        var hasActiveAppointments = provider.Appointments.Any(a => !a.IsDeleted &&
+            (a.Status == AppointmentStatus.Booked || 
+             a.Status == AppointmentStatus.Approved || 
+             a.Status == AppointmentStatus.RescheduleProposed || 
+             a.Status == AppointmentStatus.Rescheduled));
+
+        if (hasActiveAppointments)
+        {
+            throw new InvalidOperationException("Cannot delete service provider with active or pending appointments. Deactivate the provider instead.");
+        }
+
+        // Cascade soft-delete on ProviderServiceLinks
+        foreach (var link in provider.ProviderServiceLinks.Where(l => !l.IsDeleted))
+        {
+            _unitOfWork.Repository<ProviderServiceLink>().Remove(link);
+        }
+
+        // Deactivate linked User account
+        if (provider.User != null)
+        {
+            provider.User.IsActive = false;
+            _unitOfWork.Repository<User>().Remove(provider.User);
         }
 
         _unitOfWork.Repository<ServiceProvider>().Remove(provider);

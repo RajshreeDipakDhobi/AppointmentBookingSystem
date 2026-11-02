@@ -240,7 +240,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let s of pagedServices()" class="table-row">
+          <tr *ngFor="let s of pagedServices(); let i = index" class="table-row">
 
             <!-- Service Name & Icon -->
             <td class="col-service-title">
@@ -280,16 +280,80 @@
               </div>
             </td>
 
-            <!-- Linked Specialists Count -->
+            <!-- Linked Specialists Interactive Dropdown Toggle -->
             <td class="col-service-providers">
-              <span class="provider-badge-pill" [title]="s.providersCount + ' specialists assigned'">
-                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none"
-                  stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-                  <circle cx="9" cy="7" r="4" />
-                </svg>
-                <span>{{ s.providersCount }} {{ s.providersCount === 1 ? 'Specialist' : 'Specialists' }}</span>
-              </span>
+              <div class="table-dropdown-anchor" (click)="$event.stopPropagation()">
+                <button type="button" class="btn-toggle-timetable" [class.active]="openSpecialistsDropdownId() === s.id"
+                  (click)="toggleSpecialistsDropdown(s.id, $event)" [title]="'View specialists assigned to ' + s.name">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                    <circle cx="9" cy="7" r="4" />
+                  </svg>
+                  <span>{{ (s.assignedProviders?.length || s.providersCount || 0) }} {{ (s.assignedProviders?.length ||
+                    s.providersCount) === 1 ? 'Specialist' : 'Specialists' }}</span>
+                  <svg class="toggle-chevron" [class.chevron-open]="openSpecialistsDropdownId() === s.id"
+                    xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="6 9 12 15 18 9" />
+                  </svg>
+                </button>
+
+                <!-- Floating Specialists Popover Menu -->
+                <div *ngIf="openSpecialistsDropdownId() === s.id" 
+                  class="table-popover-menu animate-scale-up"
+                  [class.dropup-menu]="isDropupRow(i, pagedServices().length)"
+                  (click)="$event.stopPropagation()">
+                  <div class="popover-header">
+                    <span class="popover-header-title">Assigned Specialists</span>
+                    <span class="popover-count-pill">{{ s.assignedProviders?.length || s.providersCount || 0 }}</span>
+                  </div>
+                  <div class="popover-items-list specialists-popover-list">
+                    <ng-container
+                      *ngIf="s.assignedProviders && s.assignedProviders.length > 0; else legacySpecialistsTemplate">
+                      <div *ngFor="let p of s.assignedProviders" class="table-popover-specialist-item">
+                        <div class="specialist-avatar"
+                          [style.background]="p.profilePictureUrl ? 'transparent' : getAvatarGradient(p.name)">
+                          <img *ngIf="p.profilePictureUrl" [src]="p.profilePictureUrl" [alt]="p.name"
+                            class="avatar-img" />
+                          <span *ngIf="!p.profilePictureUrl">{{ p.name | appInitials }}</span>
+                        </div>
+                        <div class="specialist-details">
+                          <span class="specialist-name">{{ p.name }}</span>
+                          <span class="specialist-email">{{ p.email }}</span>
+                        </div>
+                      </div>
+                    </ng-container>
+
+                    <ng-template #legacySpecialistsTemplate>
+                      <ng-container
+                        *ngIf="s.assignedProviderNames && s.assignedProviderNames.length > 0; else emptySpecialists">
+                        <div *ngFor="let name of s.assignedProviderNames" class="table-popover-specialist-item">
+                          <div class="specialist-avatar" [style.background]="getAvatarGradient(name)">
+                            <span>{{ name | appInitials }}</span>
+                          </div>
+                          <div class="specialist-details">
+                            <span class="specialist-name">{{ name }}</span>
+                            <span class="specialist-email">Specialist Provider</span>
+                          </div>
+                        </div>
+                      </ng-container>
+                    </ng-template>
+
+                    <ng-template #emptySpecialists>
+                      <div class="popover-empty-notice">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                          <circle cx="12" cy="12" r="10" />
+                          <line x1="12" y1="8" x2="12" y2="12" />
+                          <line x1="12" y1="16" x2="12.01" y2="16" />
+                        </svg>
+                        <span>No specialists assigned yet</span>
+                      </div>
+                    </ng-template>
+                  </div>
+                </div>
+              </div>
             </td>
 
             <!-- Status Dropdown Pill -->
@@ -308,7 +372,9 @@
                 </button>
 
                 <!-- Floating Status Dropdown Menu -->
-                <div class="status-menu animate-fade-in" *ngIf="openStatusDropdownId() === s.id">
+                <div class="status-menu animate-fade-in" 
+                  [class.dropup-menu]="isDropupRow(i, pagedServices().length)"
+                  *ngIf="openStatusDropdownId() === s.id">
                   <button type="button" class="status-menu-item" [class.selected]="s.isActive"
                     (click)="selectServiceStatus(s, true, $event)">
                     <span class="status-dot dot-active"></span>
@@ -436,4 +502,10 @@
 
 <!-- Add / Edit Service Modal -->
 <app-service-modal [isOpen]="isModalOpen()" [mode]="modalMode()" [serviceToEdit]="selectedService()"
-  (close)="closeModal()" (saved)="onServiceSaved($event)"></app-service-modal>
+  (close)="closeModal()" (saved)="onServiceSaved($event)" (requestAddProvider)="openAddProviderFromService()">
+</app-service-modal>
+
+<!-- Quick Add Specialist Modal invoked from Service Creation flow -->
+<app-provider-modal *ngIf="isQuickProviderModalOpen()" [isOpen]="isQuickProviderModalOpen()" mode="create"
+  (close)="isQuickProviderModalOpen.set(false)" (saved)="onQuickProviderCreated($event)">
+</app-provider-modal>

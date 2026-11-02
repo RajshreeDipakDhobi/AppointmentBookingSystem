@@ -108,6 +108,8 @@ public class AppointmentService : IAppointmentService
         var now = _dateTimeProvider.GetCurrentLocalTime();
         var currentSlotTime = availability.StartTime;
         var duration = TimeSpan.FromMinutes(slotDurationMins);
+        int stepMinutes = slotDurationMins >= 90 ? 30 : slotDurationMins;
+        var step = TimeSpan.FromMinutes(stepMinutes);
 
         while (currentSlotTime + duration <= availability.EndTime)
         {
@@ -146,7 +148,7 @@ public class AppointmentService : IAppointmentService
             };
 
             response.Slots.Add(slotDto);
-            currentSlotTime = nextSlotTime;
+            currentSlotTime = currentSlotTime.Add(step);
         }
 
         return response;
@@ -181,10 +183,12 @@ public class AppointmentService : IAppointmentService
             Slots = new List<AvailableSlotDto>()
         };
 
-        // Fetch all active specialists offering this service
+        // Fetch all active specialists offering this service (via Primary Service OR Many-to-Many ProviderServiceLinks)
         var providersQuery = _unitOfWork.Repository<ServiceProvider>().Query()
             .Include(p => p.User)
-            .Where(p => p.ServiceId == serviceId && p.Status == ProviderStatus.Active);
+            .Include(p => p.ProviderServiceLinks)
+            .Where(p => (p.ServiceId == serviceId || p.ProviderServiceLinks.Any(ps => ps.ServiceId == serviceId))
+                     && p.Status == ProviderStatus.Active);
 
         if (tenantId.HasValue && tenantId.Value > 0)
         {
@@ -248,6 +252,8 @@ public class AppointmentService : IAppointmentService
 
         var now = _dateTimeProvider.GetCurrentLocalTime();
         var duration = TimeSpan.FromMinutes(slotDurationMins);
+        int stepMinutes = slotDurationMins >= 90 ? 30 : slotDurationMins;
+        var step = TimeSpan.FromMinutes(stepMinutes);
         var currentSlotTime = minStart;
 
         while (currentSlotTime + duration <= maxEnd)
@@ -304,7 +310,7 @@ public class AppointmentService : IAppointmentService
                 Reason = reason
             });
 
-            currentSlotTime = nextSlotTime;
+            currentSlotTime = currentSlotTime.Add(step);
         }
 
         return response;
@@ -530,7 +536,9 @@ public class AppointmentService : IAppointmentService
             }
 
             var specialistsQuery = _unitOfWork.Repository<ServiceProvider>().Query()
-                .Where(p => p.ServiceId == service.Id && p.Status == ProviderStatus.Active);
+                .Include(p => p.ProviderServiceLinks)
+                .Where(p => (p.ServiceId == service.Id || p.ProviderServiceLinks.Any(ps => ps.ServiceId == service.Id))
+                         && p.Status == ProviderStatus.Active);
 
             if (tenantId.HasValue && tenantId.Value > 0)
             {
@@ -1501,10 +1509,20 @@ public class AppointmentService : IAppointmentService
                 return new List<AppointmentDto>();
             }
 
-            // Only show requests for the service category the specialist is assigned to
-            if (provider.ServiceId.HasValue)
+            // Show requests for any service category the specialist is assigned to
+            var assignedServiceIds = await _unitOfWork.Repository<ProviderServiceLink>().Query()
+                .Where(ps => ps.ServiceProviderId == providerId.Value)
+                .Select(ps => ps.ServiceId)
+                .ToListAsync(cancellationToken);
+
+            if (provider.ServiceId.HasValue && !assignedServiceIds.Contains(provider.ServiceId.Value))
             {
-                query = query.Where(a => a.ServiceId == provider.ServiceId.Value);
+                assignedServiceIds.Add(provider.ServiceId.Value);
+            }
+
+            if (assignedServiceIds.Count > 0)
+            {
+                query = query.Where(a => a.ServiceId.HasValue && assignedServiceIds.Contains(a.ServiceId.Value));
             }
 
             // Fetch provider's active bookings to avoid showing conflicting slots
@@ -1607,10 +1625,18 @@ public class AppointmentService : IAppointmentService
                 return ApiResponse<AppointmentDto>.Fail("This request has expired. The 10-minute specialist acceptance window has elapsed.");
             }
 
-            if (appointment.ServiceId.HasValue && provider.ServiceId.HasValue && appointment.ServiceId.Value != provider.ServiceId.Value)
+            if (appointment.ServiceId.HasValue)
             {
-                await _unitOfWork.RollbackTransactionAsync();
-                return ApiResponse<AppointmentDto>.Fail("You are not assigned to perform this service category.");
+                var targetServiceId = appointment.ServiceId.Value;
+                bool isAssigned = (provider.ServiceId.HasValue && provider.ServiceId.Value == targetServiceId)
+                    || await _unitOfWork.Repository<ProviderServiceLink>().Query()
+                        .AnyAsync(ps => ps.ServiceProviderId == provider.Id && ps.ServiceId == targetServiceId, cancellationToken);
+
+                if (!isAssigned)
+                {
+                    await _unitOfWork.RollbackTransactionAsync();
+                    return ApiResponse<AppointmentDto>.Fail("You are not assigned to perform this service category.");
+                }
             }
 
             // Verify no time conflict with this provider's existing schedule

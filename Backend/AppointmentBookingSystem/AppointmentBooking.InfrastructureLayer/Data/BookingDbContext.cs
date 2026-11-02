@@ -19,6 +19,7 @@ public class BookingDbContext : DbContext
     // Service Provider & Catalog Tables (Module 1 & 2)
     public DbSet<Service> Services => Set<Service>();
     public DbSet<ServiceProvider> ServiceProviders => Set<ServiceProvider>();
+    public DbSet<ProviderServiceLink> ProviderServiceLinks => Set<ProviderServiceLink>();
     public DbSet<ProviderAvailability> ProviderAvailabilities => Set<ProviderAvailability>();
 
     // Appointment Booking Tables (Module 3, 4, 5, 6, 7)
@@ -142,6 +143,25 @@ public class BookingDbContext : DbContext
                   .WithMany(u => u.CreatedServices)
                   .HasForeignKey(s => s.UserId)
                   .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // 7. ProviderServiceLink Configuration (Many-to-Many Provider & Services)
+        modelBuilder.Entity<ProviderServiceLink>(entity =>
+        {
+            entity.ToTable("ProviderServiceLinks");
+            entity.HasKey(psl => psl.Id);
+
+            entity.HasOne(psl => psl.ServiceProvider)
+                  .WithMany(sp => sp.ProviderServiceLinks)
+                  .HasForeignKey(psl => psl.ServiceProviderId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(psl => psl.Service)
+                  .WithMany(s => s.ProviderServiceLinks)
+                  .HasForeignKey(psl => psl.ServiceId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(psl => new { psl.ServiceProviderId, psl.ServiceId }).IsUnique();
         });
 
 

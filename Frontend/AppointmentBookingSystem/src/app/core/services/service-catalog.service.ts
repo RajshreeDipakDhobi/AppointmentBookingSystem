@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { ServiceDto, CreateServiceRequestDto, UpdateServiceRequestDto } from '../models/service.models';
+import { ServiceDto, CreateServiceRequestDto, UpdateServiceRequestDto, ProviderServicesOverviewDto } from '../models/service.models';
 import { environment } from '../../../environments/environment';
 
 @Injectable({
@@ -41,6 +41,12 @@ export class ServiceCatalogService {
 
   deleteService(id: number): Observable<{ id: number; message: string }> {
     return this.http.delete<{ id: number; message: string }>(`${this.apiUrl}/${id}`);
+  }
+
+  getMyAssignedServices(providerId?: number): Observable<ProviderServicesOverviewDto> {
+    let params = new HttpParams();
+    if (providerId) params = params.set('providerId', providerId);
+    return this.http.get<ProviderServicesOverviewDto>(`${this.apiUrl}/my-assigned-services`, { params });
   }
 }
 

@@ -160,6 +160,7 @@
         <thead>
           <tr>
             <th class="col-provider">Provider Name</th>
+            <th class="col-services">Assigned Services</th>
             <th class="col-contact">Contact Details</th>
             <th class="col-address">Cabin / Address</th>
             <th class="col-status">Status</th>
@@ -168,7 +169,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let provider of providers()" class="table-row">
+          <tr *ngFor="let provider of providers(); let i = index" class="table-row">
             <td class="col-provider">
               <div class="provider-cell">
                 <div class="provider-avatar"
@@ -179,6 +180,65 @@
                 </div>
                 <div class="provider-info">
                   <span class="provider-name" [title]="provider.name">{{ provider.name }}</span>
+                </div>
+              </div>
+            </td>
+            <!-- Assigned Services Interactive Dropdown Toggle -->
+            <td class="col-services">
+              <div class="table-dropdown-anchor" (click)="$event.stopPropagation()">
+                <button 
+                  type="button" 
+                  class="btn-toggle-timetable" 
+                  [class.active]="openServicesDropdownId() === provider.id"
+                  (click)="toggleServicesDropdown(provider.id, $event)"
+                  [title]="'View services offered by ' + provider.name"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
+                    <line x1="7" y1="7" x2="7.01" y2="7"/>
+                  </svg>
+                  <span>{{ getServicesCount(provider) }} {{ getServicesCount(provider) === 1 ? 'Service' : 'Services' }}</span>
+                  <svg class="toggle-chevron" [class.chevron-open]="openServicesDropdownId() === provider.id"
+                    xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="6 9 12 15 18 9" />
+                  </svg>
+                </button>
+
+                <!-- Floating Services Popover Menu -->
+                <div *ngIf="openServicesDropdownId() === provider.id" 
+                  class="table-popover-menu animate-scale-up" 
+                  [class.dropup-menu]="isDropupRow(i, providers().length)"
+                  (click)="$event.stopPropagation()">
+                  <div class="popover-header">
+                    <span class="popover-header-title">Offered Services</span>
+                    <span class="popover-count-pill">{{ getServicesCount(provider) }}</span>
+                  </div>
+                  <div class="popover-items-list services-popover-list">
+                    <div *ngFor="let s of getProviderServicesList(provider)" class="table-popover-service-item">
+                      <div class="service-item-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none"
+                          stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                          <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
+                          <line x1="7" y1="7" x2="7.01" y2="7"/>
+                        </svg>
+                      </div>
+                      <div class="service-item-details">
+                        <span class="service-name">{{ s.name }}</span>
+                        <span class="service-meta" *ngIf="s.price || s.durationMinutes">₹{{ s.price | number }} · {{ s.durationMinutes }} mins</span>
+                      </div>
+                    </div>
+                    <div *ngIf="getServicesCount(provider) === 0" class="popover-empty-notice">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10" />
+                        <line x1="12" y1="8" x2="12" y2="12" />
+                        <line x1="12" y1="16" x2="12.01" y2="16" />
+                      </svg>
+                      <span>No services assigned</span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </td>
@@ -208,7 +268,9 @@
                 </button>
 
                 <!-- Custom Dropdown Menu -->
-                <div class="status-menu animate-fade-in" *ngIf="openStatusDropdownId() === provider.id">
+                <div class="status-menu animate-fade-in" 
+                  [class.dropup-menu]="isDropupRow(i, providers().length)"
+                  *ngIf="openStatusDropdownId() === provider.id">
                   <button type="button" class="status-menu-item" [class.selected]="provider.status === 1"
                     (click)="selectStatus(provider, 1, $event)">
                     <span class="status-dot dot-active"></span>
@@ -297,6 +359,21 @@
   </div>
 
   <!-- Dedicated Provider Add/Edit Modal -->
-  <app-provider-modal [isOpen]="isModalOpen()" [mode]="modalMode()" [providerToEdit]="selectedProvider()"
-    (close)="onModalClose()" (saved)="onProviderSaved($event)"></app-provider-modal>
+  <app-provider-modal 
+    [isOpen]="isModalOpen()" 
+    [mode]="modalMode()" 
+    [providerToEdit]="selectedProvider()"
+    (close)="onModalClose()" 
+    (saved)="onProviderSaved($event)"
+    (requestAddService)="onRequestAddService()"
+  ></app-provider-modal>
+
+  <!-- Service Modal (can be triggered directly from Provider Modal) -->
+  <app-service-modal
+    [isOpen]="isServiceModalOpen()"
+    [mode]="'create'"
+    [serviceToEdit]="null"
+    (close)="onServiceModalClose()"
+    (saved)="onServiceCreatedFromProviderModal($event)"
+  ></app-service-modal>
 </div>

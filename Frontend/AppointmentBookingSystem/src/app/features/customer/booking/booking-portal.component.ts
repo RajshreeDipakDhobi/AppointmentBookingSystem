@@ -106,7 +106,7 @@ export class BookingPortalComponent implements OnInit, OnDestroy {
         return;
       }
       if (role === UserRole.ServiceProvider || (role as unknown) === 3 || (role as unknown) === '3') {
-        this.router.navigate(['/appointments']);
+        this.router.navigate(['/my-services']);
         return;
       }
       this.router.navigate(['/dashboard']);
@@ -195,7 +195,7 @@ export class BookingPortalComponent implements OnInit, OnDestroy {
     if (!sessionStorage.getItem('pending_booking_draft')) {
       if (user) {
         if (user.role === UserRole.ServiceProvider || (user.role as unknown) === 3 || (user.role as unknown) === '3') {
-          this.router.navigate(['/appointments']);
+          this.router.navigate(['/my-services']);
         } else {
           this.router.navigate(['/dashboard']);
         }

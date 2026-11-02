@@ -1,20 +1,28 @@
-import { Component, OnInit, inject, signal, computed, HostListener } from '@angular/core';
+import { Component, OnInit, inject, signal, computed, HostListener, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ServiceDto } from '../../core/models/service.models';
+import { ServiceDto, ServiceSpecialistDto } from '../../core/models/service.models';
 import { ServiceCatalogService } from '../../core/services/service-catalog.service';
 import { ServiceModalComponent } from './service-modal/service-modal.component';
+import { ProviderModalComponent } from '../providers/provider-modal/provider-modal.component';
+import { ServiceProviderDto } from '../../core/models/provider.models';
 import { PaginationComponent } from '../../shared/components/pagination/pagination.component';
+import { AppInitialsPipe } from '../../shared/pipes';
+import { getAvatarGradient } from '../../core/constants/app.constants';
 
 @Component({
   selector: 'app-services',
   standalone: true,
-  imports: [CommonModule, FormsModule, ServiceModalComponent, PaginationComponent],
+  imports: [CommonModule, FormsModule, ServiceModalComponent, ProviderModalComponent, PaginationComponent, AppInitialsPipe],
   templateUrl: './services.component.html',
   styleUrls: ['./services.component.css']
 })
 export class ServicesComponent implements OnInit {
   private readonly serviceCatalogService = inject(ServiceCatalogService);
+  readonly getAvatarGradient = getAvatarGradient;
+
+  @ViewChild(ServiceModalComponent) serviceModal?: ServiceModalComponent;
+  readonly isQuickProviderModalOpen = signal<boolean>(false);
 
   readonly services = signal<ServiceDto[]>([]);
   readonly isLoading = signal<boolean>(false);
@@ -26,6 +34,7 @@ export class ServicesComponent implements OnInit {
   readonly statusFilter = signal<'all' | 'active' | 'inactive'>('all');
   readonly isStatusFilterDropdownOpen = signal<boolean>(false);
   readonly openStatusDropdownId = signal<number | null>(null);
+  readonly openSpecialistsDropdownId = signal<number | null>(null);
 
   // Pagination Signals (Default pageSize: 5)
   readonly currentPage = signal<number>(1);
@@ -90,6 +99,7 @@ export class ServicesComponent implements OnInit {
   @HostListener('document:click')
   onDocumentClick(): void {
     this.openStatusDropdownId.set(null);
+    this.openSpecialistsDropdownId.set(null);
     this.isStatusFilterDropdownOpen.set(false);
   }
 
@@ -148,7 +158,15 @@ export class ServicesComponent implements OnInit {
   toggleStatusDropdown(id: number, event: MouseEvent): void {
     event.stopPropagation();
     this.isStatusFilterDropdownOpen.set(false);
+    this.openSpecialistsDropdownId.set(null);
     this.openStatusDropdownId.update(curr => (curr === id ? null : id));
+  }
+
+  toggleSpecialistsDropdown(id: number, event: MouseEvent): void {
+    event.stopPropagation();
+    this.isStatusFilterDropdownOpen.set(false);
+    this.openStatusDropdownId.set(null);
+    this.openSpecialistsDropdownId.update(curr => (curr === id ? null : id));
   }
 
   selectServiceStatus(service: ServiceDto, targetActive: boolean, event: MouseEvent): void {
@@ -185,6 +203,16 @@ export class ServicesComponent implements OnInit {
         : `Service "${savedService.name}" updated successfully.`
     );
     this.loadServices();
+  }
+
+  openAddProviderFromService(): void {
+    this.isQuickProviderModalOpen.set(true);
+  }
+
+  onQuickProviderCreated(newProvider: ServiceProviderDto): void {
+    this.isQuickProviderModalOpen.set(false);
+    this.showSuccess(`Specialist "${newProvider.name}" onboarded and added to selection.`);
+    this.serviceModal?.onNewProviderAdded(newProvider);
   }
 
   toggleServiceStatus(service: ServiceDto, event?: MouseEvent): void {
@@ -243,6 +271,12 @@ export class ServicesComponent implements OnInit {
         this.successMessage.set(null);
       }
     }, 4000);
+  }
+
+  isDropupRow(index: number, total: number): boolean {
+    if (total >= 4 && index >= total - 2) return true;
+    if (total === 3 && index === 2) return true;
+    return false;
   }
 
   private showError(msg: string): void {
