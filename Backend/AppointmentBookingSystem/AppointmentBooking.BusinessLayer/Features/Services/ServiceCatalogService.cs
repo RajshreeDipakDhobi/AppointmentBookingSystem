@@ -168,6 +168,7 @@ public class ServiceCatalogService : IServiceCatalogService
 
         var createdService = await _unitOfWork.Repository<Service>()
             .Query()
+            .AsNoTracking()
             .Include(s => s.User)
             .Include(s => s.ServiceProviders)
             .Include(s => s.ProviderServiceLinks)
@@ -277,6 +278,7 @@ public class ServiceCatalogService : IServiceCatalogService
 
         var updatedService = await _unitOfWork.Repository<Service>()
             .Query()
+            .AsNoTracking()
             .Include(s => s.User)
             .Include(s => s.ServiceProviders)
                 .ThenInclude(sp => sp.User)
@@ -436,19 +438,18 @@ public class ServiceCatalogService : IServiceCatalogService
             : null;
 
         // 4. Fetch today's appointments for this provider
-        var todayAppointments = await _unitOfWork.Repository<Appointment>().Query()
+        var todayAppointments = await _unitOfWork.Repository<Appointment>().Query().AsNoTracking()
             .Include(a => a.Customer)
             .Include(a => a.Service)
             .Where(a => a.ServiceProviderId == provider.Id 
                      && a.AppointmentDate.Date == today 
                      && !a.IsDeleted 
-                     && a.Status != AppointmentStatus.Cancelled 
-                     && a.Status != AppointmentStatus.Rejected)
+                     && a.Status != AppointmentStatus.Cancelled)
             .OrderBy(a => a.StartTime)
             .ToListAsync(cancellationToken);
 
         // All-time bookings count per service
-        var allTimeServiceCounts = await _unitOfWork.Repository<Appointment>().Query()
+        var allTimeServiceCounts = await _unitOfWork.Repository<Appointment>().Query().AsNoTracking()
             .Where(a => a.ServiceProviderId == provider.Id && !a.IsDeleted && a.Status == AppointmentStatus.Completed && a.ServiceId.HasValue)
             .GroupBy(a => a.ServiceId!.Value)
             .Select(g => new { ServiceId = g.Key, Count = g.Count() })

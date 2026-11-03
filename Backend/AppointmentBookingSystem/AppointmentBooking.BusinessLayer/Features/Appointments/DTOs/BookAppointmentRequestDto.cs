@@ -7,8 +7,11 @@ public class BookAppointmentRequestDto
     // Optional: If null, broadcasted to all available specialists offering this Service
     public int? ServiceProviderId { get; set; }
 
-    // Required: Which service the customer wants
+    // Primary Service (Single Service or first service in multi-cart for backward compatibility)
     public int? ServiceId { get; set; }
+
+    // Multi-Service Selection (Urban Company style cart)
+    public List<int>? ServiceIds { get; set; }
 
     [Required]
     public DateTime AppointmentDate { get; set; }

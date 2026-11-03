@@ -253,7 +253,7 @@
 </header>
 
 <!-- Global Booking Modal accessible from Topbar -->
-<app-booking-modal *ngIf="isBookingModalOpen()" (close)="isBookingModalOpen.set(false)">
+<app-booking-modal *ngIf="isBookingModalOpen()" [tenantId]="activeTenantId()" (close)="isBookingModalOpen.set(false)">
 </app-booking-modal>
 
 <!-- Profile & Security Modal -->

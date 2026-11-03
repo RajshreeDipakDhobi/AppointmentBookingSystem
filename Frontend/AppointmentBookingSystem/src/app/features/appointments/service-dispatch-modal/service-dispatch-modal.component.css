@@ -177,6 +177,120 @@
   margin-left: 2px;
 }
 
+.pill-count {
+  font-size: 0.68rem;
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 999px;
+  padding: 1px 5px;
+  margin-left: 2px;
+}
+
+/* Stacked Multi-Item Dispatch Styles */
+.strip-item-stacked {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 0.5rem !important;
+  padding-bottom: 0.65rem !important;
+  border-bottom: 1px solid #edf4f0 !important;
+}
+
+.strip-item-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.service-duration-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #f0fdf4;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.dispatch-items-list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  background: #ffffff;
+  border: 1px solid #e5ece8;
+  border-radius: 8px;
+  padding: 0.6rem 0.75rem;
+}
+
+.dispatch-item-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.82rem;
+  color: #1f3d33;
+}
+
+.dispatch-item-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dispatch-bullet {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #10b981;
+}
+
+.dispatch-item-name {
+  font-weight: 600;
+}
+
+.dispatch-item-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dispatch-item-mins {
+  font-size: 0.74rem;
+  color: #64748b;
+}
+
+.dispatch-item-price {
+  font-weight: 700;
+  color: #1e5142;
+}
+
+.dispatch-total-payout-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 4px;
+  padding-top: 5px;
+  border-top: 1px dashed #d1e2da;
+}
+
+.dispatch-total-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #47665b;
+}
+
+.dispatch-total-amount {
+  font-size: 0.92rem;
+  font-weight: 800;
+  color: #15803d;
+}
+
+.dispatch-single-service {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
 /* Schedule Strip (Standard Project Specification) */
 .current-schedule-strip {
   display: flex !important;

@@ -513,6 +513,63 @@
   color: #d97706;
 }
 
+/* Booked Services Itemized Cell */
+.cell-services {
+  grid-column: 1 / -1;
+  background: #f7fbf8;
+  border-radius: 10px;
+  padding: 0.75rem 0.95rem;
+  border: 1px solid #e1eee6;
+}
+
+.ticket-items-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  margin-top: 0.35rem;
+}
+
+.ticket-item-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.82rem;
+  color: #24463c;
+}
+
+.ticket-item-row .item-title {
+  font-weight: 600;
+}
+
+.ticket-item-row .item-val {
+  font-weight: 700;
+  color: #11684c;
+}
+
+.ticket-item-total {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 0.45rem;
+  margin-top: 0.25rem;
+  border-top: 1px solid #d8ebd0;
+  font-size: 0.86rem;
+  font-weight: 800;
+  color: #183b32;
+}
+
+.ticket-item-total .total-val {
+  font-size: 0.96rem;
+  color: #11684c;
+}
+
+.ticket-single-service {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 0.25rem;
+}
+
 /* Print styles */
 @media print {
   body * {

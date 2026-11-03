@@ -138,26 +138,42 @@
                 <h2 class="section-title">Available Services</h2>
                 <span class="badge-count">{{ filteredServices().length }} Available</span>
               </div>
-              <p class="section-subtitle">Select a service below to schedule your appointment with a verified specialist
-              </p>
+              <p class="section-subtitle">Select a service below to schedule your appointment</p>
             </div>
 
-            <!-- Clean Search Filter -->
-            <div class="provider-search-box" *ngIf="services().length > 1">
-              <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24"
-                fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="11" cy="11" r="8" />
-                <line x1="21" y1="21" x2="16.65" y2="16.65" />
-              </svg>
-              <input type="text" [ngModel]="searchQuery()" (ngModelChange)="onSearchInput($event)"
-                placeholder="Search services (e.g. Haircut, Facial, Spa)..." />
-              <button *ngIf="searchQuery()" type="button" class="btn-clear-search" (click)="clearSearch()"
-                aria-label="Clear search">
-                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none"
-                  stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                  <line x1="18" y1="6" x2="6" y2="18"></line>
-                  <line x1="6" y1="6" x2="18" y2="18"></line>
+            <!-- Header Actions: Search Box + Top Cart Pill -->
+            <div class="section-header-actions">
+              <div class="provider-search-box" *ngIf="services().length > 1">
+                <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24"
+                  fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="11" cy="11" r="8" />
+                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
                 </svg>
+                <input type="text" [ngModel]="searchQuery()" (ngModelChange)="onSearchInput($event)"
+                  placeholder="Search services (e.g. Haircut, Facial, Spa)..." />
+                <button *ngIf="searchQuery()" type="button" class="btn-clear-search" (click)="clearSearch()"
+                  aria-label="Clear search">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                  </svg>
+                </button>
+              </div>
+
+              <!-- Top Cart Pill (Beside Search Box) -->
+              <button *ngIf="cartServices().length > 0" type="button" class="btn-top-cart-pill animate-fade-in"
+                (click)="openCartDrawer()" title="View Booking Cart Drawer">
+                <svg class="top-cart-icon" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" />
+                  <path d="M3 6h18" />
+                  <path d="M16 10a4 4 0 0 1-8 0" />
+                </svg>
+                <span class="top-cart-text">View Cart</span>
+                <span class="top-cart-count-chip">{{ cartTotalItemsCount() }}</span>
+                <span class="top-cart-divider"></span>
+                <span class="top-cart-amount">₹{{ cartTotalAmount() | number }}</span>
               </button>
             </div>
           </div>
@@ -213,7 +229,7 @@
 
           <!-- SERVICES GRID -->
           <div *ngIf="!isLoadingServices() && filteredServices().length > 0" class="services-grid">
-            <div *ngFor="let s of filteredServices()" class="service-card">
+            <div *ngFor="let s of filteredServices()" class="service-card" [class.in-cart]="getServiceQuantity(s.id) > 0">
               <div class="service-top">
                 <div class="service-icon-wrap">
                   <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
@@ -243,26 +259,47 @@
                 *ngIf="s.description && s.description.trim().toLowerCase() !== s.name.trim().toLowerCase()">
                 {{ s.description }}
               </p>
-              <p class="service-bio text-muted"
-                *ngIf="!s.description || s.description.trim().toLowerCase() === s.name.trim().toLowerCase()">
-                Professional {{ s.name }} service fulfilled by verified specialists.
-              </p>
 
               <div class="service-footer-row">
-                <span class="service-specialist-tag">
-                  <!-- <span class="active-dot"></span>
-                  {{ getProviderCountForService(s.name) }} {{ getProviderCountForService(s.name) === 1 ? 'specialist' :
-                  'specialists' }} available -->
-                </span>
+                <div class="service-actions-deck">
+                  <!-- When not added: show Add button -->
+                  <button *ngIf="getServiceQuantity(s.id) === 0" type="button" class="btn-toggle-cart" (click)="toggleCartService(s, $event)" title="Add to booking cart">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                      <line x1="12" y1="5" x2="12" y2="19"></line>
+                      <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                    <span>Add</span>
+                  </button>
 
-                <button type="button" class="btn-book-service" (click)="openBookingModal(s.id)">
-                  <span>Book Appointment</span>
-                  <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none"
-                    stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                    <line x1="5" y1="12" x2="19" y2="12"></line>
-                    <polyline points="12 5 19 12 12 19"></polyline>
-                  </svg>
-                </button>
+                  <!-- When added: show interactive inline stepper -->
+                  <div *ngIf="getServiceQuantity(s.id) > 0" class="service-card-stepper" (click)="$event.stopPropagation()">
+                    <button type="button" class="btn-card-step" (click)="decrementService(s.id, $event)" [title]="getServiceQuantity(s.id) === 1 ? 'Remove service' : 'Decrease quantity'">
+                      <svg *ngIf="getServiceQuantity(s.id) > 1" xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="5" y1="12" x2="19" y2="12" />
+                      </svg>
+                      <svg *ngIf="getServiceQuantity(s.id) === 1" class="trash-icon" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="3 6 5 6 21 6" />
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                      </svg>
+                    </button>
+                    <span class="card-step-qty">{{ getServiceQuantity(s.id) }}</span>
+                    <button type="button" class="btn-card-step" (click)="incrementService(s.id, $event)" [title]="'Add another ' + s.name">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="12" y1="5" x2="12" y2="19" />
+                        <line x1="5" y1="12" x2="19" y2="12" />
+                      </svg>
+                    </button>
+                  </div>
+
+                  <button type="button" class="btn-book-service" (click)="openBookingModal(s.id)">
+                    <span>Book Now</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none"
+                      stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                      <line x1="5" y1="12" x2="19" y2="12"></line>
+                      <polyline points="12 5 19 12 12 19"></polyline>
+                    </svg>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -274,9 +311,22 @@
     </div>
   </main>
 
+  <!-- Reusable Cart Modal / Slide-Over Drawer Component -->
+  <app-cart-modal *ngIf="isCartModalOpen() && cartServices().length > 0"
+    [items]="cartServices()"
+    title="Booking Cart"
+    proceedButtonText="Proceed to Schedule Slot"
+    (close)="closeCartModal()"
+    (increment)="incrementService($event)"
+    (decrement)="decrementService($event)"
+    (removeItem)="removeFromCart($event)"
+    (clearAll)="clearCart()"
+    (proceed)="openCartBooking()">
+  </app-cart-modal>
+
   <!-- Reusable Booking Modal -->
   <app-booking-modal *ngIf="isBookingModalOpen()" [tenantId]="tenant()?.id" [initialProviderId]="selectedProviderId()"
-    [initialServiceId]="selectedServiceId()" (close)="closeBookingModal()" (booked)="onAppointmentBooked($event)">
+    [initialServiceId]="selectedServiceId()" [initialServiceIds]="selectedCartServiceIds()" (close)="closeBookingModal()" (booked)="onAppointmentBooked($event)">
   </app-booking-modal>
 
   <!-- Notification Toast -->

@@ -35,6 +35,7 @@ public class MappingProfile : Profile
 
         // ServiceProvider Mappings
         CreateMap<ServiceProvider, ServiceProviderDto>()
+            .ForMember(dest => dest.UserId, opt => opt.MapFrom(src => src.UserId))
             .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.User != null ? $"{src.User.FirstName} {src.User.LastName}".Trim() : string.Empty))
             .ForMember(dest => dest.Email, opt => opt.MapFrom(src => src.User != null ? src.User.Email : string.Empty))
             .ForMember(dest => dest.PhoneNumber, opt => opt.MapFrom(src => src.User != null ? (src.User.PhoneNumber ?? string.Empty) : string.Empty))
@@ -88,6 +89,7 @@ public class MappingProfile : Profile
 
         // Master Service Mappings
         CreateMap<Service, ServiceDto>()
+            .ForMember(dest => dest.TenantId, opt => opt.MapFrom(src => src.User != null ? src.User.TenantId : (int?)null))
             .ForMember(dest => dest.CreatedByName, opt => opt.MapFrom(src => src.User != null ? $"{src.User.FirstName} {src.User.LastName}".Trim() : string.Empty))
             .ForMember(dest => dest.ProvidersCount, opt => opt.MapFrom(src => 
                 (src.ProviderServiceLinks != null && src.ProviderServiceLinks.Any(l => !l.IsDeleted)
@@ -161,7 +163,22 @@ public class MappingProfile : Profile
             .ForMember(dest => dest.BreakEndTime, opt => opt.MapFrom(src => src.BreakEndTime.HasValue ? src.BreakEndTime.Value.ToString(@"hh\:mm") : null));
 
         // Appointment Mappings
+        CreateMap<AppointmentItem, AppointmentBooking.BusinessLayer.Features.Appointments.DTOs.AppointmentItemDto>();
+
         CreateMap<Appointment, AppointmentBooking.BusinessLayer.Features.Appointments.DTOs.AppointmentDto>()
+            .ForMember(dest => dest.TotalAmount, opt => opt.MapFrom(src => 
+                src.TotalAmount > 0 
+                    ? src.TotalAmount 
+                    : (src.Items != null && src.Items.Any() 
+                        ? src.Items.Sum(i => i.Price) 
+                        : (src.Service != null ? src.Service.Price : 0.00m))))
+            .ForMember(dest => dest.TotalDurationMinutes, opt => opt.MapFrom(src => 
+                src.TotalDurationMinutes > 0 
+                    ? src.TotalDurationMinutes 
+                    : (src.Items != null && src.Items.Any() 
+                        ? src.Items.Sum(i => i.DurationMinutes) 
+                        : (src.Service != null ? src.Service.DurationMinutes : 30))))
+            .ForMember(dest => dest.Items, opt => opt.MapFrom(src => src.Items))
             .ForMember(dest => dest.ServiceProviderId, opt => opt.MapFrom(src => src.ServiceProviderId))
             .ForMember(dest => dest.ServiceProviderName, opt => opt.MapFrom(src => 
                 src.ServiceProvider != null && src.ServiceProvider.User != null 

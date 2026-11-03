@@ -394,7 +394,69 @@
   margin: 0;
 }
 
-/* Clean Search Filter Input */
+/* Clean Search Filter Input & Actions */
+.section-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+}
+
+.btn-top-cart-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: #1e5142;
+  color: #ffffff;
+  border: 1.5px solid #143b2f;
+  padding: 0.42rem 0.9rem;
+  border-radius: 9999px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 3px 10px rgba(30, 81, 66, 0.22);
+}
+
+.btn-top-cart-pill:hover {
+  background: #143b2f;
+  transform: translateY(-1px);
+  box-shadow: 0 5px 14px rgba(30, 81, 66, 0.32);
+}
+
+.top-cart-icon {
+  flex-shrink: 0;
+  color: #a7f3d0;
+}
+
+.top-cart-text {
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.top-cart-count-chip {
+  background: #10b981;
+  color: #ffffff;
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 1px 7px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.top-cart-divider {
+  width: 1px;
+  height: 12px;
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.top-cart-amount {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #a7f3d0;
+}
+
 .provider-search-box {
   position: relative;
   display: flex;
@@ -464,19 +526,32 @@
   background: #ffffff;
   border: 1.5px solid #e2ece6;
   border-radius: 16px;
-  padding: 1.35rem;
+  padding: 1.25rem;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  gap: 1rem;
+  gap: 0.9rem;
   transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
   box-shadow: 0 2px 8px rgba(24, 59, 50, 0.04);
+  position: relative;
 }
 
 .service-card:hover {
   border-color: #1e5142;
   transform: translateY(-2px);
   box-shadow: 0 8px 24px rgba(24, 59, 50, 0.09);
+}
+
+.service-card.in-cart {
+  border-color: #10b981 !important;
+  background: #f7fbf9 !important;
+  box-shadow: 0 4px 18px rgba(16, 185, 129, 0.14) !important;
+}
+
+.service-card.in-cart .service-icon-wrap {
+  background: linear-gradient(135deg, #1e5142 0%, #15803d 100%) !important;
+  color: #ffffff !important;
+  border-color: #10b981 !important;
 }
 
 .service-top {
@@ -590,37 +665,127 @@
   color: #2e6050;
 }
 
+/* Service Card Actions Deck */
+.service-actions-deck {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+/* + Add Button */
+.btn-toggle-cart {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  height: 36px;
+  padding: 0 0.85rem;
+  border-radius: 9px;
+  background: #ffffff;
+  border: 1.5px solid #1e5142;
+  color: #1e5142;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  white-space: nowrap;
+  flex: 1;
+}
+
+.btn-toggle-cart:hover {
+  background: #eef8f3;
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(30, 81, 66, 0.12);
+}
+
+/* Service Card Solid Emerald Stepper */
+.service-card-stepper {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 36px;
+  background: #1e5142;
+  border: 1.5px solid #1e5142;
+  border-radius: 9px;
+  padding: 3px 6px;
+  gap: 4px;
+  box-shadow: 0 2px 8px rgba(30, 81, 66, 0.18);
+  flex: 1;
+}
+
+.btn-card-step {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.18);
+  border: none;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.btn-card-step:hover {
+  background: rgba(255, 255, 255, 0.32);
+  transform: scale(1.05);
+}
+
+.btn-card-step svg {
+  stroke: #ffffff;
+}
+
+.btn-card-step svg.trash-icon {
+  stroke: #fca5a5;
+  transition: stroke 0.15s ease;
+}
+
+.btn-card-step:hover svg.trash-icon {
+  stroke: #ffffff;
+}
+
+.card-step-qty {
+  min-width: 22px;
+  text-align: center;
+  font-size: 0.86rem;
+  font-weight: 800;
+  color: #ffffff;
+  user-select: none;
+}
+
+/* Book Now Button */
 .btn-book-service {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.4rem;
-  padding: 0.48rem 1rem;
-  border-radius: 8px;
-  background: #e8f3ee;
-  border: 1px solid #b8dacb;
+  height: 36px;
+  padding: 0 0.85rem;
+  border-radius: 9px;
+  background: #f0f7f3;
+  border: 1.5px solid #c8ded1;
   color: #1e5142;
   font-size: 0.82rem;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
   white-space: nowrap;
-}
-
-.btn-book-service svg {
-  transition: transform 0.2s ease;
+  flex: 1;
 }
 
 .btn-book-service:hover {
   background: #1e5142;
   border-color: #1e5142;
   color: #ffffff;
-  box-shadow: 0 4px 12px rgba(30, 81, 66, 0.25);
+  box-shadow: 0 4px 12px rgba(30, 81, 66, 0.22);
   transform: translateY(-1px);
 }
 
 .btn-book-service:hover svg {
   transform: translateX(3px);
+  stroke: #ffffff;
 }
 
 .provider-card {
@@ -960,22 +1125,34 @@
   }
 }
 
-/* Toast */
+/* Toast Notification - Sits cleanly above the floating cart dock */
 .toast-popup {
   position: fixed;
-  bottom: 1.5rem;
+  bottom: 5.6rem;
   right: 1.5rem;
   background: #ffffff;
   border: 1px solid #b8dacb;
-  padding: 0.85rem 1.25rem;
+  padding: 0.75rem 1.15rem;
   border-radius: 10px;
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.65rem;
   color: #183b32;
-  font-size: 0.88rem;
+  font-size: 0.85rem;
   box-shadow: 0 10px 25px rgba(24, 59, 50, 0.15);
   z-index: 9999;
+  animation: slideUpToast 0.25s ease-out;
+}
+
+@keyframes slideUpToast {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* Responsive */
@@ -1012,3 +1189,4 @@
     width: 100%;
   }
 }
+

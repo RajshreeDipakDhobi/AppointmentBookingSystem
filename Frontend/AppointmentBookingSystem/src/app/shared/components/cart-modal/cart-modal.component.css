@@ -1,0 +1,569 @@
+/* ==========================================================================
+   Slide-Over Cart Drawer Component Styles (Compact, Mature & Ergonomic)
+   Theme: Luxury Forest Emerald & Organic Sage
+   ========================================================================== */
+
+:host {
+  display: block;
+}
+
+/* Fullscreen Frosted Backdrop */
+.cart-drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(12, 31, 25, 0.48);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  z-index: 200000 !important;
+  display: flex;
+  justify-content: flex-end;
+  animation: backdropFadeIn 0.2s ease-out;
+}
+
+@keyframes backdropFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Slide-Over Right Panel */
+.cart-drawer-panel {
+  width: 100%;
+  max-width: 440px;
+  height: 100vh;
+  background: #ffffff;
+  display: flex;
+  flex-direction: column;
+  box-shadow: -12px 0 45px rgba(18, 48, 38, 0.22);
+  animation: drawerSlideIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+  position: relative;
+}
+
+@keyframes drawerSlideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0.7;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* Compact Header */
+.drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.85rem 1.15rem;
+  background: #ffffff;
+  border-bottom: 1px solid #e8f0ec;
+  flex-shrink: 0;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-width: 0;
+}
+
+.btn-drawer-back {
+  background: #f1f7f4;
+  border: 1px solid #dce8e1;
+  color: #1e5142;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.btn-drawer-back:hover {
+  background: #e2f1e8;
+  color: #143b2f;
+  transform: translateX(-1px);
+}
+
+.header-title-box {
+  min-width: 0;
+}
+
+.title-with-pill {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.drawer-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #183b32;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.cart-badge-count {
+  background: #dcfce7;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.drawer-micro-subtitle {
+  display: block;
+  font-size: 0.72rem;
+  color: #647d74;
+  margin-top: 1px;
+}
+
+.btn-drawer-close {
+  background: transparent;
+  border: none;
+  color: #8fa89e;
+  width: 30px;
+  height: 30px;
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.btn-drawer-close:hover {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+/* Scrollable Drawer Body */
+.drawer-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.85rem 1.15rem;
+  background: #fafdfc;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 5px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #d4e3dc;
+  border-radius: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #afccbe;
+}
+
+.drawer-items-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+/* Dense Itemized Rows */
+.drawer-items-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.drawer-item-row {
+  background: #ffffff;
+  border: 1px solid #e5ede8;
+  border-radius: 11px;
+  padding: 0.65rem 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.7rem;
+  box-shadow: 0 1px 4px rgba(24, 59, 50, 0.03);
+  transition: all 0.15s ease;
+}
+
+.drawer-item-row:hover {
+  border-color: #cce0d5;
+  box-shadow: 0 2px 8px rgba(24, 59, 50, 0.06);
+}
+
+.item-left-col {
+  flex: 1;
+  min-width: 0;
+}
+
+.item-title-row {
+  display: flex;
+  align-items: center;
+}
+
+.item-name {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #183b32;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.3;
+}
+
+.item-rates-meta {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.73rem;
+  color: #647d74;
+  margin-top: 2px;
+}
+
+.unit-rate {
+  font-weight: 600;
+  color: #1e5142;
+}
+
+.meta-dot {
+  color: #a4beae;
+}
+
+.unit-duration {
+  color: #647d74;
+}
+
+/* Right Controls Deck */
+.item-right-col {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-shrink: 0;
+}
+
+/* Compact Stepper */
+.compact-stepper {
+  display: inline-flex;
+  align-items: center;
+  background: #f1f7f4;
+  border: 1px solid #d4e5dc;
+  border-radius: 7px;
+  padding: 2px;
+  gap: 2px;
+}
+
+.btn-step-mini {
+  width: 24px;
+  height: 24px;
+  border-radius: 5px;
+  background: #ffffff;
+  border: 1px solid #d5e3dc;
+  color: #183b32;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.12s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.btn-step-mini:hover {
+  background: #1e5142;
+  border-color: #1e5142;
+  color: #ffffff;
+}
+
+.btn-step-mini:hover svg line,
+.btn-step-mini:hover svg path,
+.btn-step-mini:hover svg polyline {
+  stroke: #ffffff;
+}
+
+.step-num {
+  min-width: 20px;
+  text-align: center;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #183b32;
+  user-select: none;
+}
+
+/* Pricing Column */
+.item-pricing-col {
+  text-align: right;
+  min-width: 60px;
+}
+
+.item-total-price {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #183b32;
+  display: block;
+  letter-spacing: -0.01em;
+}
+
+.item-total-time {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: #059669;
+  display: block;
+  margin-top: 1px;
+}
+
+/* Row Trash Button */
+.btn-row-trash {
+  background: transparent;
+  border: none;
+  color: #a0b5ab;
+  width: 24px;
+  height: 24px;
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-row-trash:hover {
+  color: #dc2626;
+  background: #fee2e2;
+}
+
+/* Mature Compact Summary Card */
+.drawer-summary-card {
+  background: #f8faf9;
+  border: 1px solid #e1ece6;
+  border-radius: 11px;
+  padding: 0.75rem 0.95rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  margin-top: 0.4rem;
+}
+
+.summary-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.8rem;
+}
+
+.summary-label {
+  color: #557268;
+}
+
+.summary-val {
+  font-weight: 600;
+  color: #183b32;
+}
+
+.summary-slot-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: #dcfce7;
+  color: #15803d;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 999px;
+  border: 1px solid #bbf7d0;
+}
+
+.summary-tag-free {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #15803d;
+  background: #eaf6ef;
+  padding: 1px 6px;
+  border-radius: 5px;
+}
+
+.summary-divider {
+  height: 1px;
+  background: #e6eee9;
+  margin: 0.2rem 0;
+}
+
+.grand-row {
+  align-items: flex-end;
+  padding-top: 0.15rem;
+}
+
+.grand-label {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #183b32;
+  display: block;
+}
+
+.grand-sub {
+  font-size: 0.68rem;
+  color: #7a988d;
+  display: block;
+}
+
+.grand-figure {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #183b32;
+  letter-spacing: -0.01em;
+}
+
+/* Empty State */
+.drawer-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 3rem 1.25rem;
+}
+
+.empty-icon-wrap {
+  width: 60px;
+  height: 60px;
+  border-radius: 16px;
+  background: #eef6f2;
+  color: #2d6a58;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1rem;
+}
+
+.empty-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #183b32;
+  margin: 0 0 0.35rem 0;
+}
+
+.empty-desc {
+  font-size: 0.8rem;
+  color: #647d74;
+  margin: 0 0 1.25rem 0;
+  max-width: 250px;
+  line-height: 1.4;
+}
+
+.btn-empty-return {
+  background: #1e5142;
+  color: #ffffff;
+  border: none;
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 0.55rem 1.2rem;
+  border-radius: 9px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-empty-return:hover {
+  background: #143b2f;
+}
+
+/* Compact Drawer Footer */
+.drawer-footer {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.8rem 1.15rem;
+  background: #ffffff;
+  border-top: 1px solid #e8f0ec;
+  flex-shrink: 0;
+  box-shadow: 0 -3px 12px rgba(24, 59, 50, 0.04);
+}
+
+.btn-footer-clear {
+  background: #f4f8f5;
+  border: 1px solid #dce8e1;
+  color: #557268;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 0.65rem 0.85rem;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.btn-footer-clear:hover {
+  background: #fee2e2;
+  border-color: #fca5a5;
+  color: #991b1b;
+}
+
+.btn-footer-proceed {
+  flex: 1;
+  background: linear-gradient(135deg, #1e5142 0%, #153f33 100%);
+  color: #ffffff;
+  border: none;
+  border-radius: 10px;
+  padding: 0.62rem 1.1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(30, 81, 66, 0.25);
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.btn-footer-proceed:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(30, 81, 66, 0.35);
+}
+
+.proceed-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+}
+
+.proceed-price {
+  font-size: 0.98rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.1;
+}
+
+.proceed-duration {
+  font-size: 0.68rem;
+  color: #b9dfcb;
+  font-weight: 500;
+}
+
+.proceed-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+/* Mobile Adjustments */
+@media (max-width: 640px) {
+  .cart-drawer-panel {
+    max-width: 100vw;
+  }
+}

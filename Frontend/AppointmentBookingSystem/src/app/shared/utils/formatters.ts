@@ -12,6 +12,7 @@ export function getInitials(name: string): string {
 
 export function formatTo12Hour(time24: string): string {
   if (!time24) return '';
+  if (/AM|PM/i.test(time24)) return time24;
   const [hoursStr, minutesStr] = time24.split(':');
   let hours = parseInt(hoursStr, 10);
   const minutes = minutesStr ? minutesStr.substring(0, 2) : '00';
@@ -24,13 +25,26 @@ export function formatTo12Hour(time24: string): string {
 
 export function formatDatePretty(dateInput: string | Date): string {
   if (!dateInput) return '';
+  if (typeof dateInput === 'string' && /^\d{4}-\d{2}-\d{2}/.test(dateInput)) {
+    const cleanDate = dateInput.split('T')[0];
+    const [y, m, d] = cleanDate.split('-').map(Number);
+    if (!isNaN(y) && !isNaN(m) && !isNaN(d)) {
+      const date = new Date(y, m - 1, d);
+      return date.toLocaleDateString('en-GB', {
+        weekday: 'short',
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric'
+      });
+    }
+  }
   const d = new Date(dateInput);
   if (isNaN(d.getTime())) return String(dateInput);
-  return d.toLocaleDateString('en-US', {
+  return d.toLocaleDateString('en-GB', {
     weekday: 'short',
-    year: 'numeric',
+    day: '2-digit',
     month: 'short',
-    day: 'numeric'
+    year: 'numeric'
   });
 }
 

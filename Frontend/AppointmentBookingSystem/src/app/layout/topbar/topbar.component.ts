@@ -26,6 +26,7 @@ export class TopbarComponent implements OnInit, OnDestroy {
   readonly isAuthenticated = computed(() => this.authService.isAuthenticated());
   readonly isCustomer = computed(() => this.authService.isCustomer());
   readonly isAdminOrStaff = computed(() => this.authService.isAdmin() || this.authService.isSuperAdmin());
+  readonly activeTenantId = computed<number>(() => this.authService.currentUser()?.tenantId || 1);
 
   readonly isBookingModalOpen = signal<boolean>(false);
   readonly isProfileModalOpen = signal<boolean>(false);

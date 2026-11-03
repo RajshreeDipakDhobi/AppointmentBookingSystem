@@ -88,6 +88,8 @@ export class CustomerAppointmentsComponent implements OnInit, OnDestroy {
   // Modals state
   readonly isBookingModalOpen = signal<boolean>(false);
   readonly selectedServiceIdForModal = signal<number | null>(null);
+  readonly selectedServiceIdsForModal = signal<number[]>([]);
+  readonly activeTenantId = computed<number>(() => this.authService.currentUser()?.tenantId || this.appointments()[0]?.tenantId || 1);
   readonly selectedTicket = signal<AppointmentDto | null>(null);
   readonly activeRescheduleAppt = signal<AppointmentDto | null>(null);
   readonly activeCancelAppt = signal<AppointmentDto | null>(null);
@@ -98,6 +100,32 @@ export class CustomerAppointmentsComponent implements OnInit, OnDestroy {
   readonly now = signal<number>(Date.now());
   private timerIntervalId: any = null;
   private pollIntervalId: any = null;
+
+  isTerminalStatus(status: AppointmentStatus | number | null | undefined): boolean {
+    return status === AppointmentStatus.Cancelled || status === AppointmentStatus.Completed;
+  }
+
+  getItemCount(apt: AppointmentDto): number {
+    if (apt.items && apt.items.length > 0) return apt.items.length;
+    if (apt.serviceNames && apt.serviceNames.length > 0) return apt.serviceNames.length;
+    return 1;
+  }
+
+  getTotalDuration(apt: AppointmentDto): number {
+    if (apt.totalDurationMinutes && apt.totalDurationMinutes > 0) return apt.totalDurationMinutes;
+    if (apt.items && apt.items.length > 0) {
+      return apt.items.reduce((sum, it) => sum + (it.durationMinutes || 30), 0);
+    }
+    return apt.serviceDurationMinutes || 30;
+  }
+
+  getTotalPrice(apt: AppointmentDto): number {
+    if (apt.totalAmount && apt.totalAmount > 0) return apt.totalAmount;
+    if (apt.items && apt.items.length > 0) {
+      return apt.items.reduce((sum, it) => sum + (it.price || 0), 0);
+    }
+    return apt.servicePrice || 0;
+  }
 
   get user() {
     return this.authService.currentUser();
@@ -197,11 +225,19 @@ export class CustomerAppointmentsComponent implements OnInit, OnDestroy {
   }
 
   rebookService(apt: AppointmentDto): void {
-    this.selectedServiceIdForModal.set(apt.serviceId || null);
+    let ids: number[] = [];
+    if (apt.items && apt.items.length > 0) {
+      ids = apt.items.map(it => it.serviceId).filter(id => id > 0);
+    } else if (apt.serviceId) {
+      ids = [apt.serviceId];
+    }
+    this.selectedServiceIdsForModal.set(ids);
+    this.selectedServiceIdForModal.set(ids.length > 0 ? ids[0] : null);
     this.isBookingModalOpen.set(true);
   }
 
   openBookingModal(serviceId?: number): void {
+    this.selectedServiceIdsForModal.set(serviceId ? [serviceId] : []);
     this.selectedServiceIdForModal.set(serviceId || null);
     this.isBookingModalOpen.set(true);
   }
@@ -351,5 +387,15 @@ export class CustomerAppointmentsComponent implements OnInit, OnDestroy {
 
   getGradient(name: string): string {
     return getAvatarGradient(name);
+  }
+
+  getServiceDisplay(apt: AppointmentDto): string {
+    if (apt.serviceNames && apt.serviceNames.length > 1) {
+      return apt.serviceNames.join(' + ');
+    }
+    if (apt.items && apt.items.length > 1) {
+      return apt.items.map(i => i.serviceName).join(' + ');
+    }
+    return apt.serviceName || apt.serviceProviderType || 'General Service';
   }
 }

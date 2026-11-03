@@ -7,6 +7,7 @@ export interface ServiceSpecialistDto {
 
 export interface ServiceDto {
   id: number;
+  tenantId?: number;
   userId: number;
   createdByName?: string;
   name: string;

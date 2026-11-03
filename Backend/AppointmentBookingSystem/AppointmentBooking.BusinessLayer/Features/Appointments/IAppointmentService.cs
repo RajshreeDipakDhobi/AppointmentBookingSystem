@@ -11,9 +11,9 @@ public interface IAppointmentService
     Task<UserDto?> LookupCustomerAsync(int? tenantId, string query, CancellationToken cancellationToken = default);
     Task<List<UserDto>> SearchCustomersAsync(int? tenantId, string query, CancellationToken cancellationToken = default);
 
-    // Module 3: Available Slots for Customer & Admin
-    Task<ProviderDailyAvailabilityResponseDto?> GetAvailableSlotsAsync(int providerId, DateTime date, CancellationToken cancellationToken = default);
-    Task<ProviderDailyAvailabilityResponseDto?> GetAvailableSlotsByServiceAsync(int serviceId, DateTime date, int? tenantId, CancellationToken cancellationToken = default);
+    // Module 3: Available Slots for Customer & Admin (Supports Single or Multi-Service Combined Duration)
+    Task<ProviderDailyAvailabilityResponseDto?> GetAvailableSlotsAsync(int providerId, DateTime date, List<int>? serviceIds = null, CancellationToken cancellationToken = default);
+    Task<ProviderDailyAvailabilityResponseDto?> GetAvailableSlotsByServiceAsync(int serviceId, DateTime date, int? tenantId, List<int>? serviceIds = null, CancellationToken cancellationToken = default);
 
     // Urban Company Style: First-to-Accept Broadcast Dispatch
     Task<List<AppointmentDto>> GetIncomingBroadcastRequestsAsync(int? providerId, int? tenantId, CancellationToken cancellationToken = default);

@@ -13,7 +13,7 @@
         </div>
         <div>
           <h4 class="brand-title">{{ appointment.status === AppointmentStatus.Approved ? 'Appointment Pass' : 'Appointment Details' }}</h4>
-          <span class="stub-subtitle">{{ appointment.status === AppointmentStatus.Cancelled ? 'Cancelled Booking' : (appointment.status === AppointmentStatus.Rejected ? 'Declined Booking' : (appointment.status === AppointmentStatus.Approved ? 'Confirmed Booking' : 'Pending Confirmation')) }}</span>
+          <span class="stub-subtitle">{{ appointment.status === AppointmentStatus.Cancelled ? 'Cancelled Booking' : (appointment.status === AppointmentStatus.Approved ? 'Confirmed Booking' : 'Pending Confirmation') }}</span>
         </div>
       </div>
 
@@ -52,9 +52,6 @@
       </div>
       <div *ngIf="appointment.status === AppointmentStatus.Cancelled" class="qr-mock" title="Cancelled Booking" style="border-color: #fecaca; background: #fef2f2;">
         <span class="qr-label" style="color: #991b1b; font-weight: 700; letter-spacing: 0.05em;">CANCELLED</span>
-      </div>
-      <div *ngIf="appointment.status === AppointmentStatus.Rejected" class="qr-mock" title="Declined Booking" style="border-color: #fecaca; background: #fef2f2;">
-        <span class="qr-label" style="color: #991b1b; font-weight: 700; letter-spacing: 0.05em;">DECLINED</span>
       </div>
       <div *ngIf="appointment.status === AppointmentStatus.Completed" class="qr-mock" title="Completed Booking" style="border-color: #bbe5cb; background: #ebf7f0;">
         <span class="qr-label" style="color: #166534; font-weight: 700; letter-spacing: 0.05em;">FULFILLED</span>
@@ -133,6 +130,25 @@
         </span>
       </div>
 
+      <!-- Booked Services Itemized Cell -->
+      <div *ngIf="(appointment.items && appointment.items.length > 0) || appointment.serviceName" class="info-cell cell-services">
+        <span class="cell-label">Booked Services ({{ (appointment.items?.length || 1) }})</span>
+        <div class="ticket-items-list" *ngIf="appointment.items && appointment.items.length > 0">
+          <div class="ticket-item-row" *ngFor="let it of appointment.items">
+            <span class="item-title">{{ it.serviceName }} <small class="text-muted">({{ it.durationMinutes }}m)</small></span>
+            <span class="item-val">₹{{ it.price | number }}</span>
+          </div>
+          <div class="ticket-item-total">
+            <span>Total ({{ appointment.totalDurationMinutes || appointment.serviceDurationMinutes }} mins)</span>
+            <span class="total-val">₹{{ (appointment.totalAmount || 0) | number }}</span>
+          </div>
+        </div>
+        <div class="ticket-single-service" *ngIf="(!appointment.items || appointment.items.length === 0) && appointment.serviceName">
+          <h5 class="cell-title">{{ appointment.serviceName }} <small class="text-muted" *ngIf="appointment.serviceDurationMinutes">({{ appointment.serviceDurationMinutes }}m)</small></h5>
+          <span class="cell-sub" *ngIf="appointment.servicePrice">₹{{ appointment.servicePrice | number }}</span>
+        </div>
+      </div>
+
       <!-- Optional Reason / Service Notes -->
       <div
         *ngIf="appointment.reason && !appointment.reason.includes('Rescheduled via')"
@@ -151,12 +167,6 @@
         </div>
         <p class="cancellation-text">{{ appointment.cleanCancellationReason || appointment.cancellationReason ||
           'Cancelled upon request' }}</p>
-      </div>
-
-      <!-- Rejection Details (If rejected) -->
-      <div *ngIf="appointment.status === AppointmentStatus.Rejected" class="info-cell cell-rejection">
-        <span class="cell-label label-rejection">Rejection Reason</span>
-        <p class="rejection-text">{{ appointment.rejectionReason || 'Declined by service provider' }}</p>
       </div>
 
       <!-- Reschedule Proposal Pending Notice -->

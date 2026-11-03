@@ -36,6 +36,7 @@ public class ServiceProviderService : IServiceProviderService
     {
         var providers = await _unitOfWork.Repository<ServiceProvider>()
             .Query()
+            .AsNoTracking()
             .Include(p => p.User)
             .Include(p => p.Service)
             .Include(p => p.ProviderServiceLinks)
@@ -56,6 +57,7 @@ public class ServiceProviderService : IServiceProviderService
     {
         var query = _unitOfWork.Repository<ServiceProvider>()
             .Query()
+            .AsNoTracking()
             .Include(p => p.User)
             .Include(p => p.Service)
             .Include(p => p.ProviderServiceLinks)
@@ -93,24 +95,33 @@ public class ServiceProviderService : IServiceProviderService
 
     public async Task<IReadOnlyList<ServiceProviderDto>> GetActiveProvidersAsync(int? tenantId = null, CancellationToken cancellationToken = default)
     {
-        var query = _unitOfWork.Repository<ServiceProvider>()
-            .Query()
-            .Include(p => p.User)
-            .Include(p => p.Service)
-            .Include(p => p.ProviderServiceLinks)
-                .ThenInclude(l => l.Service)
-            .Where(p => p.Status == ProviderStatus.Active);
-
-        if (tenantId.HasValue && tenantId.Value > 0)
+        try
         {
-            query = query.Where(p => p.TenantId == tenantId.Value);
+            var query = _unitOfWork.Repository<ServiceProvider>()
+                .Query()
+                .AsNoTracking()
+                .Include(p => p.User)
+                .Include(p => p.Service)
+                .Include(p => p.ProviderServiceLinks)
+                    .ThenInclude(l => l.Service)
+                .Where(p => p.Status == ProviderStatus.Active);
+
+            if (tenantId.HasValue && tenantId.Value > 0)
+            {
+                query = query.Where(p => p.TenantId == tenantId.Value);
+            }
+
+            var providers = await query
+                .OrderBy(p => p.User.FirstName)
+                .ToListAsync(cancellationToken);
+
+            return _mapper.Map<IReadOnlyList<ServiceProviderDto>>(providers);
         }
-
-        var providers = await query
-            .OrderBy(p => p.User.FirstName)
-            .ToListAsync(cancellationToken);
-
-        return _mapper.Map<IReadOnlyList<ServiceProviderDto>>(providers);
+        catch (OperationCanceledException)
+        {
+            // Request was aborted by client/browser disconnect or timeout
+            return Array.Empty<ServiceProviderDto>();
+        }
     }
 
     public async Task<ServiceProviderDto?> GetProviderByIdAsync(int id, int tenantId, CancellationToken cancellationToken = default)
@@ -135,7 +146,7 @@ public class ServiceProviderService : IServiceProviderService
 
             // 1. Check if user with this email already exists
             var emailExists = await _unitOfWork.Repository<User>()
-                .ExistsAsync(u => u.Email.ToLower() == normalizedEmail, cancellationToken);
+                .ExistsAsync(u => u.Email == normalizedEmail, cancellationToken);
 
             if (emailExists)
             {
@@ -170,13 +181,10 @@ public class ServiceProviderService : IServiceProviderService
                     CreatedBy = createdBy
                 };
 
-                await _unitOfWork.Repository<User>().AddAsync(user, cancellationToken);
-                await _unitOfWork.SaveChangesAsync(cancellationToken);
-
                 // 3. Create ServiceProvider domain profile linked to the User
                 var provider = _mapper.Map<ServiceProvider>(request);
                 provider.TenantId = tenantId;
-                provider.UserId = user.Id;
+                provider.User = user;
                 provider.CreatedAt = DateTime.UtcNow;
                 provider.CreatedBy = createdBy;
 
@@ -200,19 +208,15 @@ public class ServiceProviderService : IServiceProviderService
                     }
                 }
 
-                await _unitOfWork.Repository<ServiceProvider>().AddAsync(provider, cancellationToken);
-                await _unitOfWork.SaveChangesAsync(cancellationToken);
-
-                // Add ProviderServiceLink records for all selected services
+                // Add ProviderServiceLink records for all selected services directly to the provider graph
                 foreach (var sId in serviceIds)
                 {
-                    await _unitOfWork.Repository<ProviderServiceLink>().AddAsync(new ProviderServiceLink
+                    provider.ProviderServiceLinks.Add(new ProviderServiceLink
                     {
-                        ServiceProviderId = provider.Id,
                         ServiceId = sId,
                         CreatedAt = DateTime.UtcNow,
                         CreatedBy = createdBy
-                    }, cancellationToken);
+                    });
                 }
 
                 // 4. Automatically generate 7-day recurring weekly availability schedule (Shifts & Slots)
@@ -234,7 +238,6 @@ public class ServiceProviderService : IServiceProviderService
                     var availability = new ProviderAvailability
                     {
                         TenantId = tenantId,
-                        ServiceProviderId = provider.Id,
                         DayOfWeek = day,
                         SpecificDate = null,
                         StartTime = startTime,
@@ -247,36 +250,39 @@ public class ServiceProviderService : IServiceProviderService
                         CreatedAt = DateTime.UtcNow,
                         CreatedBy = createdBy
                     };
-                    await _unitOfWork.Repository<ProviderAvailability>().AddAsync(availability, cancellationToken);
+                    provider.Availabilities.Add(availability);
                 }
 
-                await _unitOfWork.SaveChangesAsync(cancellationToken);
-
+                await _unitOfWork.Repository<ServiceProvider>().AddAsync(provider, cancellationToken);
                 await _unitOfWork.CommitTransactionAsync(cancellationToken);
 
-                // Fetch created provider with full includes for DTO mapping
+                // Fetch created provider with full includes for DTO mapping (AsNoTracking)
                 var createdProvider = await _unitOfWork.Repository<ServiceProvider>()
                     .Query()
+                    .AsNoTracking()
                     .Include(p => p.User)
                     .Include(p => p.Service)
                     .Include(p => p.ProviderServiceLinks)
                         .ThenInclude(l => l.Service)
-                    .Include(p => p.Appointments)
                     .FirstOrDefaultAsync(p => p.Id == provider.Id && p.TenantId == tenantId, cancellationToken);
 
-                // Dispatch Welcome & Credentials Email to newly created Service Provider
-                try
+                // Dispatch Welcome & Credentials Email in background (fire-and-forget for instant API response)
+                var targetEmail = user.Email;
+                var targetName = request.Name.Trim();
+                _ = Task.Run(async () =>
                 {
-                    await _emailService.SendAccountCreatedEmailAsync(
-                        user.Email, 
-                        request.Name.Trim(), 
-                        rawPassword, 
-                        cancellationToken);
-                }
-                catch (Exception emailEx)
-                {
-                    _logger.LogError(emailEx, "Failed to send welcome credentials email to Service Provider {Email}", user.Email);
-                }
+                    try
+                    {
+                        await _emailService.SendAccountCreatedEmailAsync(
+                            targetEmail, 
+                            targetName, 
+                            rawPassword);
+                    }
+                    catch (Exception emailEx)
+                    {
+                        _logger.LogError(emailEx, "Failed to send welcome credentials email to Service Provider {Email}", targetEmail);
+                    }
+                });
 
                 return ApiResponse<ServiceProviderDto>.Ok(_mapper.Map<ServiceProviderDto>(createdProvider ?? provider), "Service provider created successfully.");
             }
@@ -298,7 +304,6 @@ public class ServiceProviderService : IServiceProviderService
     {
         var provider = await _unitOfWork.Repository<ServiceProvider>()
             .Query()
-            .Include(p => p.Appointments)
             .Include(p => p.ProviderServiceLinks)
             .FirstOrDefaultAsync(p => p.Id == id && p.TenantId == tenantId, cancellationToken);
 
@@ -386,11 +391,11 @@ public class ServiceProviderService : IServiceProviderService
 
         var updatedProvider = await _unitOfWork.Repository<ServiceProvider>()
             .Query()
+            .AsNoTracking()
             .Include(p => p.User)
             .Include(p => p.Service)
             .Include(p => p.ProviderServiceLinks)
                 .ThenInclude(l => l.Service)
-            .Include(p => p.Appointments)
             .FirstOrDefaultAsync(p => p.Id == id && p.TenantId == tenantId, cancellationToken);
 
         return _mapper.Map<ServiceProviderDto>(updatedProvider ?? provider);

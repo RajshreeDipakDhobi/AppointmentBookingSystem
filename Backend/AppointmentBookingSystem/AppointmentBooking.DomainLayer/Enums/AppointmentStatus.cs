@@ -8,6 +8,5 @@ public enum AppointmentStatus
     Cancelled = 3,
     Rescheduled = 4,
     Approved = 5,
-    Rejected = 6,
     RescheduleProposed = 7
 }

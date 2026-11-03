@@ -53,6 +53,7 @@ export class AppointmentsComponent implements OnInit, OnDestroy {
   private timerId: any = null;
 
   readonly isAdmin = this.authService.isAdmin;
+  readonly activeTenantId = computed<number | undefined>(() => this.authService.currentUser()?.tenantId);
 
   get isServiceProvider(): boolean {
     const u = this.authService.currentUser();
@@ -106,7 +107,6 @@ export class AppointmentsComponent implements OnInit, OnDestroy {
     if (this.selectedStatus === AppointmentStatus.RescheduleProposed) return 'Reschedule Proposed';
     if (this.selectedStatus === AppointmentStatus.Completed) return 'Completed';
     if (this.selectedStatus === AppointmentStatus.Cancelled) return 'Cancelled';
-    if (this.selectedStatus === AppointmentStatus.Rejected) return 'Rejected';
     return 'All Status';
   }
 
@@ -177,14 +177,15 @@ export class AppointmentsComponent implements OnInit, OnDestroy {
   selectedAppointmentForComplete: AppointmentDto | null = null;
   readonly isCompleting = signal<boolean>(false);
 
-  // Reject Modal State
-  selectedAppointmentForReject: AppointmentDto | null = null;
-  rejectionReason = '';
-  readonly isRejecting = signal<boolean>(false);
-
   readonly AppointmentStatus = AppointmentStatus;
   readonly isAppointmentPast = isAppointmentPast;
-  readonly canCancel = canCancelAppointment;
+  readonly canCancel = (apt: AppointmentDto | null | undefined): boolean => {
+    if (!apt || this.isTerminalStatus(apt.status) || !apt.serviceProviderId) return false;
+    if (this.isAdmin() || this.isServiceProvider) {
+      return apt.status === AppointmentStatus.Booked || apt.status === AppointmentStatus.Approved;
+    }
+    return canCancelAppointment(apt);
+  };
 
   // Service providers strictly see ONLY their own appointments in the table
   readonly displayedAppointments = computed(() => {
@@ -454,50 +455,6 @@ export class AppointmentsComponent implements OnInit, OnDestroy {
     });
   }
 
-  openRejectModal(apt: AppointmentDto): void {
-    this.closeActionDropdown();
-    this.selectedAppointmentForReject = apt;
-    this.rejectionReason = '';
-  }
-
-  closeRejectModal(): void {
-    if (!this.isRejecting()) {
-      this.selectedAppointmentForReject = null;
-      this.rejectionReason = '';
-    }
-  }
-
-  confirmReject(): void {
-    const apt = this.selectedAppointmentForReject;
-    if (!apt || this.isRejecting()) return;
-
-    if (!this.rejectionReason.trim()) {
-      this.errorMessage.set('Please provide a reason for rejecting the appointment.');
-      setTimeout(() => this.errorMessage.set(''), 4000);
-      return;
-    }
-
-    this.isRejecting.set(true);
-    this.appointmentService.updateStatus(apt.id, {
-      status: AppointmentStatus.Rejected,
-      notes: this.rejectionReason.trim()
-    }).subscribe({
-      next: () => {
-        this.isRejecting.set(false);
-        this.selectedAppointmentForReject = null;
-        this.rejectionReason = '';
-        this.showSuccessNotification(`Appointment #${apt.appointmentNumber} rejected.`);
-        this.loadStats();
-        this.loadAppointments();
-      },
-      error: (err) => {
-        this.isRejecting.set(false);
-        const errorMsg = err.error?.message || 'Failed to reject appointment.';
-        this.errorMessage.set(errorMsg);
-      }
-    });
-  }
-
   viewDetails(apt: AppointmentDto): void {
     this.closeActionDropdown();
     this.selectedAppointmentForDetail = apt;
@@ -518,12 +475,15 @@ export class AppointmentsComponent implements OnInit, OnDestroy {
 
   // Helper checks for row action buttons
   canModify(apt: AppointmentDto): boolean {
+    if (!apt || this.isTerminalStatus(apt.status) || !apt.serviceProviderId) return false;
+    if (this.isAdmin() || this.isServiceProvider) {
+      return apt.status === AppointmentStatus.Booked || apt.status === AppointmentStatus.Approved;
+    }
     return canModifyAppointment(apt);
   }
 
   isTerminalStatus(status: AppointmentStatus | number | null | undefined): boolean {
     return status === AppointmentStatus.Cancelled ||
-           status === AppointmentStatus.Completed ||
-           status === AppointmentStatus.Rejected;
+           status === AppointmentStatus.Completed;
   }
 }

@@ -104,6 +104,12 @@ public abstract class BaseApiController : ControllerBase
             return CurrentTenantId.Value;
         }
 
+        // 4. Fallback for authenticated Customers with no explicit requested tenant
+        if (IsCustomer || (User.Identity != null && User.Identity.IsAuthenticated && !IsSuperAdmin))
+        {
+            return 1;
+        }
+
         return null;
     }
 

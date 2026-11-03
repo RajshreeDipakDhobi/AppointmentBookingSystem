@@ -840,20 +840,21 @@
 }
 
 /* Cards Grid View - Modern Compact Context */
+/* Cards Grid View - Modern Compact Context (Urban Company Aesthetic) */
 .cards-grid-view {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
-  gap: 0.95rem;
+  grid-template-columns: repeat(auto-fill, minmax(315px, 1fr));
+  gap: 1rem;
 }
 
 .customer-card {
   border-radius: 14px;
   background: #ffffff;
   border: 1px solid #e2ece6;
-  padding: 0.85rem 1rem;
+  padding: 1rem 1.15rem;
   display: flex;
   flex-direction: column;
-  gap: 0.65rem;
+  gap: 0.75rem;
   box-shadow: 0 2px 8px rgba(24, 59, 50, 0.04);
   transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
   position: relative;
@@ -869,6 +870,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 0.5rem;
 }
 
 .card-ref {
@@ -888,122 +890,307 @@
   color: #164034;
 }
 
-.card-provider-box {
+/* Service Title & Specialist Section */
+.card-service-hero {
   display: flex;
-  align-items: center;
-  gap: 0.65rem;
+  flex-direction: column;
+  gap: 0.4rem;
 }
 
-.provider-avatar-circle {
-  width: 36px;
-  height: 36px;
+.service-title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.card-service-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #183b32;
+  margin: 0;
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  letter-spacing: -0.01em;
+}
+
+.multi-service-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #166534;
+  background: #dcfce7;
+  border: 1px solid #bbf7d0;
+  border-radius: 999px;
+  padding: 0.15rem 0.5rem;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.card-specialist-row {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 24px;
+}
+
+.provider-avatar-mini {
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 800;
-  font-size: 0.85rem;
+  font-weight: 700;
+  font-size: 0.68rem;
   color: #ffffff;
-  box-shadow: 0 2px 6px rgba(24, 59, 50, 0.12);
   flex-shrink: 0;
   overflow: hidden;
-  border: 1.5px solid #e2ece6;
+  border: 1px solid #e2ece6;
+  box-shadow: 0 1px 3px rgba(24, 59, 50, 0.08);
 }
 
-.provider-text-wrap {
-  display: flex;
-  flex-direction: column;
-  gap: 0.1rem;
-  min-width: 0;
+.avatar-photo-mini {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+  display: block;
 }
 
-.card-provider-name {
-  font-size: 0.95rem;
-  font-weight: 700;
-  color: #183b32;
-  margin: 0;
+.specialist-name-text {
+  font-size: 0.78rem;
+  color: #5b756c;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.card-specialty-chip {
-  font-size: 0.74rem;
-  color: #5b756c;
-  font-weight: 500;
-}
-
-.card-schedule-strip {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.45rem 0.65rem;
-  background: #f4f8f5;
-  border: 1px solid #e2ece6;
-  border-radius: 6px;
-  font-size: 0.78rem;
+.specialist-name-text strong {
   color: #183b32;
-  white-space: nowrap;
-  overflow: hidden;
+  font-weight: 600;
 }
 
-.schedule-item {
+.assigning-text-row {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
+  font-size: 0.75rem;
+  color: #047857;
+  font-weight: 600;
 }
 
-.schedule-item svg {
+.assigning-bolt {
+  font-size: 0.85rem;
+}
+
+.unavailable-text-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.74rem;
+  color: #be123c;
+  font-weight: 500;
+}
+
+.unavailable-text-row svg {
+  color: #e11d48;
+  flex-shrink: 0;
+}
+
+/* Schedule & Pricing Strip (Non-clipped, crystal clear) */
+.card-schedule-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: #f8faf9;
+  border: 1px solid #e6f0eb;
+  border-radius: 8px;
+  font-size: 0.78rem;
+}
+
+.schedule-datetime-group {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: #3d5e53;
+  font-weight: 500;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.schedule-date-item,
+.schedule-time-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  white-space: nowrap;
+}
+
+.schedule-date-item svg,
+.schedule-time-item svg {
   color: #1e5142;
   flex-shrink: 0;
 }
 
-.schedule-divider {
-  color: #b8dacb;
+.schedule-sep {
+  color: #a4c4b5;
   font-size: 0.7rem;
 }
 
-/* Footer Row with Note snippet & Action Icon Buttons */
-.card-footer-row {
+.schedule-pricing-group {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.schedule-duration-pill {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: #5b756c;
+  background: #eef5f1;
+  border: 1px solid #d8e8e0;
+  border-radius: 4px;
+  padding: 0.1rem 0.35rem;
+  white-space: nowrap;
+}
+
+.schedule-price-val {
+  font-size: 0.96rem;
+  font-weight: 800;
+  color: #183b32;
+  white-space: nowrap;
+}
+
+/* Modern Card Action Bar */
+.card-action-bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 0.5rem;
   padding-top: 0.55rem;
-  border-top: 1px solid #eef3f0;
-  min-height: 38px;
+  border-top: 1px solid #edf4f0;
+  margin-top: auto;
 }
 
-.card-note-cell {
-  display: flex;
+.btn-action-primary {
+  display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
-  font-size: 0.74rem;
-  color: #5b756c;
-  min-width: 0;
-  max-width: 135px;
-  overflow: hidden;
+  justify-content: center;
+  gap: 0.45rem;
+  padding: 0.48rem 0.95rem;
+  border-radius: 8px;
+  background: #1e5142;
+  color: #ffffff;
+  font-size: 0.78rem;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 2px 6px rgba(30, 81, 66, 0.15);
+}
+
+.btn-action-primary:hover:not(:disabled) {
+  background: #164034;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(30, 81, 66, 0.25);
+}
+
+.btn-rebook-wide {
   flex: 1;
 }
 
-.note-icon {
-  color: #5b756c;
-  flex-shrink: 0;
+.btn-ticket-main {
+  flex: 1;
 }
 
-.note-text-snippet {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 115px;
-  display: inline-block;
+.btn-action-outline {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  padding: 0.48rem 0.95rem;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #1e5142;
+  border: 1px solid #c2ded2;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.card-actions-icons {
+.btn-action-outline:hover:not(:disabled) {
+  background: #f0f7f3;
+  border-color: #1e5142;
+  color: #164034;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(30, 81, 66, 0.1);
+}
+
+.btn-details-wide {
+  width: 100%;
+}
+
+.btn-action-accept {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 0.45rem 0.75rem;
+  border-radius: 8px;
+  background: #1e5142;
+  color: #ffffff;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border: 1px solid #164034;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex: 1;
+}
+
+.btn-action-accept:hover:not(:disabled) {
+  background: #164034;
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(30, 81, 66, 0.25);
+}
+
+.btn-action-decline {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 0.45rem 0.75rem;
+  border-radius: 8px;
+  background: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex: 1;
+}
+
+.btn-action-decline:hover:not(:disabled) {
+  background: #fee2e2;
+  border-color: #fca5a5;
+  color: #7f1d1d;
+  transform: translateY(-1px);
+}
+
+.card-icon-actions-group {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
-  flex-shrink: 0;
 }
 
 /* Modern Compact Icon Buttons */
@@ -1589,3 +1776,43 @@
 }
 
 /* Modals use master global tokens in styles.css */
+
+/* Multi-service additions on customer cards */
+.card-service-meta-line {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.multi-service-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #166534;
+  background: #dcfce7;
+  border: 1px solid #bbf7d0;
+  border-radius: 999px;
+  padding: 1px 6px;
+  letter-spacing: 0.02em;
+}
+
+.schedule-price-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-left: auto;
+}
+
+.card-price-val {
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: #15803d;
+}
+
+.card-duration-val {
+  font-size: 0.72rem;
+  color: #64748b;
+  font-weight: 500;
+}

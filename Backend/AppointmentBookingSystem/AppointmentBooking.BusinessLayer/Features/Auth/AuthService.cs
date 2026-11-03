@@ -43,14 +43,24 @@ public class AuthService : IAuthService
             var normalizedEmail = input.ToLower();
             var digitsOnly = new string(input.Where(char.IsDigit).ToArray());
 
-            var user = await _unitOfWork.Repository<User>()
+            var userQuery = _unitOfWork.Repository<User>()
                 .Query()
                 .Include(u => u.Tenant)
-                .Include(u => u.ServiceProvider)
-                .FirstOrDefaultAsync(u => 
-                    u.Email.ToLower() == normalizedEmail ||
-                    (digitsOnly.Length >= 10 && u.PhoneNumber != null && u.PhoneNumber.Contains(digitsOnly.Substring(digitsOnly.Length - 10))),
+                .Include(u => u.ServiceProvider);
+
+            User? user;
+            if (digitsOnly.Length >= 10)
+            {
+                var phoneSuffix = digitsOnly.Substring(digitsOnly.Length - 10);
+                user = await userQuery.FirstOrDefaultAsync(u => 
+                    u.Email == normalizedEmail ||
+                    (u.PhoneNumber != null && u.PhoneNumber.Contains(phoneSuffix)),
                     cancellationToken);
+            }
+            else
+            {
+                user = await userQuery.FirstOrDefaultAsync(u => u.Email == normalizedEmail, cancellationToken);
+            }
 
             if (user == null)
             {
@@ -95,6 +105,20 @@ public class AuthService : IAuthService
                 return ApiResponse<AuthResponseDto>.Fail("Invalid email or password.");
             }
 
+            // Ensure customer has a tenant assigned so services and providers scope correctly
+            if (user.Role == UserRole.Customer && !user.TenantId.HasValue)
+            {
+                var pastTenantId = await _unitOfWork.Repository<Appointment>().Query()
+                    .Where(a => a.CustomerId == user.Id)
+                    .OrderByDescending(a => a.CreatedAt)
+                    .Select(a => (int?)a.TenantId)
+                    .FirstOrDefaultAsync(cancellationToken);
+
+                user.TenantId = pastTenantId ?? 1;
+                _unitOfWork.Repository<User>().Update(user);
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+            }
+
             var authDto = await GenerateAuthResponseAsync(user, cancellationToken);
             return ApiResponse<AuthResponseDto>.Ok(authDto, "Login successful.");
         }
@@ -133,19 +157,24 @@ public class AuthService : IAuthService
                     existingUser.LastName = namePartsUpdate.Length > 1 ? namePartsUpdate[1] : string.Empty;
                     await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-                    // Dispatch Welcome & Credentials Email to upgraded Customer
-                    try
+                    // Dispatch Welcome & Credentials Email to upgraded Customer in background
+                    var existingEmail = existingUser.Email;
+                    var fullNameUpgrade = request.FullName.Trim();
+                    var rawPasswordUpgrade = request.Password;
+                    _ = Task.Run(async () =>
                     {
-                        await _emailService.SendAccountCreatedEmailAsync(
-                            existingUser.Email,
-                            request.FullName.Trim(),
-                            request.Password,
-                            cancellationToken);
-                    }
-                    catch (Exception emailEx)
-                    {
-                        _logger.LogError(emailEx, "Failed to send welcome email to Customer {Email}", existingUser.Email);
-                    }
+                        try
+                        {
+                            await _emailService.SendAccountCreatedEmailAsync(
+                                existingEmail,
+                                fullNameUpgrade,
+                                rawPasswordUpgrade);
+                        }
+                        catch (Exception emailEx)
+                        {
+                            _logger.LogError(emailEx, "Failed to send welcome email to Customer {Email}", existingEmail);
+                        }
+                    });
 
                     var updatedAuthDto = await GenerateAuthResponseAsync(existingUser, cancellationToken);
                     return ApiResponse<AuthResponseDto>.Ok(updatedAuthDto, "Registration successful.");
@@ -160,6 +189,7 @@ public class AuthService : IAuthService
 
             var newUser = new User
             {
+                TenantId = 1,
                 FirstName = firstName,
                 LastName = lastName,
                 Email = normalizedEmail,
@@ -174,19 +204,24 @@ public class AuthService : IAuthService
             await _unitOfWork.Repository<User>().AddAsync(newUser, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-            // Dispatch Welcome & Credentials Email to newly registered Customer
-            try
+            // Dispatch Welcome & Credentials Email to newly registered Customer in background
+            var newEmail = newUser.Email;
+            var newFullName = request.FullName.Trim();
+            var newRawPassword = request.Password;
+            _ = Task.Run(async () =>
             {
-                await _emailService.SendAccountCreatedEmailAsync(
-                    newUser.Email,
-                    request.FullName.Trim(),
-                    request.Password,
-                    cancellationToken);
-            }
-            catch (Exception emailEx)
-            {
-                _logger.LogError(emailEx, "Failed to send welcome credentials email to Customer {Email}", newUser.Email);
-            }
+                try
+                {
+                    await _emailService.SendAccountCreatedEmailAsync(
+                        newEmail,
+                        newFullName,
+                        newRawPassword);
+                }
+                catch (Exception emailEx)
+                {
+                    _logger.LogError(emailEx, "Failed to send welcome credentials email to Customer {Email}", newEmail);
+                }
+            });
 
             var authDto = await GenerateAuthResponseAsync(newUser, cancellationToken);
             return ApiResponse<AuthResponseDto>.Ok(authDto, "Registration successful.");

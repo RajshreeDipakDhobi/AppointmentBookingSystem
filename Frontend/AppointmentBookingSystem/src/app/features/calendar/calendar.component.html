@@ -442,9 +442,8 @@
                     <span class="card-client-name" [title]="item.appointment.customerName">{{
                       item.appointment.customerName }}</span>
                     <span class="card-service-name" [style.color]="item.theme.serviceColor"
-                      [title]="item.appointment.reason || item.appointment.serviceName || item.appointment.serviceProviderType">
-                      {{ item.appointment.reason || item.appointment.serviceName || item.appointment.serviceProviderType
-                      || 'Consultation' }}
+                      [title]="(item.appointment.serviceNames && item.appointment.serviceNames.length > 1) ? item.appointment.serviceNames.join(' + ') : (item.appointment.reason || item.appointment.serviceName || item.appointment.serviceProviderType)">
+                      {{ (item.appointment.serviceNames && item.appointment.serviceNames.length > 1) ? item.appointment.serviceNames.join(' + ') : (item.appointment.reason || item.appointment.serviceName || item.appointment.serviceProviderType || 'Consultation') }}
                     </span>
                     <span class="card-time-range" [style.color]="item.theme.timeTagText">
                       {{ formatAppointmentTimeRange(item.appointment.startTime, item.appointment.endTime) }}
@@ -584,7 +583,7 @@
             </svg>
             <span class="info-label">Service / Treatment</span>
           </div>
-          <span class="info-val font-semibold">{{ apt.serviceProviderType || 'General Consultation' }}</span>
+          <span class="info-val font-semibold">{{ (apt.serviceNames && apt.serviceNames.length > 1) ? apt.serviceNames.join(' + ') : (apt.serviceName || apt.serviceProviderType || 'General Consultation') }}</span>
         </div>
 
         <div class="info-cell">

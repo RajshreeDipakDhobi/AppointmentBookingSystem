@@ -47,11 +47,11 @@
       <div class="current-schedule-strip">
         <div class="strip-item">
           <span class="strip-label">Appointment ID</span>
-          <span class="strip-val monospace">{{ appointment.appointmentNumber }}</span>
+          <span class="strip-val monospace">#{{ appointment.appointmentNumber }}</span>
         </div>
         <div class="strip-item">
           <span class="strip-label">Customer</span>
-          <span class="strip-val">{{ appointment.customerName }} ({{ appointment.customerPhone | appPhone }})</span>
+          <span class="strip-val">{{ appointment.customerName }} <span *ngIf="appointment.customerPhone && appointment.customerPhone !== '-'">({{ appointment.customerPhone | appPhone }})</span></span>
         </div>
         <div class="strip-item">
           <span class="strip-label">Provider</span>
@@ -68,9 +68,25 @@
           </div>
         </div>
         <div class="strip-item">
+          <span class="strip-label">Services</span>
+          <div class="services-meta-row">
+            <span class="strip-val font-semibold">{{ serviceNamesSummary }}</span>
+            <span class="badge-duration-mini" *ngIf="totalDurationMinutes">{{ totalDurationMinutes }} mins</span>
+            <span class="badge-price-mini" *ngIf="totalAmount">₹{{ totalAmount | number }}</span>
+          </div>
+        </div>
+        <div class="strip-item">
           <span class="strip-label">Scheduled Time</span>
-          <span class="strip-val current-highlight">{{ appointment.formattedDate }} at {{ appointment.timeSlotText
-            }}</span>
+          <span class="strip-val current-highlight">
+            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 5px;">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+              <line x1="16" y1="2" x2="16" y2="6" />
+              <line x1="8" y1="2" x2="8" y2="6" />
+              <line x1="3" y1="10" x2="21" y2="10" />
+            </svg>
+            {{ appointment.appointmentDate | appDate }} at {{ appointment.startTime | appTime }} – {{ appointment.endTime | appTime }}
+          </span>
         </div>
       </div>
 

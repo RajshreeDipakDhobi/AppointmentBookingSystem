@@ -20,6 +20,11 @@ public class ExceptionHandlingMiddleware
         {
             await _next(context);
         }
+        catch (OperationCanceledException)
+        {
+            // Client closed connection or cancelled the request (normal HTTP behavior)
+            _logger.LogInformation("HTTP request aborted by client for {Path}", context.Request.Path);
+        }
         catch (Exception ex)
         {
             await HandleExceptionAsync(context, ex);

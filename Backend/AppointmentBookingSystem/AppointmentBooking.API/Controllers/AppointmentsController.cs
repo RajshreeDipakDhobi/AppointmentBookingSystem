@@ -31,6 +31,7 @@ public class AppointmentsController : BaseApiController
     public async Task<IActionResult> GetAvailableSlots(
         [FromQuery] int providerId, 
         [FromQuery] DateTime date,
+        [FromQuery] string? serviceIds,
         CancellationToken cancellationToken)
     {
         if (providerId <= 0)
@@ -40,7 +41,8 @@ public class AppointmentsController : BaseApiController
 
         try
         {
-            var result = await _appointmentService.GetAvailableSlotsAsync(providerId, date, cancellationToken);
+            var parsedIds = ParseServiceIds(serviceIds);
+            var result = await _appointmentService.GetAvailableSlotsAsync(providerId, date, parsedIds, cancellationToken);
             if (result == null)
             {
                 return NotFoundResponse($"Service provider with ID {providerId} was not found.");
@@ -56,7 +58,7 @@ public class AppointmentsController : BaseApiController
     }
 
     /// <summary>
-    /// Module 3B: View Merged Available Time Slots for a Service Category on a Specific Date (Public / Urban Company style)
+    /// Module 3B: View Merged Available Time Slots for a Service Category or Multi-Service Cart on a Specific Date (Public / Urban Company style)
     /// </summary>
     [HttpGet("service-slots")]
     [AllowAnonymous]
@@ -67,20 +69,23 @@ public class AppointmentsController : BaseApiController
         [FromQuery] int serviceId, 
         [FromQuery] DateTime date,
         [FromQuery] int? tenantId,
+        [FromQuery] string? serviceIds,
         CancellationToken cancellationToken)
     {
-        if (serviceId <= 0)
+        var parsedIds = ParseServiceIds(serviceIds, serviceId);
+        if (serviceId <= 0 && (parsedIds == null || parsedIds.Count == 0))
         {
-            return ErrorResponse("Valid Service ID must be specified.");
+            return ErrorResponse("Valid Service ID or serviceIds must be specified.");
         }
 
         try
         {
             var activeTenantId = ResolveTenantId(tenantId);
-            var result = await _appointmentService.GetAvailableSlotsByServiceAsync(serviceId, date, activeTenantId, cancellationToken);
+            var effectiveServiceId = serviceId > 0 ? serviceId : parsedIds![0];
+            var result = await _appointmentService.GetAvailableSlotsByServiceAsync(effectiveServiceId, date, activeTenantId, parsedIds, cancellationToken);
             if (result == null)
             {
-                return NotFoundResponse($"Service with ID {serviceId} was not found or is inactive.");
+                return NotFoundResponse($"Service with ID {effectiveServiceId} was not found or is inactive.");
             }
 
             return OkResponse(result);
@@ -90,6 +95,26 @@ public class AppointmentsController : BaseApiController
             _logger.LogError(ex, "Error getting available slots for service ID {ServiceId}", serviceId);
             return ErrorResponse(ex.Message);
         }
+    }
+
+    private static List<int>? ParseServiceIds(string? serviceIds, int fallbackServiceId = 0)
+    {
+        if (string.IsNullOrWhiteSpace(serviceIds))
+        {
+            return fallbackServiceId > 0 ? new List<int> { fallbackServiceId } : null;
+        }
+
+        var list = serviceIds.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(s => int.TryParse(s, out var id) ? id : 0)
+            .Where(id => id > 0)
+            .ToList();
+
+        if (list.Count == 0 && fallbackServiceId > 0)
+        {
+            list.Add(fallbackServiceId);
+        }
+
+        return list.Count > 0 ? list : null;
     }
 
     /// <summary>
@@ -385,21 +410,15 @@ public class AppointmentsController : BaseApiController
             return ValidationResponse();
         }
 
-        // Tenant Admin cannot directly reschedule
-        if (IsAdmin && !IsSuperAdmin)
-        {
-            return ForbiddenResponse("Tenant Admins cannot directly reschedule appointments. Direct rescheduling is reserved for customers, while service providers can propose a new time.");
-        }
-
         var activeTenantId = ResolveTenantId(tenantId);
         var customerId = ResolveCustomerId();
-        bool isAdmin = IsAdmin || IsSuperAdmin;
+        bool isStaff = IsAdmin || IsSuperAdmin || IsServiceProvider;
 
         var result = await _appointmentService.RescheduleAppointmentAsync(
             appointmentId, 
             activeTenantId, 
             customerId, 
-            isAdmin, 
+            isStaff, 
             request,
             cancellationToken);
 

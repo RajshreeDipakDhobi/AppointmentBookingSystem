@@ -1,0 +1,191 @@
+<!-- ==========================================================================
+     Slide-Over Cart Drawer Component (Compact, Mature & Space-Optimized)
+     Theme: Luxury Forest Emerald & Organic Sage
+     ========================================================================== -->
+<div class="cart-drawer-backdrop animate-fade-in" (click)="onClose()">
+  <div class="cart-drawer-panel animate-drawer-slide-in" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
+
+    <!-- Compact Drawer Header -->
+    <div class="drawer-header">
+      <div class="header-left">
+        <button type="button" class="btn-drawer-back" (click)="onClose()" aria-label="Close cart drawer" title="Back">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="19" y1="12" x2="5" y2="12" />
+            <polyline points="12 19 5 12 12 5" />
+          </svg>
+        </button>
+
+        <div class="header-title-box">
+          <div class="title-with-pill">
+            <h3 class="drawer-title">{{ title }}</h3>
+            <span *ngIf="items.length > 0" class="cart-badge-count">
+              {{ totalItemsCount }} {{ totalItemsCount === 1 ? 'item' : 'items' }}
+            </span>
+          </div>
+          <span class="drawer-micro-subtitle">Review items & adjust quantities</span>
+        </div>
+      </div>
+
+      <button type="button" class="btn-drawer-close" (click)="onClose()" aria-label="Close cart drawer" title="Close">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18" />
+          <line x1="6" y1="6" x2="18" y2="18" />
+        </svg>
+      </button>
+    </div>
+
+    <!-- Drawer Body (Compact & Low-Scrollable) -->
+    <div class="drawer-body custom-scrollbar">
+
+      <!-- Case 1: Items Present -->
+      <div *ngIf="items.length > 0" class="drawer-items-wrap">
+
+        <!-- Dense Itemized Rows -->
+        <div class="drawer-items-list">
+          <div *ngFor="let item of items" class="drawer-item-row">
+            
+            <!-- Left Info Column -->
+            <div class="item-left-col">
+              <div class="item-title-row">
+                <h4 class="item-name" [title]="item.name">{{ item.name }}</h4>
+              </div>
+              <div class="item-rates-meta">
+                <span class="unit-rate">₹{{ item.price | number }}</span>
+                <span class="meta-dot">•</span>
+                <span class="unit-duration">{{ item.durationMinutes }}m/unit</span>
+              </div>
+            </div>
+
+            <!-- Right Controls: Stepper + Price + Quick Remove -->
+            <div class="item-right-col">
+              
+              <!-- Mini Stepper -->
+              <div *ngIf="allowQuantity" class="compact-stepper">
+                <button type="button" class="btn-step-mini" (click)="onDecrement(item, $event)"
+                  [title]="getItemQuantity(item) === 1 ? 'Remove service' : 'Decrease quantity'">
+                  <svg *ngIf="getItemQuantity(item) > 1" xmlns="http://www.w3.org/2000/svg" width="11" height="11"
+                    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="5" y1="12" x2="19" y2="12" />
+                  </svg>
+                  <svg *ngIf="getItemQuantity(item) === 1" xmlns="http://www.w3.org/2000/svg" width="11" height="11"
+                    viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="3 6 5 6 21 6" />
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                  </svg>
+                </button>
+
+                <span class="step-num">{{ getItemQuantity(item) }}</span>
+
+                <button type="button" class="btn-step-mini" (click)="onIncrement(item, $event)"
+                  [title]="'Add another ' + item.name">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="12" y1="5" x2="12" y2="19" />
+                    <line x1="5" y1="12" x2="19" y2="12" />
+                  </svg>
+                </button>
+              </div>
+
+              <!-- Price & Total Duration Column -->
+              <div class="item-pricing-col">
+                <span class="item-total-price">₹{{ getItemTotal(item) | number }}</span>
+                <span class="item-total-time">{{ getItemDuration(item) }}m</span>
+              </div>
+
+              <!-- Quick Trash Button -->
+              <button *ngIf="allowRemove" type="button" class="btn-row-trash" (click)="onRemove(item.id, $event)"
+                [title]="'Remove ' + item.name">
+                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="3 6 5 6 21 6" />
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                </svg>
+              </button>
+
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Mature Compact Bill Card -->
+        <div class="drawer-summary-card">
+          <div class="summary-row">
+            <span class="summary-label">Combined Slot Time</span>
+            <span class="summary-slot-pill">
+              <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <polyline points="12 6 12 12 16 14" />
+              </svg>
+              <span>{{ totalDuration }} Mins Slot</span>
+            </span>
+          </div>
+
+          <div class="summary-row">
+            <span class="summary-label">Items Subtotal ({{ totalItemsCount }})</span>
+            <span class="summary-val">₹{{ totalAmount | number }}</span>
+          </div>
+
+          <div class="summary-divider"></div>
+
+          <div class="summary-row grand-row">
+            <div>
+              <span class="grand-label">To Pay</span>
+              <span class="grand-sub">Inclusive of taxes</span>
+            </div>
+            <span class="grand-figure">₹{{ totalAmount | number }}</span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Case 2: Empty State -->
+      <div *ngIf="items.length === 0" class="drawer-empty-state">
+        <div class="empty-icon-wrap">
+          <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" />
+            <path d="M3 6h18" />
+            <path d="M16 10a4 4 0 0 1-8 0" />
+          </svg>
+        </div>
+        <h4 class="empty-title">Cart is Empty</h4>
+        <p class="empty-desc">Add services from the catalog to build your appointment.</p>
+        <button type="button" class="btn-empty-return" (click)="onClose()">
+          Browse Services
+        </button>
+      </div>
+
+    </div>
+
+    <!-- Compact Drawer Footer -->
+    <div class="drawer-footer" *ngIf="items.length > 0">
+      <button *ngIf="showClearButton" type="button" class="btn-footer-clear" (click)="onClear($event)" title="Clear cart">
+        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="3 6 5 6 21 6" />
+          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+        </svg>
+        <span>Clear</span>
+      </button>
+
+      <button *ngIf="showProceedButton" type="button" class="btn-footer-proceed" (click)="onProceed()">
+        <div class="proceed-meta">
+          <span class="proceed-price">₹{{ totalAmount | number }}</span>
+          <span class="proceed-duration">{{ totalDuration }}m slot</span>
+        </div>
+        <div class="proceed-action">
+          <span>{{ proceedButtonText }}</span>
+          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="5" y1="12" x2="19" y2="12" />
+            <polyline points="12 5 19 12 12 19" />
+          </svg>
+        </div>
+      </button>
+    </div>
+
+  </div>
+</div>

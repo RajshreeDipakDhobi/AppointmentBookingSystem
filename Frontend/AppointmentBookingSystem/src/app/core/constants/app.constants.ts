@@ -32,11 +32,6 @@ export const APPOINTMENT_STATUS_MAP: Record<AppointmentStatus, StatusConfig> = {
     badgeClass: 'badge-approved',
     dotColor: '#10b981'
   },
-  [AppointmentStatus.Rejected]: {
-    label: 'Rejected',
-    badgeClass: 'badge-rejected',
-    dotColor: '#ef4444'
-  },
   [AppointmentStatus.RescheduleProposed]: {
     label: 'Reschedule Proposed',
     badgeClass: 'badge-reschedule-proposed',

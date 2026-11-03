@@ -97,24 +97,33 @@ public class TenantService : ITenantService
             }
 
             bool emailExists = await _unitOfWork.Repository<User>()
-                .ExistsAsync(u => u.Email.ToLower() == targetEmail, cancellationToken);
+                .ExistsAsync(u => u.Email == targetEmail, cancellationToken);
 
             if (emailExists)
             {
                 return ApiResponse<TenantDto>.Fail("A user account with this email already exists.");
             }
 
-            // 2. Auto-generate unique TenantCode
-            var baseSlug = Regex.Replace(request.TenantName.ToLower().Trim(), @"[^a-z0-9]+", "-").Trim('-');
+            // 2. Auto-generate unique TenantCode (Single DB query to fetch matching base slugs)
+            var baseSlug = Regex.Replace(request.TenantName.ToLowerInvariant().Trim(), @"[^a-z0-9]+", "-").Trim('-');
 
             if (string.IsNullOrWhiteSpace(baseSlug))
             {
                 baseSlug = "tenant";
             }
 
+            var matchingPrefix = baseSlug + "-";
+            var existingCodes = await _unitOfWork.Repository<Tenant>()
+                .Query()
+                .AsNoTracking()
+                .Where(t => t.TenantCode == baseSlug || t.TenantCode.StartsWith(matchingPrefix))
+                .Select(t => t.TenantCode)
+                .ToListAsync(cancellationToken);
+
+            var codeSet = new HashSet<string>(existingCodes, StringComparer.OrdinalIgnoreCase);
             var uniqueTenantCode = baseSlug;
             int counter = 1;
-            while (await _unitOfWork.Repository<Tenant>().ExistsAsync(t => t.TenantCode == uniqueTenantCode, cancellationToken))
+            while (codeSet.Contains(uniqueTenantCode))
             {
                 uniqueTenantCode = $"{baseSlug}-{counter}";
                 counter++;
@@ -135,13 +144,9 @@ public class TenantService : ITenantService
                 tenant.CreatedAt = DateTime.UtcNow;
                 tenant.CreatedBy = createdBy;
 
-                await _unitOfWork.Repository<Tenant>().AddAsync(tenant, cancellationToken);
-                await _unitOfWork.SaveChangesAsync(cancellationToken);
-
                 // 5. Create Tenant Admin (User) with First & Last Name
                 var adminUser = new User
                 {
-                    TenantId = tenant.Id,
                     FirstName = request.AdminFirstName.Trim(),
                     LastName = request.AdminLastName.Trim(),
                     Email = targetEmail,
@@ -154,25 +159,28 @@ public class TenantService : ITenantService
                     CreatedBy = createdBy
                 };
 
-                await _unitOfWork.Repository<User>().AddAsync(adminUser, cancellationToken);
-                await _unitOfWork.SaveChangesAsync(cancellationToken);
+                // Attach admin to tenant graph — EF Core handles foreign key resolution atomically
+                tenant.Users.Add(adminUser);
 
+                await _unitOfWork.Repository<Tenant>().AddAsync(tenant, cancellationToken);
                 await _unitOfWork.CommitTransactionAsync(cancellationToken);
 
-                // Dispatch Welcome & Credentials Email to newly provisioned Tenant Admin
-                try
+                // Dispatch Welcome & Credentials Email to newly provisioned Tenant Admin in background
+                var adminFullName = $"{request.AdminFirstName} {request.AdminLastName}".Trim();
+                _ = Task.Run(async () =>
                 {
-                    var adminFullName = $"{request.AdminFirstName} {request.AdminLastName}".Trim();
-                    await _emailService.SendAccountCreatedEmailAsync(
-                        targetEmail, 
-                        adminFullName, 
-                        rawPassword, 
-                        cancellationToken);
-                }
-                catch (Exception emailEx)
-                {
-                    _logger.LogError(emailEx, "Failed to send welcome credentials email to Tenant Admin {Email}", targetEmail);
-                }
+                    try
+                    {
+                        await _emailService.SendAccountCreatedEmailAsync(
+                            targetEmail, 
+                            adminFullName, 
+                            rawPassword);
+                    }
+                    catch (Exception emailEx)
+                    {
+                        _logger.LogError(emailEx, "Failed to send welcome credentials email to Tenant Admin {Email}", targetEmail);
+                    }
+                });
 
                 return ApiResponse<TenantDto>.Ok(_mapper.Map<TenantDto>(tenant), "Tenant created successfully.");
             }
@@ -194,7 +202,6 @@ public class TenantService : ITenantService
     {
         var tenant = await _unitOfWork.Repository<Tenant>()
             .Query()
-            .Include(t => t.Users)
             .FirstOrDefaultAsync(t => t.Id == id, cancellationToken);
 
         if (tenant == null)
@@ -206,23 +213,31 @@ public class TenantService : ITenantService
         tenant.UpdatedAt = DateTime.UtcNow;
 
         // Also update Admin user if details provided
-        var adminUser = tenant.Users.FirstOrDefault(u => u.Role == UserRole.Admin);
-        if (adminUser != null)
+        if (!string.IsNullOrWhiteSpace(request.AdminFirstName) || 
+            !string.IsNullOrWhiteSpace(request.AdminLastName) || 
+            !string.IsNullOrWhiteSpace(request.ContactEmail))
         {
-            if (!string.IsNullOrWhiteSpace(request.AdminFirstName))
-                adminUser.FirstName = request.AdminFirstName.Trim();
-            if (!string.IsNullOrWhiteSpace(request.AdminLastName))
-                adminUser.LastName = request.AdminLastName.Trim();
-            if (!string.IsNullOrWhiteSpace(request.ContactEmail))
-                adminUser.Email = request.ContactEmail.Trim().ToLower();
-            adminUser.UpdatedAt = DateTime.UtcNow;
-            _unitOfWork.Repository<User>().Update(adminUser);
+            var adminUser = await _unitOfWork.Repository<User>()
+                .Query()
+                .FirstOrDefaultAsync(u => u.TenantId == id && u.Role == UserRole.Admin && !u.IsDeleted, cancellationToken);
+
+            if (adminUser != null)
+            {
+                if (!string.IsNullOrWhiteSpace(request.AdminFirstName))
+                    adminUser.FirstName = request.AdminFirstName.Trim();
+                if (!string.IsNullOrWhiteSpace(request.AdminLastName))
+                    adminUser.LastName = request.AdminLastName.Trim();
+                if (!string.IsNullOrWhiteSpace(request.ContactEmail))
+                    adminUser.Email = request.ContactEmail.Trim().ToLowerInvariant();
+                adminUser.UpdatedAt = DateTime.UtcNow;
+                _unitOfWork.Repository<User>().Update(adminUser);
+            }
         }
 
         _unitOfWork.Repository<Tenant>().Update(tenant);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return _mapper.Map<TenantDto>(tenant);
+        return await GetTenantByIdAsync(id, cancellationToken);
     }
 
     public async Task<bool> UpdateTenantStatusAsync(int id, TenantStatus status, CancellationToken cancellationToken = default)

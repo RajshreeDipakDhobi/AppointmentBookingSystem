@@ -5,7 +5,6 @@ export enum AppointmentStatus {
   Cancelled = 3,
   Rescheduled = 4,
   Approved = 5,
-  Rejected = 6,
   RescheduleProposed = 7
 }
 
@@ -30,6 +29,15 @@ export interface ProviderDailyAvailabilityResponseDto {
   slots: AvailableSlotDto[];
 }
 
+export interface AppointmentItemDto {
+  id: number;
+  appointmentId: number;
+  serviceId: number;
+  serviceName: string;
+  price: number;
+  durationMinutes: number;
+}
+
 export interface AppointmentDto {
   id: number;
   tenantId: number;
@@ -42,6 +50,10 @@ export interface AppointmentDto {
   serviceName?: string;
   servicePrice?: number;
   serviceDurationMinutes?: number;
+  totalAmount?: number;
+  totalDurationMinutes?: number;
+  serviceNames?: string[];
+  items?: AppointmentItemDto[];
   isBroadcast?: boolean;
   isExpired?: boolean;
   isAcceptanceWindowActive?: boolean;
@@ -79,6 +91,7 @@ export interface AppointmentDto {
 export interface BookAppointmentRequestDto {
   serviceProviderId?: number | null;
   serviceId?: number | null;
+  serviceIds?: number[];
   appointmentDate: string; // "YYYY-MM-DD"
   startTime: string;       // "10:00"
   endTime: string;         // "10:30"

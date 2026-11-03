@@ -669,15 +669,15 @@
 }
 
 .appointments-table col.col-id {
-  width: 19%;
+  width: 18%;
 }
 
 .appointments-table col.col-customer {
-  width: 23%;
+  width: 25%;
 }
 
 .appointments-table col.col-provider {
-  width: 20%;
+  width: 23%;
 }
 
 .appointments-table col.col-schedule {
@@ -685,11 +685,11 @@
 }
 
 .appointments-table col.col-status {
-  width: 10%;
+  width: 8%;
 }
 
 .appointments-table col.col-actions {
-  width: 9%;
+  width: 7%;
 }
 
 /* When Provider views own appointments, Service Provider column is hidden and space is reallocated */
@@ -698,7 +698,7 @@
 }
 
 .appointments-table.provider-view col.col-customer {
-  width: 30%;
+  width: 36%;
 }
 
 .appointments-table.provider-view col.col-schedule {
@@ -706,11 +706,11 @@
 }
 
 .appointments-table.provider-view col.col-status {
-  width: 12%;
+  width: 10%;
 }
 
 .appointments-table.provider-view col.col-actions {
-  width: 12%;
+  width: 8%;
 }
 
 .appointments-table thead tr {
@@ -987,6 +987,84 @@
 .provider-specialty-pill svg {
   color: #1e5142;
   flex-shrink: 0;
+}
+
+/* Detail Modal Itemized Receipt Styles */
+.detail-receipt-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  background: #f8faf9;
+  border: 1px solid #e2ece6;
+  border-radius: 10px;
+  padding: 0.75rem 0.9rem;
+  margin-top: 0.4rem;
+}
+
+.receipt-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.receipt-duration-pill {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #166534;
+  background: #dcfce7;
+  border: 1px solid #bbf7d0;
+  padding: 1px 7px;
+  border-radius: 999px;
+}
+
+.receipt-items-deck {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.receipt-item-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.82rem;
+  color: #1f3d33;
+}
+
+.receipt-item-name {
+  font-weight: 500;
+}
+
+.receipt-item-price {
+  font-weight: 600;
+  color: #183b32;
+}
+
+.receipt-total-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px dashed #cfded6;
+  margin-top: 0.3rem;
+  padding-top: 0.4rem;
+}
+
+.receipt-total-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #47665b;
+}
+
+.receipt-total-price {
+  font-size: 0.92rem;
+  font-weight: 800;
+  color: #15803d;
+}
+
+.receipt-single-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
 /* 4. Schedule Date & Time Cell */
@@ -2341,16 +2419,16 @@
   position: absolute;
   right: 0;
   top: calc(100% + 6px);
-  min-width: 195px;
+  min-width: 215px;
   background: #ffffff;
-  border: 1px solid #dce7e2;
+  border: 1px solid #e2e8f0;
   border-radius: 12px;
-  padding: 0.4rem;
-  box-shadow: 0 10px 30px rgba(24, 60, 48, 0.12), 0 2px 6px rgba(24, 60, 48, 0.04);
+  padding: 0.35rem;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
   z-index: 9999;
   display: flex;
   flex-direction: column;
-  gap: 0.2rem;
+  gap: 0.15rem;
   animation: dropIn 0.18s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -2389,81 +2467,96 @@
   align-items: center;
   gap: 0.65rem;
   width: 100%;
-  padding: 0.5rem 0.75rem;
+  padding: 0.55rem 0.8rem;
   background: transparent;
   border: none;
   border-radius: 8px;
-  color: #183b32;
-  font-size: 0.8rem;
+  color: #1e293b;
+  font-size: 0.83rem;
   font-weight: 500;
   text-align: left;
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
-.dropdown-menu-item:hover {
-  background: #f4f8f5;
-  color: #1e5142;
-}
-
 .dropdown-menu-item svg {
   flex-shrink: 0;
+  transition: transform 0.15s ease;
+}
+
+.dropdown-menu-item:hover svg {
+  transform: scale(1.1);
 }
 
 .dropdown-menu-item.item-approve {
-  color: #34d399;
+  color: #1e293b;
+}
+
+.dropdown-menu-item.item-approve svg {
+  color: #059669;
 }
 
 .dropdown-menu-item.item-approve:hover {
-  background: rgba(16, 185, 129, 0.15);
-  color: #6ee7b7;
-}
-
-.dropdown-menu-item.item-reject {
-  color: #f87171;
-}
-
-.dropdown-menu-item.item-reject:hover {
-  background: rgba(239, 68, 68, 0.15);
-  color: #fca5a5;
+  background: #ecfdf5;
+  color: #065f46;
 }
 
 .dropdown-menu-item.item-complete {
-  color: #60a5fa;
+  color: #1e293b;
+}
+
+.dropdown-menu-item.item-complete svg {
+  color: #2563eb;
 }
 
 .dropdown-menu-item.item-complete:hover {
-  background: rgba(59, 130, 246, 0.15);
-  color: #93c5fd;
+  background: #eff6ff;
+  color: #1e40af;
 }
 
 .dropdown-menu-item.item-reschedule {
-  color: #fbbf24;
+  color: #1e293b;
+}
+
+.dropdown-menu-item.item-reschedule svg {
+  color: #d97706;
 }
 
 .dropdown-menu-item.item-reschedule:hover {
-  background: rgba(245, 158, 11, 0.15);
-  color: #fde68a;
+  background: #fffbeb;
+  color: #92400e;
 }
 
 .dropdown-menu-item.item-cancel {
-  color: #fb7185;
+  color: #1e293b;
+}
+
+.dropdown-menu-item.item-cancel svg {
+  color: #dc2626;
 }
 
 .dropdown-menu-item.item-cancel:hover {
-  background: rgba(244, 63, 94, 0.15);
-  color: #fda4af;
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.dropdown-menu-item.item-details {
+  color: #1e293b;
+}
+
+.dropdown-menu-item.item-details svg {
+  color: #64748b;
 }
 
 .dropdown-menu-item.item-details:hover {
-  background: rgba(99, 102, 241, 0.15);
-  color: #c7d2fe;
+  background: #f8fafc;
+  color: #0f172a;
 }
 
 .dropdown-menu-divider {
   height: 1px;
-  background: rgba(255, 255, 255, 0.08);
-  margin: 0.25rem 0.2rem;
+  background: #e2e8f0;
+  margin: 0.3rem 0.25rem;
 }
 
 /* ================= REJECT MODAL STYLES ================= */

@@ -24,6 +24,7 @@ public class BookingDbContext : DbContext
 
     // Appointment Booking Tables (Module 3, 4, 5, 6, 7)
     public DbSet<Appointment> Appointments => Set<Appointment>();
+    public DbSet<AppointmentItem> AppointmentItems => Set<AppointmentItem>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -221,6 +222,9 @@ public class BookingDbContext : DbContext
             // Concurrency token to prevent overlapping appointments
             entity.Property(a => a.RowVersion).IsRowVersion();
 
+            entity.Property(a => a.TotalAmount).HasColumnType("decimal(18,2)").HasDefaultValue(0.00m);
+            entity.Property(a => a.TotalDurationMinutes).IsRequired().HasDefaultValue(30);
+
             entity.HasOne(a => a.ServiceProvider)
                   .WithMany(sp => sp.Appointments)
                   .HasForeignKey(a => a.ServiceProviderId)
@@ -248,6 +252,26 @@ public class BookingDbContext : DbContext
             entity.HasOne(a => a.RescheduledFromAppointment)
                   .WithMany()
                   .HasForeignKey(a => a.RescheduledFromAppointmentId)
+                  .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // 10. AppointmentItem Configuration (Multi-Service Cart Items)
+        modelBuilder.Entity<AppointmentItem>(entity =>
+        {
+            entity.ToTable("AppointmentItems");
+            entity.HasKey(ai => ai.Id);
+            entity.Property(ai => ai.ServiceName).IsRequired().HasMaxLength(150);
+            entity.Property(ai => ai.Price).HasColumnType("decimal(18,2)").HasDefaultValue(0.00m);
+            entity.Property(ai => ai.DurationMinutes).IsRequired().HasDefaultValue(30);
+
+            entity.HasOne(ai => ai.Appointment)
+                  .WithMany(a => a.Items)
+                  .HasForeignKey(ai => ai.AppointmentId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(ai => ai.Service)
+                  .WithMany()
+                  .HasForeignKey(ai => ai.ServiceId)
                   .OnDelete(DeleteBehavior.Restrict);
         });
     }

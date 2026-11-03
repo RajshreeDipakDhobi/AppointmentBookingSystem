@@ -17,6 +17,15 @@ public class AppointmentDto
     public string? ServiceName { get; set; }
     public decimal? ServicePrice { get; set; }
     public int? ServiceDurationMinutes { get; set; }
+
+    // Multi-Service Cart Items & Aggregates (Urban Company model)
+    public decimal TotalAmount { get; set; }
+    public int TotalDurationMinutes { get; set; }
+    public List<AppointmentItemDto> Items { get; set; } = new();
+    public List<string> ServiceNames => Items.Count > 0 
+        ? Items.Select(i => i.ServiceName).Distinct().ToList() 
+        : (ServiceName != null ? new List<string> { ServiceName } : new List<string>());
+
     public bool IsBroadcast => !ServiceProviderId.HasValue;
     
     private DateTime UtcCreatedAt => CreatedAt.Kind == DateTimeKind.Utc 
@@ -40,7 +49,7 @@ public class AppointmentDto
     public string FormattedDate => AppointmentDate.ToString("yyyy-MM-dd");
     public string StartTime { get; set; } = string.Empty; // "HH:mm"
     public string EndTime { get; set; } = string.Empty;   // "HH:mm"
-    public string TimeSlotText => $"{StartTime} – {EndTime}";
+    public string TimeSlotText => FormatSlotTimeRange(StartTime, EndTime);
 
     public AppointmentStatus Status { get; set; }
     public string StatusText => Status switch
@@ -53,7 +62,6 @@ public class AppointmentDto
         AppointmentStatus.Completed => "Completed",
         AppointmentStatus.Cancelled => "Cancelled",
         AppointmentStatus.Rescheduled => "Rescheduled",
-        AppointmentStatus.Rejected => "Rejected",
         AppointmentStatus.RescheduleProposed => "Reschedule Proposed",
         _ => Status.ToString()
     };
@@ -72,7 +80,9 @@ public class AppointmentDto
     public string? ProposedDateText => ProposedDate?.ToString("yyyy-MM-dd");
     public string? ProposedStartTime { get; set; }
     public string? ProposedEndTime { get; set; }
-    public string? ProposedTimeSlotText => (!string.IsNullOrEmpty(ProposedStartTime) && !string.IsNullOrEmpty(ProposedEndTime)) ? $"{ProposedStartTime} – {ProposedEndTime}" : null;
+    public string? ProposedTimeSlotText => (!string.IsNullOrEmpty(ProposedStartTime) && !string.IsNullOrEmpty(ProposedEndTime)) 
+        ? FormatSlotTimeRange(ProposedStartTime, ProposedEndTime) 
+        : null;
     public string? RescheduleNotes { get; set; }
 
     public string? CancelledByName
@@ -104,5 +114,24 @@ public class AppointmentDto
             if (idx == 0) return null;
             return idx > 0 ? CancellationReason.Substring(0, idx).Trim() : CancellationReason.Trim();
         }
+    }
+
+    private static string FormatSlotTimeRange(string? start, string? end)
+    {
+        if (string.IsNullOrWhiteSpace(start) || string.IsNullOrWhiteSpace(end))
+            return $"{start} – {end}";
+        return $"{FormatTo12Hour(start)} – {FormatTo12Hour(end)}";
+    }
+
+    private static string FormatTo12Hour(string time)
+    {
+        if (string.IsNullOrWhiteSpace(time)) return string.Empty;
+        if (time.Contains("AM", StringComparison.OrdinalIgnoreCase) || time.Contains("PM", StringComparison.OrdinalIgnoreCase))
+            return time;
+        if (TimeOnly.TryParse(time, out var t))
+            return t.ToString("hh:mm tt");
+        if (DateTime.TryParse(time, out var dt))
+            return dt.ToString("hh:mm tt");
+        return time;
     }
 }

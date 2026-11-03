@@ -14,9 +14,14 @@ public class Appointment : BaseEntity
     public int? ServiceProviderId { get; set; }
     public virtual ServiceProvider? ServiceProvider { get; set; }
 
-    // Service relation (Linked to master Service catalog)
+    // Service relation (Linked to primary master Service catalog for backward compatibility)
     public int? ServiceId { get; set; }
     public virtual Service? Service { get; set; }
+
+    // Multi-Service Order Items (Urban Company cart model)
+    public virtual ICollection<AppointmentItem> Items { get; set; } = new List<AppointmentItem>();
+    public decimal TotalAmount { get; set; } = 0.00m;
+    public int TotalDurationMinutes { get; set; } = 30;
 
 
     // Customer relation (Single source of truth in User entity - Required)

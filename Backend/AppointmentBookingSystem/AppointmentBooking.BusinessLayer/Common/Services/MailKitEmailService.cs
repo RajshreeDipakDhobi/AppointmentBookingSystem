@@ -46,6 +46,7 @@ public class MailKitEmailService : IEmailService
             message.Body = bodyBuilder.ToMessageBody();
 
             using var client = new SmtpClient();
+            client.Timeout = 5000; // 5-second socket timeout to prevent API hangs
 
             // Accept all SSL certificates if needed for local test resilience, or rely on system trust
             client.ServerCertificateValidationCallback = (s, c, h, e) => true;

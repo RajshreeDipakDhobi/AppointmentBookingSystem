@@ -14,11 +14,13 @@
       </div>
       <div class="header-content">
         <div class="header-title-row">
-          <h3 class="modal-title">{{ isServiceProvider ? 'Propose New Time Slot' : 'Reschedule Appointment' }}</h3>
+          <h3 class="modal-title">{{ isServiceProvider ? 'Propose New Time' : 'Reschedule Appointment' }}</h3>
           <span class="appointment-chip-id">#{{ appointment.appointmentNumber }}</span>
         </div>
         <p class="modal-subtitle">
-          {{ isServiceProvider ? 'Select a recommended time slot to propose to ' + appointment.customerName + '.' : 'Select a new date and available time slot for your appointment.' }}
+          {{ isServiceProvider 
+             ? ('Select a new date and available time slot to propose to ' + appointment.customerName + '. The customer will receive an option to accept or decline.')
+             : ('Select a new date and available time slot to reschedule #' + appointment.appointmentNumber + '.') }}
         </p>
       </div>
 
@@ -45,45 +47,63 @@
     <!-- Modal Body -->
     <div class="modal-body custom-scrollbar">
 
-      <!-- Current Booking Overview Strip -->
+      <!-- Current Booking Overview Strip (Compact Context Strip) -->
       <div class="current-schedule-strip">
-        <div class="strip-header">
-          <span class="strip-dot"></span>
-          <span class="strip-title">CURRENT SCHEDULE</span>
-        </div>
-        <div class="strip-content">
-          <div class="strip-item">
-            <span class="strip-label">Customer</span>
-            <span class="strip-val">{{ appointment.customerName }}</span>
+        <div class="strip-main-row">
+          <!-- Left: Compact Details & Metadata -->
+          <div class="strip-left-context">
+            <div class="strip-badge-wrap">
+              <span class="strip-dot"></span>
+              <span class="strip-tag">CURRENT BOOKING</span>
+            </div>
+            <div class="strip-meta-inline">
+              <span class="meta-item">
+                <span class="meta-label">Customer:</span>
+                <span class="meta-value">{{ appointment.customerName }}</span>
+              </span>
+              <span class="meta-sep">•</span>
+              <span class="meta-item">
+                <span class="meta-label">Specialist:</span>
+                <span class="meta-value font-semibold">{{ appointment.serviceProviderName }}</span>
+              </span>
+            </div>
           </div>
-          <div class="strip-item">
-            <span class="strip-label">Service Provider</span>
-            <span class="strip-val font-semibold">{{ appointment.serviceProviderName }}</span>
-          </div>
-          <div class="strip-item slot-item">
-            <span class="strip-label">Current Slot</span>
-            <div class="strip-pill">
-              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none"
-                stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-                <line x1="16" y1="2" x2="16" y2="6" />
-                <line x1="8" y1="2" x2="8" y2="6" />
-                <line x1="3" y1="10" x2="21" y2="10" />
-              </svg>
-              <span>{{ appointment.formattedDate || appointment.appointmentDate }}</span>
-              <span class="sep">•</span>
-              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none"
-                stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="12" cy="12" r="10" />
-                <polyline points="12 6 12 12 16 14" />
-              </svg>
-              <span>{{ appointment.timeSlotText || (appointment.startTime + ' – ' + appointment.endTime) }}</span>
+
+          <!-- Right: Current Slot with Indian 12-Hour AM/PM Time -->
+          <div class="strip-right-slot">
+            <div class="strip-pill-compact" [title]="'Scheduled on ' + currentFormattedDate + ' at ' + currentSlotDisplay">
+              <span class="pill-title">CURRENT SLOT</span>
+              <div class="pill-values">
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                  <line x1="16" y1="2" x2="16" y2="6" />
+                  <line x1="8" y1="2" x2="8" y2="6" />
+                  <line x1="3" y1="10" x2="21" y2="10" />
+                </svg>
+                <span>{{ currentFormattedDate }}</span>
+                <span class="sep">•</span>
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10" />
+                  <polyline points="12 6 12 12 16 14" />
+                </svg>
+                <span class="font-semibold">{{ currentSlotDisplay }}</span>
+              </div>
             </div>
           </div>
         </div>
+
+        <!-- Secondary Row: Multi-Services Summary -->
+        <div class="strip-services-row">
+          <span class="services-label">Services:</span>
+          <span class="services-text font-semibold" [title]="serviceNamesSummary">{{ serviceNamesSummary }}</span>
+          <span class="badge-duration-mini" *ngIf="totalDurationMinutes">⏱️ {{ totalDurationMinutes }} mins</span>
+          <span class="badge-price-mini" *ngIf="totalAmount">₹{{ totalAmount | number }}</span>
+        </div>
       </div>
 
-      <!-- Reschedule Split Layout: Left (Direct Calendar) + Right (Slots & Reason) -->
+      <!-- Reschedule Split Layout: Left (Interactive Calendar) + Right (Slots Matching Booking Modal) -->
       <div class="reschedule-split-layout">
 
         <!-- LEFT PANEL: Direct Interactive Calendar (Material Calendar) -->
@@ -117,7 +137,7 @@
 
         <!-- RIGHT PANEL: Available Time Slots + Reason -->
         <div class="panel-slots-card">
-          <!-- Time Slots Section -->
+          <!-- Time Slots Section (Matching Booking Modal Exactly) -->
           <div class="slots-section">
             <div class="panel-header space-between">
               <div class="panel-header-title-wrap">
@@ -126,16 +146,57 @@
                   <circle cx="12" cy="12" r="10" />
                   <polyline points="12 6 12 12 16 14" />
                 </svg>
-                <span class="panel-title">Available Time Slots</span>
+                <span class="panel-title">{{ formatDisplayDate(newDate) }}</span>
               </div>
-              <span class="slot-count-badge" *ngIf="!isLoadingSlots() && availableCount > 0">
-                <strong>{{ availableCount }}</strong> Slots
-              </span>
+              <div class="header-tags-wrap">
+                <span class="slot-count-badge" *ngIf="!isLoadingSlots() && availableCount > 0">
+                  <strong>{{ availableCount }}</strong> Available
+                </span>
+                <span class="slot-duration-pill">
+                  ⏱️ {{ totalDurationMinutes }}m slot
+                </span>
+              </div>
             </div>
 
-            <app-time-slot-picker [slots]="availableSlots" [isLoading]="isLoadingSlots()" [selectedSlot]="selectedSlot"
-              [hideHeader]="true" (slotSelect)="selectSlot($event)"
-              emptyMessage="No available slots found for this date. Please pick another date."></app-time-slot-picker>
+            <!-- Loading State -->
+            <div *ngIf="isLoadingSlots()" class="slots-loading-box">
+              <div class="spinner-small green-spinner"></div>
+              <span>Checking live slots for {{ totalDurationMinutes }} mins combined duration...</span>
+            </div>
+
+            <!-- Empty State -->
+            <div *ngIf="!isLoadingSlots() && availableSlots.length === 0" class="slots-empty-box">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <polyline points="12 6 12 12 16 14" />
+              </svg>
+              <p>{{ isWorkingDay ? 'No available time slots on this date.' : 'Provider is not available on this day.' }}</p>
+              <span class="empty-hint">Please choose another day on the calendar.</span>
+            </div>
+
+            <!-- 2-Column Available Time Slots Grid (Matching Booking Modal Exactly) -->
+            <div *ngIf="!isLoadingSlots() && availableSlots.length > 0" class="slots-two-col-grid custom-scrollbar">
+              <button *ngFor="let slot of availableSlots" type="button" class="slot-checkbox-card"
+                [class.checked]="selectedSlot?.startTime === slot.startTime" [title]="formatSlotRange(slot)"
+                (click)="selectSlot(slot)">
+                <!-- Checkbox / Clock Icon Indicator -->
+                <div class="slot-check-icon">
+                  <svg *ngIf="selectedSlot?.startTime === slot.startTime" xmlns="http://www.w3.org/2000/svg" width="10"
+                    height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                  <svg *ngIf="selectedSlot?.startTime !== slot.startTime" class="slot-clock-icon"
+                    xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10" />
+                    <polyline points="12 6 12 12 16 14" />
+                  </svg>
+                </div>
+                <span class="slot-time-text">{{ formatSlotRange(slot) }}</span>
+              </button>
+            </div>
           </div>
 
           <!-- Reason for Rescheduling Section -->
@@ -147,14 +208,13 @@
                   <path d="M12 20h9" />
                   <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
                 </svg>
-                <span class="panel-title">Reason for Rescheduling</span>
-                <span class="required-star">*</span>
+                <span class="panel-title">{{ isServiceProvider ? 'Reason for Proposal' : 'Reason for Rescheduling' }}</span>
               </div>
             </div>
 
             <textarea [(ngModel)]="rescheduleReason"
-              placeholder="Please enter the reason for rescheduling (e.g. Schedule conflict, client request)..." rows="2"
-              class="modern-textarea" required></textarea>
+              [placeholder]="isServiceProvider ? 'Please explain the reason for proposing a new time (e.g. Schedule conflict, client request)...' : 'Please enter the reason for rescheduling (e.g. Schedule adjustment, client request)...'" rows="2"
+              class="modern-textarea"></textarea>
           </div>
         </div>
 
@@ -169,19 +229,16 @@
       </button>
 
       <button type="button" class="btn btn-primary btn-reschedule-submit"
-        [disabled]="!selectedSlot || !rescheduleReason || !rescheduleReason.trim() || isSubmitting()"
-        title="Confirm new date and time" (click)="confirmReschedule()">
+        [disabled]="!selectedSlot || isSubmitting()"
+        [title]="isServiceProvider ? 'Send proposed slot to customer' : 'Confirm new date and time'" (click)="confirmReschedule()">
         <svg *ngIf="!isSubmitting()" xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24"
           fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-          <path d="M3 3v5h5" />
-          <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" />
-          <path d="M16 21h5v-5" />
+          <polyline points="20 6 9 17 4 12" />
         </svg>
-        <span *ngIf="!isSubmitting()">{{ isServiceProvider ? 'Propose New Slot' : 'Confirm Reschedule' }}</span>
+        <span *ngIf="!isSubmitting()">{{ isServiceProvider ? 'Send Proposal to Customer' : 'Confirm Reschedule' }}</span>
         <span *ngIf="isSubmitting()" class="spinner-inline">
           <span class="spinner-small"></span>
-          <span>{{ isServiceProvider ? 'Submitting Proposal...' : 'Rescheduling...' }}</span>
+          <span>{{ isServiceProvider ? 'Sending Proposal...' : 'Rescheduling...' }}</span>
         </span>
       </button>
     </div>

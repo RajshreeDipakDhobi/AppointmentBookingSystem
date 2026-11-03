@@ -116,6 +116,16 @@ namespace AppointmentBooking.InfrastructureLayer.Migrations
                     b.Property<int>("TenantId")
                         .HasColumnType("int");
 
+                    b.Property<decimal>("TotalAmount")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("decimal(18,2)")
+                        .HasDefaultValue(0.00m);
+
+                    b.Property<int>("TotalDurationMinutes")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(30);
+
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
 
@@ -142,6 +152,65 @@ namespace AppointmentBooking.InfrastructureLayer.Migrations
                     b.HasIndex("ServiceProviderId", "AppointmentDate", "Status");
 
                     b.ToTable("Appointments", (string)null);
+                });
+
+            modelBuilder.Entity("AppointmentBooking.DomainLayer.Entities.AppointmentItem", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("AppointmentId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DeletedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("DurationMinutes")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(30);
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<decimal>("Price")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("decimal(18,2)")
+                        .HasDefaultValue(0.00m);
+
+                    b.Property<int>("ServiceId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ServiceName")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AppointmentId");
+
+                    b.HasIndex("ServiceId");
+
+                    b.ToTable("AppointmentItems", (string)null);
                 });
 
             modelBuilder.Entity("AppointmentBooking.DomainLayer.Entities.ProviderAvailability", b =>
@@ -621,6 +690,25 @@ namespace AppointmentBooking.InfrastructureLayer.Migrations
                     b.Navigation("ServiceProvider");
                 });
 
+            modelBuilder.Entity("AppointmentBooking.DomainLayer.Entities.AppointmentItem", b =>
+                {
+                    b.HasOne("AppointmentBooking.DomainLayer.Entities.Appointment", "Appointment")
+                        .WithMany("Items")
+                        .HasForeignKey("AppointmentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("AppointmentBooking.DomainLayer.Entities.Service", "Service")
+                        .WithMany()
+                        .HasForeignKey("ServiceId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Appointment");
+
+                    b.Navigation("Service");
+                });
+
             modelBuilder.Entity("AppointmentBooking.DomainLayer.Entities.ProviderAvailability", b =>
                 {
                     b.HasOne("AppointmentBooking.DomainLayer.Entities.ServiceProvider", "ServiceProvider")
@@ -711,6 +799,11 @@ namespace AppointmentBooking.InfrastructureLayer.Migrations
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Tenant");
+                });
+
+            modelBuilder.Entity("AppointmentBooking.DomainLayer.Entities.Appointment", b =>
+                {
+                    b.Navigation("Items");
                 });
 
             modelBuilder.Entity("AppointmentBooking.DomainLayer.Entities.Service", b =>

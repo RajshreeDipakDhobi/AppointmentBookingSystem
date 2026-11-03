@@ -20,6 +20,7 @@ public class AvailabilityService : IAvailabilityService
     {
         var providers = await _unitOfWork.Repository<ServiceProvider>()
             .Query()
+            .AsNoTracking()
             .Include(p => p.User)
             .Include(p => p.Service)
             .Where(p => p.TenantId == tenantId)
@@ -28,6 +29,7 @@ public class AvailabilityService : IAvailabilityService
 
         var allAvailabilities = await _unitOfWork.Repository<ProviderAvailability>()
             .Query()
+            .AsNoTracking()
             .Where(pa => pa.TenantId == tenantId && pa.SpecificDate == null)
             .ToListAsync(cancellationToken);
 
@@ -203,6 +205,7 @@ public class AvailabilityService : IAvailabilityService
     {
         var provider = await _unitOfWork.Repository<ServiceProvider>()
             .Query()
+            .AsNoTracking()
             .Include(p => p.User)
             .Include(p => p.Service)
             .FirstOrDefaultAsync(p => p.Id == providerId && p.TenantId == tenantId, cancellationToken);
@@ -216,6 +219,7 @@ public class AvailabilityService : IAvailabilityService
 
         var existingRecords = await _unitOfWork.Repository<ProviderAvailability>()
             .Query()
+            .AsNoTracking()
             .Where(pa => pa.ServiceProviderId == providerId && pa.TenantId == tenantId && pa.SpecificDate == null)
             .ToListAsync(cancellationToken);
 
@@ -397,6 +401,7 @@ public class AvailabilityService : IAvailabilityService
     {
         var provider = await _unitOfWork.Repository<ServiceProvider>()
             .Query()
+            .AsNoTracking()
             .Include(p => p.User)
             .Include(p => p.Service)
             .FirstOrDefaultAsync(p => p.Id == providerId && p.TenantId == tenantId, cancellationToken);
@@ -410,6 +415,7 @@ public class AvailabilityService : IAvailabilityService
 
         var records = await _unitOfWork.Repository<ProviderAvailability>()
             .Query()
+            .AsNoTracking()
             .Where(pa => pa.ServiceProviderId == providerId && pa.TenantId == tenantId && pa.SpecificDate != null)
             .OrderBy(pa => pa.SpecificDate)
             .ToListAsync(cancellationToken);

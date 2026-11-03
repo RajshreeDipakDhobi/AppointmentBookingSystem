@@ -47,7 +47,8 @@
           <span class="pill-dot"></span>
           <span class="pill-number">#{{ idx + 1 }}</span>
           <span class="pill-customer">{{ r.customerName || 'Customer' }}</span>
-          <span *ngIf="r.servicePrice" class="pill-price">₹{{ r.servicePrice | number }}</span>
+          <span *ngIf="r.totalAmount || r.servicePrice" class="pill-price">₹{{ (r.totalAmount || r.servicePrice) | number }}</span>
+          <span *ngIf="r.items && r.items.length > 1" class="pill-count">({{ r.items.length }})</span>
         </button>
       </div>
 
@@ -58,12 +59,44 @@
           <span class="strip-val monospace">#{{ req.appointmentNumber }}</span>
         </div>
 
-        <div class="strip-item">
-          <span class="strip-label">Service</span>
-          <div class="strip-val font-semibold">
+        <!-- Booked Services Multi-Item Section -->
+        <div class="strip-item-stacked">
+          <div class="strip-item-top">
+            <span class="strip-label">
+              {{ (req.items && req.items.length > 1) ? 'Booked Services (' + req.items.length + ')' : 'Booked Service' }}
+            </span>
+            <span class="service-duration-badge" *ngIf="req.totalDurationMinutes || req.serviceDurationMinutes">
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <polyline points="12 6 12 12 16 14" />
+              </svg>
+              <span>{{ req.totalDurationMinutes || req.serviceDurationMinutes }} mins total</span>
+            </span>
+          </div>
+
+          <!-- Itemized list when items array is available -->
+          <div *ngIf="req.items && req.items.length > 0" class="dispatch-items-list">
+            <div *ngFor="let it of req.items" class="dispatch-item-row">
+              <div class="dispatch-item-left">
+                <span class="dispatch-bullet"></span>
+                <span class="dispatch-item-name">{{ it.serviceName }}</span>
+              </div>
+              <div class="dispatch-item-right">
+                <span class="dispatch-item-mins">{{ it.durationMinutes }}m</span>
+                <span class="dispatch-item-price">₹{{ it.price | number }}</span>
+              </div>
+            </div>
+            <!-- Total Payout Banner -->
+            <div class="dispatch-total-payout-row">
+              <span class="dispatch-total-label">Total Earnings</span>
+              <span class="dispatch-total-amount">₹{{ (req.totalAmount || req.servicePrice) | number }}</span>
+            </div>
+          </div>
+
+          <!-- Fallback for legacy single service -->
+          <div *ngIf="!req.items || req.items.length === 0" class="strip-val font-semibold dispatch-single-service">
             <span>{{ req.serviceName || req.serviceProviderType }}</span>
             <span *ngIf="req.servicePrice" class="service-price-tag">₹{{ req.servicePrice | number }}</span>
-            <span *ngIf="req.serviceDurationMinutes" class="service-duration-tag">({{ req.serviceDurationMinutes }} mins)</span>
           </div>
         </div>
 

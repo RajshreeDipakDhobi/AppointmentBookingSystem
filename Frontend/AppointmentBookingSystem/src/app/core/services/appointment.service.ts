@@ -32,23 +32,29 @@ export class AppointmentService {
   private readonly apiUrl = `${environment.apiUrl}/appointments`;
 
   /**
-   * Module 3: Get calculated available slots for a provider on a date
+   * Module 3: Get calculated available slots for a provider on a date (supports multi-service combined duration)
    */
-  getAvailableSlots(providerId: number, date: string): Observable<ProviderDailyAvailabilityResponseDto> {
-    return this.http.get<any>(
-      `${this.apiUrl}/available-slots?providerId=${providerId}&date=${date}`
-    ).pipe(
+  getAvailableSlots(providerId: number, date: string, serviceIds?: number[]): Observable<ProviderDailyAvailabilityResponseDto> {
+    let url = `${this.apiUrl}/available-slots?providerId=${providerId}&date=${date}`;
+    if (serviceIds && serviceIds.length > 0) {
+      url += `&serviceIds=${serviceIds.join(',')}`;
+    }
+    return this.http.get<any>(url).pipe(
       map(res => (res && res.data !== undefined) ? res.data : res)
     );
   }
 
   /**
-   * Urban Company Style: Get merged available slots for all specialists offering a service
+   * Urban Company Style: Get merged available slots for all specialists offering service(s)
    */
-  getAvailableSlotsByService(serviceId: number, date: string, tenantId?: number): Observable<ProviderDailyAvailabilityResponseDto> {
-    const url = tenantId 
-      ? `${this.apiUrl}/service-slots?serviceId=${serviceId}&date=${date}&tenantId=${tenantId}`
-      : `${this.apiUrl}/service-slots?serviceId=${serviceId}&date=${date}`;
+  getAvailableSlotsByService(serviceId: number, date: string, tenantId?: number, serviceIds?: number[]): Observable<ProviderDailyAvailabilityResponseDto> {
+    let url = `${this.apiUrl}/service-slots?serviceId=${serviceId}&date=${date}`;
+    if (tenantId) {
+      url += `&tenantId=${tenantId}`;
+    }
+    if (serviceIds && serviceIds.length > 0) {
+      url += `&serviceIds=${serviceIds.join(',')}`;
+    }
     return this.http.get<any>(url).pipe(
       map(res => (res && res.data !== undefined) ? res.data : res)
     );

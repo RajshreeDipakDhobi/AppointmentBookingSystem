@@ -11,9 +11,14 @@ import { ServiceProviderDto } from '../../../core/models/provider.models';
 import { ServiceDto } from '../../../core/models/service.models';
 import { AppointmentDto } from '../../../core/models/appointment.models';
 import { BookingModalComponent } from '../../appointments/booking-modal/booking-modal.component';
+import { CartModalComponent, CartModalItem } from '../../../shared/components/cart-modal/cart-modal.component';
 import { TopbarComponent } from '../../../layout/topbar/topbar.component';
 import { AppPhonePipe } from '../../../shared/pipes';
 import { getInitials } from '../../../shared/utils/formatters';
+
+export interface CartServiceItem extends ServiceDto {
+  quantity: number;
+}
 
 @Component({
   selector: 'app-organization-detail',
@@ -24,6 +29,7 @@ import { getInitials } from '../../../shared/utils/formatters';
     FormsModule,
     TopbarComponent,
     BookingModalComponent,
+    CartModalComponent,
     AppPhonePipe
   ],
   templateUrl: './organization-detail.component.html',
@@ -53,6 +59,30 @@ export class OrganizationDetailComponent implements OnInit {
   readonly selectedProviderId = signal<number | null>(null);
   readonly selectedServiceId = signal<number | null>(null);
   readonly toastMessage = signal<string | null>(null);
+
+  // Multi-Service Cart State (Urban Company Style) with Multi-Quantity Stepper
+  readonly cartServices = signal<CartServiceItem[]>([]);
+  readonly isCartModalOpen = signal<boolean>(false);
+  readonly cartTotalAmount = computed<number>(() => {
+    return this.cartServices().reduce((sum, s) => sum + (s.price || 0) * (s.quantity || 1), 0);
+  });
+  readonly cartTotalDuration = computed<number>(() => {
+    return this.cartServices().reduce((sum, s) => sum + (s.durationMinutes || 0) * (s.quantity || 1), 0);
+  });
+  readonly cartTotalItemsCount = computed<number>(() => {
+    return this.cartServices().reduce((sum, s) => sum + (s.quantity || 1), 0);
+  });
+  readonly cartCount = computed<number>(() => this.cartServices().length);
+  readonly selectedCartServiceIds = computed<number[]>(() => {
+    const ids: number[] = [];
+    for (const item of this.cartServices()) {
+      const q = item.quantity && item.quantity > 0 ? item.quantity : 1;
+      for (let i = 0; i < q; i++) {
+        ids.push(item.id);
+      }
+    }
+    return ids;
+  });
 
   readonly filteredServices = computed(() => {
     const q = this.searchQuery().trim().toLowerCase();
@@ -194,8 +224,118 @@ export class OrganizationDetailComponent implements OnInit {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
+  isServiceInCart(serviceId: number): boolean {
+    return this.cartServices().some(s => s.id === serviceId);
+  }
+
+  getServiceQuantity(serviceId: number): number {
+    const item = this.cartServices().find(s => s.id === serviceId);
+    return item ? (item.quantity || 1) : 0;
+  }
+
+  toggleCartService(service: ServiceDto, event?: Event): void {
+    if (event) event.stopPropagation();
+    const current = this.cartServices();
+    const existing = current.find(s => s.id === service.id);
+    if (existing) {
+      this.removeFromCart(service.id);
+    } else {
+      this.cartServices.set([...current, { ...service, quantity: 1 }]);
+      this.showToast(`Added "${service.name}" to booking cart.`);
+    }
+  }
+
+  incrementService(serviceId: number, event?: Event): void {
+    if (event) event.stopPropagation();
+    const current = this.cartServices();
+    const existing = current.find(s => s.id === serviceId);
+    if (existing) {
+      const nextQty = (existing.quantity || 1) + 1;
+      this.cartServices.set(current.map(s => s.id === serviceId ? { ...s, quantity: nextQty } : s));
+      this.showToast(`Updated "${existing.name}" quantity to ${nextQty}.`);
+    } else {
+      const match = this.services().find(s => s.id === serviceId);
+      if (match) {
+        this.cartServices.set([...current, { ...match, quantity: 1 }]);
+        this.showToast(`Added "${match.name}" to booking cart.`);
+      }
+    }
+  }
+
+  decrementService(serviceId: number, event?: Event): void {
+    if (event) event.stopPropagation();
+    const current = this.cartServices();
+    const existing = current.find(s => s.id === serviceId);
+    if (!existing) return;
+    const currentQty = existing.quantity || 1;
+    if (currentQty > 1) {
+      const nextQty = currentQty - 1;
+      this.cartServices.set(current.map(s => s.id === serviceId ? { ...s, quantity: nextQty } : s));
+      this.showToast(`Updated "${existing.name}" quantity to ${nextQty}.`);
+    } else {
+      this.removeFromCart(serviceId);
+    }
+  }
+
+  openCartModal(): void {
+    if (this.cartServices().length > 0) {
+      this.isCartModalOpen.set(true);
+    }
+  }
+
+  closeCartModal(): void {
+    this.isCartModalOpen.set(false);
+  }
+
+  openCartDrawer(): void {
+    this.openCartModal();
+  }
+
+  closeCartDrawer(): void {
+    this.closeCartModal();
+  }
+
+  removeFromCart(serviceId: number, event?: Event): void {
+    if (event) event.stopPropagation();
+    const current = this.cartServices();
+    const item = current.find(s => s.id === serviceId);
+    const updated = current.filter(s => s.id !== serviceId);
+    this.cartServices.set(updated);
+    if (updated.length === 0) {
+      this.isCartModalOpen.set(false);
+    }
+    if (item) {
+      this.showToast(`Removed "${item.name}" from booking cart.`);
+    }
+  }
+
+  clearCart(event?: Event): void {
+    if (event) event.stopPropagation();
+    this.cartServices.set([]);
+    this.isCartModalOpen.set(false);
+    this.showToast('Cleared all items from booking cart.');
+  }
+
+  openCartBooking(): void {
+    if (this.cartServices().length === 0) return;
+    this.closeCartModal();
+    this.selectedServiceId.set(this.cartServices()[0].id);
+    this.selectedProviderId.set(null);
+    this.isBookingModalOpen.set(true);
+  }
+
   openBookingModal(serviceId?: number): void {
-    this.selectedServiceId.set(serviceId ?? null);
+    if (serviceId) {
+      const match = this.services().find(s => s.id === serviceId);
+      if (match && !this.isServiceInCart(serviceId)) {
+        this.cartServices.set([...this.cartServices(), { ...match, quantity: 1 }]);
+      }
+      this.selectedServiceId.set(serviceId);
+    } else if (this.cartServices().length > 0) {
+      this.selectedServiceId.set(this.cartServices()[0].id);
+    } else {
+      this.selectedServiceId.set(null);
+    }
     this.selectedProviderId.set(null);
     this.isBookingModalOpen.set(true);
   }
@@ -208,6 +348,7 @@ export class OrganizationDetailComponent implements OnInit {
 
   onAppointmentBooked(_appointment: AppointmentDto): void {
     this.closeBookingModal();
+    this.cartServices.set([]);
     sessionStorage.removeItem('pending_booking_draft');
     this.router.navigate(['/my-appointments']);
   }
