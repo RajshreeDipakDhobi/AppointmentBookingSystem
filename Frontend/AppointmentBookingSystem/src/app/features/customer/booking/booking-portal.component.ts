@@ -148,6 +148,9 @@ export class BookingPortalComponent implements OnInit, OnDestroy {
 
   // Modal Handlers
   openBookingModal(providerId?: number): void {
+    if (!this.route.snapshot.queryParamMap.has('resumeBooking')) {
+      sessionStorage.removeItem('pending_booking_draft');
+    }
     this.closeLoginDrawer();
     this.selectedProviderIdForModal.set(providerId ?? null);
     this.isBookingModalOpen.set(true);
@@ -160,8 +163,8 @@ export class BookingPortalComponent implements OnInit, OnDestroy {
   }
 
   onAppointmentBooked(_appointment: AppointmentDto): void {
-    this.closeBookingModal();
     sessionStorage.removeItem('pending_booking_draft');
+    this.closeBookingModal();
     this.router.navigate(['/my-appointments']);
   }
 
@@ -177,14 +180,14 @@ export class BookingPortalComponent implements OnInit, OnDestroy {
   onLoginSuccess(): void {
     this.isLoginDrawerOpen.set(false);
 
-    const user = this.authService.currentUser();
-    const isCustomer = user && (user.role === UserRole.Customer || (user.role as unknown) === 4 || (user.role as unknown) === '4');
-
     const hasPendingDraft = sessionStorage.getItem('pending_booking_draft');
     if (hasPendingDraft) {
       this.checkResumeBooking();
       return;
     }
+
+    const user = this.authService.currentUser();
+    const isCustomer = user && (user.role === UserRole.Customer || (user.role as unknown) === 4 || (user.role as unknown) === '4');
 
     if (isCustomer) {
       this.router.navigate(['/my-appointments']);
@@ -192,28 +195,17 @@ export class BookingPortalComponent implements OnInit, OnDestroy {
     }
 
     // If no booking draft to resume, redirect to role dashboard/appointments
-    if (!sessionStorage.getItem('pending_booking_draft')) {
-      if (user) {
-        if (user.role === UserRole.ServiceProvider || (user.role as unknown) === 3 || (user.role as unknown) === '3') {
-          this.router.navigate(['/my-services']);
-        } else {
-          this.router.navigate(['/dashboard']);
-        }
+    if (user) {
+      if (user.role === UserRole.ServiceProvider || (user.role as unknown) === 3 || (user.role as unknown) === '3') {
+        this.router.navigate(['/my-services']);
+      } else {
+        this.router.navigate(['/dashboard']);
       }
     }
   }
 
   private checkResumeBooking(): void {
     if (!this.authService.isAuthenticated()) {
-      sessionStorage.removeItem('pending_booking_draft');
-      if (this.route.snapshot.queryParamMap.has('resumeBooking')) {
-        this.router.navigate([], {
-          relativeTo: this.route,
-          queryParams: { resumeBooking: null },
-          queryParamsHandling: 'merge',
-          replaceUrl: true
-        });
-      }
       return;
     }
 
@@ -224,18 +216,23 @@ export class BookingPortalComponent implements OnInit, OnDestroy {
       try {
         const draft = JSON.parse(hasPendingDraft);
         if (draft) {
-          if (draft.serviceId) {
-            this.selectedServiceIdForModal.set(draft.serviceId);
-            this.selectedProviderIdForModal.set(null);
-            this.isBookingModalOpen.set(true);
-          } else if (draft.providerId) {
-            this.selectedProviderIdForModal.set(draft.providerId);
-            this.selectedServiceIdForModal.set(null);
-            this.isBookingModalOpen.set(true);
+          if (draft.serviceIds && Array.isArray(draft.serviceIds) && draft.serviceIds.length > 0) {
+            this.selectedServiceIdForModal.set(Number(draft.serviceIds[0]));
+          } else if (draft.serviceId) {
+            this.selectedServiceIdForModal.set(Number(draft.serviceId));
           } else {
             this.selectedServiceIdForModal.set(null);
-            this.selectedProviderIdForModal.set(null);
-            this.isBookingModalOpen.set(true);
+          }
+          this.selectedProviderIdForModal.set(draft.providerId ? Number(draft.providerId) : null);
+          this.isBookingModalOpen.set(true);
+
+          if (this.route.snapshot.queryParamMap.has('resumeBooking')) {
+            this.router.navigate([], {
+              relativeTo: this.route,
+              queryParams: { resumeBooking: null },
+              queryParamsHandling: 'merge',
+              replaceUrl: true
+            });
           }
         }
       } catch {

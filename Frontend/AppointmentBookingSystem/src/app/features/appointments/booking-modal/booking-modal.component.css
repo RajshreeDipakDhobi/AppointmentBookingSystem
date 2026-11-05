@@ -1619,15 +1619,15 @@
 
 .review-compact-deck {
   display: grid;
-  grid-template-columns: 1.12fr 0.88fr;
-  gap: 0.85rem;
-  align-items: stretch;
+  grid-template-columns: minmax(0, 1.25fr) minmax(280px, 0.95fr);
+  gap: 1.15rem;
+  align-items: start;
 }
 
-@media (max-width: 720px) {
+@media (max-width: 768px) {
   .review-compact-deck {
     grid-template-columns: 1fr;
-    gap: 0.75rem;
+    gap: 0.85rem;
   }
 }
 
@@ -1636,109 +1636,88 @@
   flex-direction: column;
 }
 
-/* Left Column Top Strip */
-.compact-hero-strip {
-  background: #fbfdfc;
+/* Step 4 Unified Schedule & Itemized Card (Zero Repetition) */
+.review-unified-card {
+  background: #ffffff;
   border: 1px solid #e2ece6;
   border-radius: 12px;
-  padding: 0.65rem 0.85rem;
+  padding: 0.85rem 1rem;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.65rem;
   box-shadow: 0 1px 4px rgba(24, 59, 50, 0.02);
+  flex: 1;
 }
 
-.compact-provider-line {
+.unified-card-header {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
+  justify-content: space-between;
+  padding-bottom: 0.45rem;
+  border-bottom: 1px solid #edf4f0;
 }
 
-.compact-avatar-icon {
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
-  background: #1e5142;
-  color: #ffffff;
+.unified-header-left {
   display: flex;
   align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  box-shadow: 0 2px 5px rgba(30, 81, 66, 0.2);
+  gap: 0.55rem;
 }
 
-.compact-avatar {
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
-  background: #1e5142;
-  color: #ffffff;
+.unified-card-icon {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  background: #e8f3ee;
+  color: #1e5142;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  font-weight: 700;
-  font-size: 0.75rem;
-  overflow: hidden;
 }
 
-.compact-avatar .avatar-img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.compact-provider-meta {
+.unified-title-text {
   display: flex;
   flex-direction: column;
   gap: 0.05rem;
-  flex: 1;
-  min-width: 0;
 }
 
-.compact-provider-meta .meta-label {
-  font-size: 0.65rem;
-  color: #657e74;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  font-weight: 700;
-}
-
-.compact-provider-meta .meta-name {
-  font-size: 0.88rem;
+.unified-title {
+  margin: 0;
+  font-size: 0.86rem;
   font-weight: 700;
   color: #183b32;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  letter-spacing: -0.01em;
 }
 
-.compact-badge-chip {
+.unified-subtitle {
   font-size: 0.68rem;
+  color: #657e74;
+}
+
+.unified-count-badge {
+  font-size: 0.7rem;
   font-weight: 700;
   color: #1e5142;
   background: #e8f3ee;
-  border: 1px solid #b8dacb;
+  border: 1px solid #c2dfd1;
   padding: 0.15rem 0.5rem;
   border-radius: 9999px;
   white-space: nowrap;
 }
 
-.compact-schedule-row {
+/* Timing Strip */
+.unified-timing-strip {
   display: flex;
   align-items: center;
   gap: 0.45rem;
   flex-wrap: wrap;
-  padding-top: 0.45rem;
-  border-top: 1px solid #edf4f0;
+  padding: 0.4rem 0.6rem;
+  background: #fbfdfc;
+  border: 1px solid #edf4f0;
+  border-radius: 8px;
 }
 
-.compact-schedule-row.no-border {
-  padding-top: 0.15rem;
-  border-top: none;
-}
-
-.compact-sched-pill {
+.unified-pill {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
@@ -1748,100 +1727,79 @@
   background: #ffffff;
   border: 1px solid #dce8e1;
   padding: 0.2rem 0.55rem;
-  border-radius: 7px;
+  border-radius: 6px;
 }
 
-.compact-sched-pill svg {
+.unified-pill svg {
   color: #1e5142;
 }
 
-.duration-micro-pill {
+.unified-time-pill {
+  font-weight: 700;
+}
+
+.unified-dur-pill {
   font-size: 0.68rem;
   font-weight: 700;
   color: #1e5142;
   background: #e8f3ee;
   padding: 0.1rem 0.35rem;
   border-radius: 4px;
+  margin-left: 0.15rem;
 }
 
-/* Services Box */
-.compact-services-box {
-  background: #ffffff;
-  border: 1px solid #e2ece6;
-  border-radius: 12px;
-  padding: 0.65rem 0.85rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-  margin-top: 0.55rem;
-  flex: 1;
+.unified-provider-pill {
+  border-color: #b8dacb;
+  background: #eef7f2;
 }
 
-.compact-box-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding-bottom: 0.35rem;
-  border-bottom: 1px solid #f0f5f2;
-}
-
-.compact-box-header .box-title {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-  font-size: 0.72rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  color: #5b756c;
-  letter-spacing: 0.04em;
-}
-
-.compact-box-header .box-title svg {
-  color: #1e5142;
-}
-
-.compact-box-header .box-meta {
-  font-size: 0.7rem;
+.unified-provider-pill .provider-label {
+  font-size: 0.68rem;
+  color: #657e74;
   font-weight: 600;
-  color: #1e5142;
-  background: #e8f3ee;
-  padding: 0.1rem 0.4rem;
-  border-radius: 4px;
+  text-transform: uppercase;
 }
 
-.compact-items-scroll {
+/* Itemized Service Deck */
+.unified-services-deck {
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
-  max-height: 120px;
-  overflow-y: auto;
-  padding-right: 0.2rem;
 }
 
-.compact-item-row {
+.unified-service-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.5rem;
-  padding: 0.18rem 0;
+  gap: 0.75rem;
+  padding: 0.4rem 0.65rem;
+  background: #ffffff;
+  border: 1px solid #e8f0eb;
+  border-radius: 8px;
+  transition: all 0.15s ease;
 }
 
-.compact-item-left {
-  display: inline-flex;
+.unified-service-row:hover {
+  background: #fbfdfc;
+  border-color: #c9e0d4;
+}
+
+.unified-row-left {
+  display: flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.55rem;
+  flex: 1;
   min-width: 0;
-  overflow: hidden;
 }
 
-.item-dot {
-  width: 17px;
-  height: 17px;
+.unified-row-index {
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
   background: #e8f3ee;
   border: 1px solid #b8dacb;
   color: #1e5142;
-  font-size: 0.65rem;
+  font-size: 0.68rem;
   font-weight: 700;
   display: flex;
   align-items: center;
@@ -1849,47 +1807,130 @@
   flex-shrink: 0;
 }
 
-.compact-item-left .item-name {
-  font-size: 0.84rem;
-  font-weight: 600;
+.unified-row-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.unified-name-line {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.unified-service-title {
+  font-size: 0.82rem;
+  font-weight: 700;
   color: #183b32;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.compact-item-left .item-time {
+.unified-qty-tag {
+  font-size: 0.65rem;
+  font-weight: 800;
+  color: #ffffff;
+  background: #1e5142;
+  padding: 0.05rem 0.3rem;
+  border-radius: 4px;
+}
+
+.unified-dur-tag {
   font-size: 0.72rem;
   color: #657e74;
-  flex-shrink: 0;
+  font-weight: 500;
 }
 
-.compact-item-row .item-price {
-  font-size: 0.88rem;
+.unified-combo-badge {
+  font-size: 0.62rem;
   font-weight: 700;
-  color: #11684c;
-  flex-shrink: 0;
+  color: #065f46;
+  background: #d1fae5;
+  border: 1px solid #a7f3d0;
+  padding: 0.08rem 0.35rem;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
-.compact-total-line {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding-top: 0.45rem;
-  border-top: 1px dashed #d8ebd0;
-  margin-top: 0.15rem;
+.unified-specialist-info {
+  font-size: 0.68rem;
+  color: #657e74;
 }
 
-.compact-total-line .total-text {
-  font-size: 0.84rem;
-  font-weight: 700;
+.unified-specialist-info strong {
   color: #183b32;
 }
 
-.compact-total-line .total-figure {
-  font-size: 1.05rem;
+.unified-row-slot {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: #183b32;
+  background: #f4f8f6;
+  border: 1px solid #dbe8e0;
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.unified-row-slot svg {
+  color: #1e5142;
+}
+
+.unified-row-price {
+  font-size: 0.88rem;
   font-weight: 800;
   color: #11684c;
+  white-space: nowrap;
+  flex-shrink: 0;
+  min-width: 65px;
+  text-align: right;
+}
+
+/* Grand Total Row */
+.unified-total-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.6rem 0.75rem;
+  background: #fbfdfc;
+  border: 1px dashed #c0ded0;
+  border-radius: 8px;
+  margin-top: 0.15rem;
+}
+
+.unified-total-left {
+  display: flex;
+  align-items: baseline;
+  gap: 0.45rem;
+}
+
+.unified-total-label {
+  font-size: 0.86rem;
+  font-weight: 800;
+  color: #183b32;
+}
+
+.unified-total-meta {
+  font-size: 0.72rem;
+  color: #657e74;
+  font-weight: 600;
+}
+
+.unified-total-amount {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #11684c;
+  letter-spacing: -0.01em;
 }
 
 /* Right Column: Customer Box */
@@ -1927,38 +1968,36 @@
 .compact-info-list {
   display: flex;
   flex-direction: column;
-  gap: 0.3rem;
-  margin-top: 0.25rem;
+  gap: 0.45rem;
+  margin-top: 0.35rem;
 }
 
 .compact-info-entry {
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 0.5rem;
-  font-size: 0.78rem;
-  padding: 0.28rem 0.5rem;
+  flex-direction: column;
+  gap: 0.15rem;
+  font-size: 0.82rem;
+  padding: 0.45rem 0.65rem;
   background: #fbfdfc;
   border: 1px solid #edf4f0;
-  border-radius: 6px;
+  border-radius: 7px;
 }
 
 .compact-info-entry .entry-label {
-  font-size: 0.66rem;
+  font-size: 0.64rem;
   font-weight: 700;
   color: #657e74;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
-  flex-shrink: 0;
+  letter-spacing: 0.05em;
 }
 
 .compact-info-entry .entry-val {
   font-weight: 600;
   color: #183b32;
-  text-align: right;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  text-align: left;
+  word-break: break-word;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .compact-info-entry.entry-notes .notes-val {
@@ -2691,6 +2730,17 @@
   letter-spacing: 0.05em;
   padding: 0.3rem 0.75rem;
   border-radius: 9999px;
+}
+
+.pass-status-pill.pass-status-pending {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+  color: #1d4ed8;
+}
+
+.status-dot-pulse.pulse-amber {
+  background: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
 }
 
 /* Perforation Tear Effect */
@@ -3464,6 +3514,18 @@
   box-shadow: 0 2px 6px rgba(30, 81, 66, 0.15);
 }
 
+.service-catalog-select-card .btn-select-provider.selected {
+  background: #1e5142;
+  border-color: #1e5142;
+  color: #ffffff;
+}
+
+.service-catalog-select-card .btn-select-provider.selected:hover {
+  background: #163e32;
+  border-color: #163e32;
+  color: #ffffff;
+}
+
 /* Service Catalog Card Interactive Stepper */
 .service-catalog-select-card .card-qty-stepper {
   display: inline-flex;
@@ -4075,4 +4137,840 @@
   border: 1px solid #a7f3d0;
   color: #047857;
   font-weight: 700;
+}
+
+/* ================================================================ */
+/* Multi-Specialist Booking Styles (Admin Deck, Flow Pill, Passes)  */
+/* ================================================================ */
+
+.multi-specialist-deck {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  margin-top: 0.5rem;
+}
+
+.multi-specialist-banner-strip {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  background: #f7faf8;
+  border: 1px solid #dce8e1;
+  border-radius: 9px;
+  padding: 0.65rem 0.95rem;
+}
+
+.multi-specialist-banner-strip .banner-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: #e8f3ee;
+  color: #1e5142;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.22rem 0.55rem;
+  border-radius: 6px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.multi-specialist-banner-strip .banner-pill svg {
+  color: #1e5142;
+}
+
+.multi-specialist-banner-strip .banner-text {
+  font-size: 0.79rem;
+  color: #4b665c;
+  margin: 0;
+  line-height: 1.35;
+}
+
+.multi-specialist-banner-strip .banner-text strong {
+  color: #183b32;
+}
+
+.multi-specialist-assignment-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.service-assign-row-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  background: #ffffff;
+  border: 1.5px solid #dbe7df;
+  border-radius: 10px;
+  padding: 0.75rem 1rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+  transition: all 0.2s ease;
+}
+
+.service-assign-row-card:hover {
+  border-color: #1e5142;
+  box-shadow: 0 2px 6px rgba(30, 81, 66, 0.08);
+}
+
+.service-assign-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.step-sequence-dot {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #1e5142;
+  color: #ffffff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 1px 3px rgba(30, 81, 66, 0.25);
+}
+
+.service-name-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.service-name-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.combo-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  background: #ecfdf5;
+  border: 1px solid #6ee7b7;
+  color: #047857;
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 0.12rem 0.45rem;
+  border-radius: 9999px;
+  letter-spacing: 0.02em;
+}
+
+.service-assign-name {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #183b32;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.service-assign-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.76rem;
+  color: #52796f;
+  font-weight: 600;
+}
+
+.service-assign-meta .qty-pill {
+  background: #ecfdf5;
+  color: #065f46;
+  font-weight: 700;
+  padding: 0.08rem 0.35rem;
+  border-radius: 4px;
+}
+
+.service-assign-meta .dot-sep {
+  color: #b8dacb;
+}
+
+.service-assign-control {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.service-assign-control .assign-label {
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: #657e74;
+}
+
+.custom-select-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.custom-select-wrap .service-provider-select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  padding: 0.45rem 2.2rem 0.45rem 0.85rem;
+  background: #ffffff;
+  border: 1.5px solid #d4e5dc;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #1e5142;
+  outline: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 230px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.custom-select-wrap .service-provider-select:hover {
+  border-color: #1e5142;
+}
+
+.custom-select-wrap .service-provider-select:focus {
+  border-color: #1e5142;
+  box-shadow: 0 0 0 3px rgba(30, 81, 66, 0.12);
+}
+
+.custom-select-wrap .select-chevron {
+  position: absolute;
+  right: 0.75rem;
+  pointer-events: none;
+  color: #657e74;
+}
+
+.multi-specialist-flow-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  background: #ecfdf5;
+  border: 1px solid #6ee7b7;
+  color: #047857;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.2rem 0.55rem;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
+/* Step 4 Leg Breakdown */
+.compact-legs-breakdown {
+  margin-top: 0.6rem;
+  padding: 0.65rem 0.8rem;
+  background: #f8faf9;
+  border: 1px solid #e2ece6;
+  border-radius: 8px;
+}
+
+.legs-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.45rem;
+}
+
+.legs-header-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #1e5142;
+}
+
+.legs-header-tag {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #047857;
+  background: #d1fae5;
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+}
+
+.legs-deck {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.leg-mini-card {
+  display: flex;
+  flex-direction: column;
+  padding: 0.55rem 0.75rem;
+  background: #ffffff;
+  border: 1px solid #e8f0eb;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  gap: 0.35rem;
+}
+
+.combo-session-card {
+  border-left: 3.5px solid #10b981 !important;
+  background: #fbfdfc !important;
+}
+
+.leg-card-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  width: 100%;
+}
+
+.leg-main-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.leg-badge-group {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+
+.leg-badge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  background: #1e5142;
+  color: #ffffff;
+  padding: 0.12rem 0.45rem;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.combo-label {
+  font-size: 0.66rem;
+  font-weight: 700;
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #6ee7b7;
+  padding: 0.08rem 0.4rem;
+  border-radius: 9999px;
+  white-space: nowrap;
+}
+
+.leg-provider-name {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #183b32;
+}
+
+.leg-time-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: #1e5142;
+  background: #f0f6f3;
+  padding: 0.15rem 0.5rem;
+  border-radius: 6px;
+  margin-left: auto;
+}
+
+.leg-duration-pill {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #657e74;
+}
+
+.leg-services-chips {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  padding-top: 0.1rem;
+}
+
+.leg-service-chip {
+  font-size: 0.72rem;
+  font-weight: 600;
+  background: #f4f8f5;
+  border: 1px solid #e0ece4;
+  color: #335348;
+  padding: 0.12rem 0.45rem;
+  border-radius: 5px;
+}
+
+/* Step 5 Multi-Pass Success View */
+.multi-pass-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: linear-gradient(135deg, #ecfdf5 0%, #f0fdf4 100%);
+  border: 1.5px solid #a7f3d0;
+  border-radius: 12px;
+  padding: 0.85rem 1.15rem;
+  margin-bottom: 1.25rem;
+}
+
+.multi-pass-banner-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #10b981;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.multi-pass-title {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #065f46;
+  margin: 0;
+}
+
+.multi-pass-desc {
+  font-size: 0.78rem;
+  color: #047857;
+  margin: 0.2rem 0 0 0;
+  line-height: 1.4;
+}
+
+.passes-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.multi-card-item {
+  margin-bottom: 0.25rem;
+}
+
+.session-pill-badge {
+  display: inline-block;
+  background: #1e5142;
+  color: #ffffff;
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  margin-right: 0.4rem;
+}
+
+/* ================================================================ */
+/* Grouped Sessions Overview (Step 1B)                             */
+/* ================================================================ */
+.grouped-sessions-overview {
+  background: #f8faf9;
+  border: 1px solid #dce8e1;
+  border-radius: 12px;
+  padding: 0.85rem 1rem;
+  margin-bottom: 0.35rem;
+}
+
+.grouped-sessions-overview .overview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.65rem;
+}
+
+.grouped-sessions-overview .overview-title {
+  font-size: 0.74rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #1e5142;
+}
+
+.grouped-sessions-overview .overview-badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  background: #e8f3ee;
+  color: #1e5142;
+  padding: 0.12rem 0.45rem;
+  border-radius: 9999px;
+}
+
+.overview-cards-deck {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.session-overview-card {
+  background: #ffffff;
+  border: 1px solid #e2ece6;
+  border-radius: 9px;
+  padding: 0.65rem 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  transition: all 0.2s ease;
+}
+
+.session-overview-card.combo-card {
+  border-left: 3.5px solid #10b981;
+  background: #fbfdfc;
+}
+
+.session-card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.session-badge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  background: #1e5142;
+  color: #ffffff;
+  padding: 0.12rem 0.45rem;
+  border-radius: 4px;
+}
+
+.combo-tag {
+  font-size: 0.68rem;
+  font-weight: 700;
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #6ee7b7;
+  padding: 0.1rem 0.4rem;
+  border-radius: 9999px;
+}
+
+.session-duration-tag {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #657e74;
+  margin-left: auto;
+}
+
+.session-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.provider-line {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.p-avatar-dot {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #1e5142;
+  color: #ffffff;
+  font-size: 0.65rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.p-name {
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: #183b32;
+}
+
+.services-list-line {
+  font-size: 0.76rem;
+  color: #52796f;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.services-count {
+  font-weight: 700;
+  color: #1e5142;
+}
+
+.service-pill-item {
+  color: #334e45;
+}
+
+/* ================================================================ */
+/* Sequential Specialist Schedule Timeline (Step 2)                */
+/* ================================================================ */
+.slot-timeline-card {
+  margin-top: 0.95rem;
+  background: #ffffff;
+  border: 1.5px solid #d4e5dc;
+  border-radius: 12px;
+  padding: 0.85rem 1rem;
+  box-shadow: 0 2px 8px rgba(30, 81, 66, 0.05);
+}
+
+.timeline-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 0.55rem;
+  border-bottom: 1px solid #edf4f0;
+  margin-bottom: 0.65rem;
+}
+
+.timeline-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #1e5142;
+}
+
+.timeline-title-row svg {
+  color: #1e5142;
+}
+
+.timeline-total-badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  background: #e8f3ee;
+  color: #1e5142;
+  padding: 0.12rem 0.5rem;
+  border-radius: 9999px;
+}
+
+.timeline-sessions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.timeline-session-item {
+  display: flex;
+  gap: 0.85rem;
+  position: relative;
+}
+
+.timeline-rail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 22px;
+  flex-shrink: 0;
+}
+
+.rail-node {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #1e5142;
+  color: #ffffff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+  box-shadow: 0 1px 3px rgba(30, 81, 66, 0.25);
+}
+
+.rail-line {
+  flex: 1;
+  width: 2px;
+  background: #d4e5dc;
+  min-height: 24px;
+}
+
+.timeline-session-body {
+  flex: 1;
+  padding-bottom: 0.85rem;
+}
+
+.timeline-session-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.session-service-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.service-name-row {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+
+.session-service-title {
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: #183b32;
+}
+
+.service-assigned-staff {
+  font-size: 0.72rem;
+  color: #5b786c;
+  font-weight: 500;
+}
+
+.service-assigned-staff strong {
+  color: #1e5142;
+}
+
+.leg-service-title {
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: #183b32;
+}
+
+.leg-sub-staff {
+  font-size: 0.72rem;
+  color: #5b786c;
+  padding-top: 0.15rem;
+}
+
+.leg-sub-staff strong {
+  color: #1e5142;
+}
+
+.timeline-compact-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  padding-top: 0.1rem;
+}
+
+.timeline-service-col {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.service-dur-tag {
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: #557266;
+}
+
+/* Multi-Service Top Summary (Step 2 & Overview) */
+.summary-top-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.35rem;
+}
+
+.summary-badge-count {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #1e5142;
+  background: #e8f3ee;
+  border: 1px solid #c8ded4;
+  padding: 0.15rem 0.55rem;
+  border-radius: 6px;
+}
+
+.summary-meta-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.74rem;
+  font-weight: 600;
+  padding: 0.15rem 0.55rem;
+  border-radius: 6px;
+}
+
+.summary-meta-pill.price-pill {
+  background: #f0fdf4;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+  font-weight: 700;
+}
+
+.summary-meta-pill.duration-pill {
+  background: #f8fafc;
+  color: #334155;
+  border: 1px solid #e2e8f0;
+}
+
+.summary-meta-pill .human-duration {
+  color: #64748b;
+  font-weight: 500;
+}
+
+.summary-services-chips-row {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+  margin-top: 0.25rem;
+}
+
+.summary-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.74rem;
+  background: #ffffff;
+  border: 1px solid #d4e5dc;
+  color: #183b32;
+  padding: 0.15rem 0.5rem;
+  border-radius: 6px;
+  font-weight: 500;
+}
+
+.summary-chip .chip-name {
+  font-weight: 600;
+}
+
+.summary-chip .chip-dur {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #1e5142;
+  background: #e8f3ee;
+  padding: 0.05rem 0.3rem;
+  border-radius: 4px;
+}
+
+.combo-session-pill {
+  font-size: 0.68rem;
+  font-weight: 700;
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #6ee7b7;
+  padding: 0.08rem 0.4rem;
+  border-radius: 9999px;
+}
+
+.session-time-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.78rem;
+  color: #1e5142;
+  background: #f4f8f5;
+  border: 1px solid #dce8e1;
+  padding: 0.18rem 0.55rem;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+
+.session-duration-tag {
+  color: #657e74;
+  font-weight: 600;
 }

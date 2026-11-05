@@ -6,7 +6,7 @@ namespace AppointmentBooking.BusinessLayer.Features.Services;
 public interface IServiceCatalogService
 {
     Task<IReadOnlyList<ServiceDto>> GetAllServicesAsync(int? tenantId = null, CancellationToken cancellationToken = default);
-    Task<IReadOnlyList<ServiceDto>> GetActiveServicesAsync(int? tenantId = null, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<ServiceDto>> GetActiveServicesAsync(int? tenantId = null, bool onlyWithProviders = false, CancellationToken cancellationToken = default);
     Task<ServiceDto?> GetServiceByIdAsync(int id, CancellationToken cancellationToken = default);
     Task<ApiResponse<ServiceDto>> CreateServiceAsync(int userId, CreateServiceRequestDto request, string createdBy, CancellationToken cancellationToken = default);
     Task<ServiceDto?> UpdateServiceAsync(int id, UpdateServiceRequestDto request, string updatedBy, CancellationToken cancellationToken = default);

@@ -699,6 +699,18 @@
   box-shadow: 0 3px 8px rgba(30, 81, 66, 0.12);
 }
 
+.btn-toggle-cart.added {
+  background: #1e5142;
+  border-color: #1e5142;
+  color: #ffffff;
+}
+
+.btn-toggle-cart.added:hover {
+  background: #163e32;
+  border-color: #163e32;
+  color: #ffffff;
+}
+
 /* Service Card Solid Emerald Stepper */
 .service-card-stepper {
   display: inline-flex;

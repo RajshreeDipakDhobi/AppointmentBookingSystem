@@ -411,7 +411,7 @@ export class RescheduleModalComponent implements OnInit {
   }
 
   confirmReschedule(): void {
-    if (!this.isStaff && !canRescheduleAppointment(this.appointment)) {
+    if (!canRescheduleAppointment(this.appointment)) {
       this.errorMessage.set('Appointments can only be rescheduled at least 1 hour prior to the scheduled start time.');
       return;
     }

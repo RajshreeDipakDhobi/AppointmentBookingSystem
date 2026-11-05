@@ -188,6 +188,10 @@ export function canRescheduleAppointment(apt: AppointmentDto | null | undefined)
     return false;
   }
 
+  if (isAppointmentPast(apt)) {
+    return false;
+  }
+
   const rawDate: any = apt.appointmentDate;
   let year = 0, month = 0, day = 0;
   if (typeof rawDate === 'string') {
@@ -231,7 +235,10 @@ export function canModifyAppointment(apt: AppointmentDto | null | undefined): bo
  */
 export function canCancelAppointment(apt: AppointmentDto | null | undefined): boolean {
   if (!apt) return false;
-  if (apt.status === AppointmentStatus.Completed || apt.status === AppointmentStatus.Cancelled) {
+  if (apt.status === AppointmentStatus.Completed || apt.status === AppointmentStatus.Cancelled || apt.status === AppointmentStatus.RescheduleProposed) {
+    return false;
+  }
+  if (isAppointmentPast(apt)) {
     return false;
   }
 

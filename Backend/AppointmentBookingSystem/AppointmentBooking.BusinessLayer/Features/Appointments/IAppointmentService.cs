@@ -13,18 +13,19 @@ public interface IAppointmentService
 
     // Module 3: Available Slots for Customer & Admin (Supports Single or Multi-Service Combined Duration)
     Task<ProviderDailyAvailabilityResponseDto?> GetAvailableSlotsAsync(int providerId, DateTime date, List<int>? serviceIds = null, CancellationToken cancellationToken = default);
-    Task<ProviderDailyAvailabilityResponseDto?> GetAvailableSlotsByServiceAsync(int serviceId, DateTime date, int? tenantId, List<int>? serviceIds = null, CancellationToken cancellationToken = default);
+    Task<ProviderDailyAvailabilityResponseDto?> GetAvailableSlotsByServiceAsync(int serviceId, DateTime date, int? tenantId, List<int>? serviceIds = null, string? assignedSpecialistIds = null, CancellationToken cancellationToken = default);
 
     // Urban Company Style: First-to-Accept Broadcast Dispatch
     Task<List<AppointmentDto>> GetIncomingBroadcastRequestsAsync(int? providerId, int? tenantId, CancellationToken cancellationToken = default);
     Task<ApiResponse<AppointmentDto>> AcceptBroadcastAppointmentAsync(int appointmentId, int providerId, CancellationToken cancellationToken = default);
 
-    // Module 4: Book Appointment (Supports Guest, Registered Customer & Optional Password Auto-Account Creation)
+    // Module 4: Book Appointment (Supports Single or Multi-Leg Split Bookings across Specialists)
     Task<ApiResponse<AppointmentDto>> BookAppointmentAsync(int? tenantId, int? customerId, BookAppointmentRequestDto request, bool isBookedByProvider = false, string? createdByName = null, CancellationToken cancellationToken = default);
+    Task<ApiResponse<List<AppointmentDto>>> BookMultiAppointmentAsync(int? tenantId, int? customerId, BookMultiAppointmentRequestDto request, bool isBookedByProvider = false, string? createdByName = null, CancellationToken cancellationToken = default);
 
     // Module 5: Reschedule & Cancel (Supports Admin, Logged-in Customer & Guest)
-    Task<ApiResponse<AppointmentDto>> RescheduleAppointmentAsync(int appointmentId, int? tenantId, int? customerId, bool isAdmin, RescheduleAppointmentRequestDto request, CancellationToken cancellationToken = default);
-    Task<ApiResponse<AppointmentDto>> CancelAppointmentAsync(int appointmentId, int? tenantId, int? customerId, bool isAdmin, CancelAppointmentRequestDto request, string? cancellerName = null, CancellationToken cancellationToken = default);
+    Task<ApiResponse<AppointmentDto>> RescheduleAppointmentAsync(int appointmentId, int? tenantId, int? customerId, bool isStaff, RescheduleAppointmentRequestDto request, CancellationToken cancellationToken = default);
+    Task<ApiResponse<AppointmentDto>> CancelAppointmentAsync(int appointmentId, int? tenantId, int? customerId, bool isStaff, CancelAppointmentRequestDto request, string? cancellerName = null, CancellationToken cancellationToken = default);
 
     // Customer History Portals
     Task<List<AppointmentDto>> GetMyAppointmentsAsync(int customerId, CancellationToken cancellationToken = default);

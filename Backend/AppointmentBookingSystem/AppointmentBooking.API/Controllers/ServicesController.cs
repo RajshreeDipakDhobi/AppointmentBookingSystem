@@ -29,13 +29,14 @@ public class ServicesController : BaseApiController
     [ProducesResponseType(typeof(IReadOnlyList<ServiceDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetActiveServices(
         [FromQuery] int? tenantId,
-        CancellationToken cancellationToken)
+        [FromQuery] bool onlyWithProviders = false,
+        CancellationToken cancellationToken = default)
     {
         var resolvedTenantId = (tenantId.HasValue && tenantId.Value > 0)
             ? tenantId.Value
             : ResolveTenantId(tenantId);
 
-        var services = await _serviceCatalogService.GetActiveServicesAsync(resolvedTenantId, cancellationToken);
+        var services = await _serviceCatalogService.GetActiveServicesAsync(resolvedTenantId, onlyWithProviders, cancellationToken);
         return OkResponse(services);
     }
 

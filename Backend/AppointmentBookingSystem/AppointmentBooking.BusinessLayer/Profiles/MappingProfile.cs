@@ -183,11 +183,11 @@ public class MappingProfile : Profile
             .ForMember(dest => dest.ServiceProviderName, opt => opt.MapFrom(src => 
                 src.ServiceProvider != null && src.ServiceProvider.User != null 
                     ? $"{src.ServiceProvider.User.FirstName} {src.ServiceProvider.User.LastName}".Trim() 
-                    : (!src.ServiceProviderId.HasValue ? "Dispatching Specialist..." : string.Empty)))
+                    : string.Empty))
             .ForMember(dest => dest.ServiceProviderType, opt => opt.MapFrom(src => 
                 src.ServiceProvider != null && src.ServiceProvider.Service != null 
                     ? src.ServiceProvider.Service.Name 
-                    : (src.Service != null ? src.Service.Name : string.Empty)))
+                    : string.Empty))
             .ForMember(dest => dest.ServiceProviderProfilePictureUrl, opt => opt.MapFrom(src => 
                 src.ServiceProvider != null && src.ServiceProvider.User != null 
                     ? src.ServiceProvider.User.ProfilePictureUrl 

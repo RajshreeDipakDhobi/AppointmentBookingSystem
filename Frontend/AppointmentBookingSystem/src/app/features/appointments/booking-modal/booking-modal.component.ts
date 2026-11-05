@@ -11,7 +11,10 @@ import { ServiceDto } from '../../../core/models/service.models';
 import {
   AvailableSlotDto,
   BookAppointmentRequestDto,
+  BookMultiAppointmentRequest,
+  AppointmentLegRequest,
   AppointmentDto,
+  AppointmentStatus,
   ProviderDailyAvailabilityResponseDto
 } from '../../../core/models/appointment.models';
 import { UserDto } from '../../../core/models/auth.models';
@@ -31,6 +34,37 @@ export interface CalendarDay {
   isBeyondLimit: boolean; // after maxDate (15 days)
   isToday: boolean;
   isSelected: boolean;
+}
+
+export interface GroupedBookingSession {
+  sessionId: number;
+  providerId: number | null;
+  providerName: string;
+  isCombo: boolean;
+  services: {
+    id: number;
+    name: string;
+    durationMinutes: number;
+    price: number;
+    quantity: number;
+  }[];
+  totalDurationMinutes: number;
+  totalPrice: number;
+  startTime?: string;
+  endTime?: string;
+}
+
+export interface UnifiedReviewItem {
+  id: number;
+  name: string;
+  durationMinutes: number;
+  price: number;
+  quantity: number;
+  startTime: string;
+  endTime: string;
+  providerId: number | null;
+  providerName: string;
+  isCombo: boolean;
 }
 
 @Component({
@@ -55,6 +89,7 @@ export class BookingModalComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly confirmService = inject(ConfirmService);
   private readonly cdr = inject(ChangeDetectorRef);
+  readonly AppointmentStatus = AppointmentStatus;
 
   @Input() initialProviderId: number | null = null;
   @Input() initialServiceId: number | null = null;
@@ -86,15 +121,10 @@ export class BookingModalComponent implements OnInit {
   });
 
   readonly cartModalItems = computed<CartModalItem[]>(() => {
-    const ids = this.selectedServiceIds();
+    const ids = Array.from(new Set(this.selectedServiceIds()));
     const catalog = this.catalogServices();
-    const countsMap = new Map<number, number>();
-    for (const id of ids) {
-      countsMap.set(id, (countsMap.get(id) || 0) + 1);
-    }
-
     const items: CartModalItem[] = [];
-    for (const [id, qty] of countsMap.entries()) {
+    for (const id of ids) {
       const match = catalog.find(s => s.id === id) || (this.selectedService?.id === id ? this.selectedService : null);
       if (match) {
         items.push({
@@ -103,7 +133,7 @@ export class BookingModalComponent implements OnInit {
           price: match.price,
           durationMinutes: match.durationMinutes,
           description: match.description,
-          quantity: qty
+          quantity: 1
         });
       }
     }
@@ -111,25 +141,25 @@ export class BookingModalComponent implements OnInit {
   });
 
   readonly totalCartItemsCount = computed<number>(() => {
-    return this.selectedServiceIds().length;
+    return this.cartModalItems().length;
   });
 
   readonly totalServicesPrice = computed<number>(() => {
     const items = this.cartModalItems();
     if (items.length === 0) return this.selectedService?.price || 0;
-    return items.reduce((sum, s) => sum + (s.price || 0) * (s.quantity || 1), 0);
+    return items.reduce((sum, s) => sum + (s.price || 0), 0);
   });
 
   readonly totalServicesDuration = computed<number>(() => {
     const items = this.cartModalItems();
     if (items.length === 0) return this.selectedService?.durationMinutes || 30;
-    return items.reduce((sum, s) => sum + (s.durationMinutes || 30) * (s.quantity || 1), 0);
+    return items.reduce((sum, s) => sum + (s.durationMinutes || 30), 0);
   });
 
   readonly selectedServicesNamesSummary = computed<string>(() => {
     const items = this.cartModalItems();
     if (items.length === 0) return this.selectedService?.name || '';
-    return items.map(s => s.quantity && s.quantity > 1 ? `${s.name} (×${s.quantity})` : s.name).join(' + ');
+    return items.map(s => s.name).join(' + ');
   });
 
   // State Signals
@@ -139,6 +169,8 @@ export class BookingModalComponent implements OnInit {
   readonly isSubmitting = signal<boolean>(false);
   readonly errorMessage = signal<string>('');
   readonly confirmedAppointment = signal<AppointmentDto | null>(null);
+  readonly confirmedAppointments = signal<AppointmentDto[]>([]);
+  readonly perServiceSpecialistAssignments = signal<Map<number, number | null>>(new Map());
   readonly showAuthPrompt = signal<boolean>(false);
   copiedRef: boolean = false;
   linkedCustomer: any = null;
@@ -319,6 +351,335 @@ export class BookingModalComponent implements OnInit {
     );
   });
 
+  readonly isMultiSpecialistBooking = computed<boolean>(() => {
+    const sIds = this.selectedServiceIds();
+    if (sIds.length <= 1) return false;
+    const distinctIds = Array.from(new Set(sIds));
+    if (distinctIds.length <= 1) return false;
+    return this.qualifiedProvidersForSelectedServices().length === 0;
+  });
+
+  getQualifiedProvidersForService(serviceId: number): ServiceProviderDto[] {
+    const all = this.providers().filter(p => p.status === ProviderStatus.Active);
+    const certified = all.filter(p => {
+      const ids = this.getProviderServiceIds(p);
+      return ids.has(serviceId);
+    });
+    // Fallback to all salon active specialists if no specific mappings exist in DB
+    return certified.length > 0 ? certified : all;
+  }
+
+  onServiceSpecialistChange(serviceId: number, event: Event): void {
+    const select = event.target as HTMLSelectElement;
+    const val = select.value ? Number(select.value) : null;
+    const map = new Map(this.perServiceSpecialistAssignments());
+    map.set(serviceId, val);
+    this.perServiceSpecialistAssignments.set(map);
+    this.selectedSlot = null;
+    if (this.currentStep === 2) {
+      this.fetchSlots();
+    }
+  }
+
+  isServiceCombo(serviceId: number): boolean {
+    const assignments = this.perServiceSpecialistAssignments();
+    const currentProvId = assignments.get(serviceId);
+    if (!currentProvId) return false;
+    const cart = this.cartModalItems();
+    return cart.filter(item => assignments.get(item.id) === currentProvId).length > 1;
+  }
+
+  readonly groupedBookingSessions = computed<GroupedBookingSession[]>(() => {
+    const cart = this.cartModalItems();
+    if (!cart || cart.length === 0) return [];
+
+    let assignments = this.perServiceSpecialistAssignments();
+
+    // If multi-specialist booking and assignments map is unpopulated, run greedy clustering automatically
+    if (this.isMultiSpecialistBooking() && assignments.size === 0) {
+      const clusterMap = new Map<number, number>();
+      const allProviders = this.providers().filter(p => p.status === ProviderStatus.Active);
+      let remaining = [...cart];
+
+      while (remaining.length > 0) {
+        let bestProvider: ServiceProviderDto | null = null;
+        let bestMatchingCount = 0;
+
+        for (const prov of allProviders) {
+          const provServices = this.getProviderServiceIds(prov);
+          const matchCount = remaining.filter(item => provServices.has(item.id)).length;
+          if (matchCount > bestMatchingCount) {
+            bestMatchingCount = matchCount;
+            bestProvider = prov;
+          }
+        }
+
+        if (bestProvider && bestMatchingCount > 0) {
+          const provServices = this.getProviderServiceIds(bestProvider);
+          const handled: typeof remaining = [];
+          for (const item of remaining) {
+            if (provServices.has(item.id)) {
+              clusterMap.set(item.id, bestProvider.id);
+              handled.push(item);
+            }
+          }
+          remaining = remaining.filter(item => !handled.includes(item));
+        } else {
+          for (const item of remaining) {
+            const qualified = this.getQualifiedProvidersForService(item.id);
+            if (qualified.length > 0) {
+              clusterMap.set(item.id, qualified[0].id);
+            }
+          }
+          break;
+        }
+      }
+      assignments = clusterMap;
+    }
+
+    // Urban Company Intelligent Provider Clustering:
+    // Group all services belonging to the same assigned specialist together
+    // so that e.g. services 1, 2, 4, 5 for Provider A are combined in one continuous session,
+    // followed by service 3 for Provider B (avoiding awkward multi-handoff fragmentation).
+    const providerGroups = new Map<number | null, typeof cart>();
+    const providerOrder: (number | null)[] = [];
+
+    cart.forEach(item => {
+      const pId = assignments.get(item.id) ?? null;
+      if (!providerGroups.has(pId)) {
+        providerGroups.set(pId, []);
+        providerOrder.push(pId);
+      }
+      providerGroups.get(pId)!.push(item);
+    });
+
+    // Reorder provider groups: Providers with assigned specialists first, largest combo first
+    providerOrder.sort((a, b) => {
+      if (a !== null && b === null) return -1;
+      if (a === null && b !== null) return 1;
+      const countA = providerGroups.get(a)?.length || 0;
+      const countB = providerGroups.get(b)?.length || 0;
+      return countB - countA;
+    });
+
+    const sessions: GroupedBookingSession[] = [];
+
+    providerOrder.forEach(pId => {
+      const items = providerGroups.get(pId) || [];
+      if (items.length === 0) return;
+
+      const provName = pId ? this.getProviderName(pId) : (this.isAdmin() ? 'Assigned Specialist' : 'Dedicated Specialist');
+      const totalDur = items.reduce((sum, item) => sum + ((item.durationMinutes || 30) * (item.quantity || 1)), 0);
+      const totalPrice = items.reduce((sum, item) => sum + ((item.price || 0) * (item.quantity || 1)), 0);
+
+      if (pId !== null) {
+        // All items for this specialist form ONE continuous session block (Combo if > 1 service)
+        sessions.push({
+          sessionId: sessions.length + 1,
+          providerId: pId,
+          providerName: provName,
+          isCombo: items.length > 1,
+          services: items.map(item => ({
+            id: item.id,
+            name: item.name,
+            durationMinutes: item.durationMinutes || 30,
+            price: item.price || 0,
+            quantity: item.quantity || 1
+          })),
+          totalDurationMinutes: totalDur,
+          totalPrice: totalPrice
+        });
+      } else {
+        // For unassigned/broadcast items: Group ALL services into ONE continuous booking order/session!
+        sessions.push({
+          sessionId: sessions.length + 1,
+          providerId: null,
+          providerName: provName,
+          isCombo: items.length > 1,
+          services: items.map(item => ({
+            id: item.id,
+            name: item.name,
+            durationMinutes: item.durationMinutes || 30,
+            price: item.price || 0,
+            quantity: item.quantity || 1
+          })),
+          totalDurationMinutes: totalDur,
+          totalPrice: totalPrice
+        });
+      }
+    });
+
+    return sessions;
+  });
+
+  getAssignedProviderForService(serviceId: number): number | null {
+    const val = this.perServiceSpecialistAssignments().get(serviceId);
+    if (val) return val;
+    if (this.isAdmin()) {
+      const qualified = this.getQualifiedProvidersForService(serviceId);
+      if (qualified.length > 0) {
+        return qualified[0].id;
+      }
+    }
+    return null;
+  }
+
+  getProviderName(providerId: number): string {
+    const p = this.providers().find(prov => prov.id === providerId);
+    return p ? p.name : '';
+  }
+
+  readonly isAllServicesAssigned = computed<boolean>(() => {
+    if (!this.isAdmin() || !this.isMultiSpecialistBooking()) return true;
+    const cart = this.cartModalItems();
+    const assignments = this.perServiceSpecialistAssignments();
+    return cart.every(item => {
+      const pId = assignments.get(item.id);
+      return pId !== null && pId !== undefined && pId > 0;
+    });
+  });
+
+  autoAssignDefaultSpecialists(): void {
+    const cart = this.cartModalItems();
+    if (!cart || cart.length === 0) return;
+    const map = new Map(this.perServiceSpecialistAssignments());
+    const unassignedItems = cart.filter(item => {
+      const existing = map.get(item.id);
+      return !existing || existing <= 0;
+    });
+
+    if (unassignedItems.length === 0) return;
+
+    const allProviders = this.providers().filter(p => p.status === ProviderStatus.Active);
+    let remaining = [...unassignedItems];
+
+    while (remaining.length > 0) {
+      // Find provider who can handle the most of the remaining services (greedy combo clustering)
+      let bestProvider: ServiceProviderDto | null = null;
+      let bestMatchingCount = 0;
+
+      for (const prov of allProviders) {
+        const provServices = this.getProviderServiceIds(prov);
+        const matchCount = remaining.filter(item => provServices.has(item.id)).length;
+        if (matchCount > bestMatchingCount) {
+          bestMatchingCount = matchCount;
+          bestProvider = prov;
+        }
+      }
+
+      if (bestProvider && bestMatchingCount > 0) {
+        const provServices = this.getProviderServiceIds(bestProvider);
+        const handled: typeof remaining = [];
+        for (const item of remaining) {
+          if (provServices.has(item.id)) {
+            map.set(item.id, bestProvider.id);
+            handled.push(item);
+          }
+        }
+        remaining = remaining.filter(item => !handled.includes(item));
+      } else {
+        // Fallback: for each remaining item, assign first qualified provider
+        for (const item of remaining) {
+          const qualified = this.getQualifiedProvidersForService(item.id);
+          if (qualified.length > 0) {
+            map.set(item.id, qualified[0].id);
+          }
+        }
+        break;
+      }
+    }
+
+    this.perServiceSpecialistAssignments.set(map);
+  }
+
+  formatDurationHours(minutes: number): string {
+    if (!minutes || minutes <= 0) return '0m';
+    const h = Math.floor(minutes / 60);
+    const m = minutes % 60;
+    if (h > 0 && m > 0) return `${h}h ${m}m`;
+    if (h > 0) return `${h}h`;
+    return `${m}m`;
+  }
+
+  getComputedSlotSessions(): (GroupedBookingSession & { startTime: string; endTime: string })[] {
+    if (!this.selectedSlot) return [];
+    const sessions = this.groupedBookingSessions();
+    const [startH, startM] = this.selectedSlot.startTime.split(':').map(Number);
+    let currentMinute = startH * 60 + startM;
+
+    return sessions.map(session => {
+      const sessionStart = currentMinute;
+      const sessionEnd = currentMinute + session.totalDurationMinutes;
+
+      const startStr = `${Math.floor(sessionStart / 60).toString().padStart(2, '0')}:${(sessionStart % 60).toString().padStart(2, '0')}`;
+      const endStr = `${Math.floor(sessionEnd / 60).toString().padStart(2, '0')}:${(sessionEnd % 60).toString().padStart(2, '0')}`;
+
+      currentMinute = sessionEnd;
+
+      return {
+        ...session,
+        startTime: startStr,
+        endTime: endStr
+      };
+    });
+  }
+
+  readonly unifiedReviewItems = computed<UnifiedReviewItem[]>(() => {
+    const slot = this.selectedSlot;
+    if (!slot) return [];
+
+    const [startH, startM] = slot.startTime.split(':').map(Number);
+    let currentMinute = startH * 60 + startM;
+
+    const result: UnifiedReviewItem[] = [];
+    const sessions = this.groupedBookingSessions();
+
+    for (const session of sessions) {
+      for (const s of session.services) {
+        const dur = (s.durationMinutes || 30) * (s.quantity || 1);
+        const itemStart = currentMinute;
+        const itemEnd = currentMinute + dur;
+
+        const startStr = `${Math.floor(itemStart / 60).toString().padStart(2, '0')}:${(itemStart % 60).toString().padStart(2, '0')}`;
+        const endStr = `${Math.floor(itemEnd / 60).toString().padStart(2, '0')}:${(itemEnd % 60).toString().padStart(2, '0')}`;
+
+        result.push({
+          id: s.id,
+          name: s.name,
+          durationMinutes: dur,
+          price: (s.price || 0) * (s.quantity || 1),
+          quantity: s.quantity || 1,
+          startTime: startStr,
+          endTime: endStr,
+          providerId: session.providerId,
+          providerName: session.providerName,
+          isCombo: session.isCombo
+        });
+
+        currentMinute = itemEnd;
+      }
+    }
+
+    // Fallback if no grouped sessions but selectedService exists (single service flow)
+    if (result.length === 0 && this.selectedService) {
+      const dur = this.selectedService.durationMinutes || 30;
+      result.push({
+        id: this.selectedService.id,
+        name: this.selectedService.name,
+        durationMinutes: dur,
+        price: this.selectedService.price || 0,
+        quantity: 1,
+        startTime: slot.startTime,
+        endTime: slot.endTime,
+        providerId: this.selectedProviderId,
+        providerName: this.selectedProvider?.name || (this.isAdmin() ? 'Assigned Specialist' : ''),
+        isCombo: false
+      });
+    }
+
+    return result;
+  });
+
   goToChooseSpecialist(): void {
     if (this.selectedServiceIds().length === 0 && !this.selectedServiceId) {
       this.errorMessage.set('Please select at least one service from the catalog to proceed.');
@@ -326,6 +687,9 @@ export class BookingModalComponent implements OnInit {
     }
     this.errorMessage.set('');
     this.step1SubState.set('specialist');
+    if (this.isMultiSpecialistBooking()) {
+      this.autoAssignDefaultSpecialists();
+    }
   }
 
   backToServiceSelection(): void {
@@ -371,13 +735,14 @@ export class BookingModalComponent implements OnInit {
   }
 
   getServiceCount(serviceId: number): number {
-    return this.selectedServiceIds().filter(id => id === serviceId).length;
+    return this.selectedServiceIds().includes(serviceId) ? 1 : 0;
   }
 
   incrementServiceSelection(serviceId: number, event?: Event): void {
     if (event) event.stopPropagation();
-    const updated = [...this.selectedServiceIds(), serviceId];
-    this.selectedServiceIds.set(updated);
+    if (!this.selectedServiceIds().includes(serviceId)) {
+      this.selectedServiceIds.set([...this.selectedServiceIds(), serviceId]);
+    }
     if (!this.selectedServiceId) {
       this.selectedServiceId = serviceId;
       this.selectedService = this.catalogServices().find(s => s.id === serviceId) || null;
@@ -390,28 +755,11 @@ export class BookingModalComponent implements OnInit {
 
   decrementServiceSelection(serviceId: number, event?: Event): void {
     if (event) event.stopPropagation();
-    const ids = this.selectedServiceIds();
-    const idx = ids.lastIndexOf(serviceId);
-    if (idx !== -1) {
-      const updated = [...ids];
-      updated.splice(idx, 1);
-      this.selectedServiceIds.set(updated);
-      if (updated.length > 0) {
-        this.selectedServiceId = updated[0];
-        this.selectedService = this.catalogServices().find(s => s.id === updated[0]) || null;
-      } else {
-        this.selectedServiceId = null;
-        this.selectedService = null;
-        this.isCartModalOpen.set(false);
-      }
-      this.selectedSlot = null;
-      if (this.currentStep === 2) {
-        this.fetchSlots();
-      }
-    }
+    this.removeServiceFromSelection(serviceId);
   }
 
-  toggleServiceSelection(service: ServiceDto): void {
+  toggleServiceSelection(service: ServiceDto, event?: Event): void {
+    if (event) event.stopPropagation();
     const current = this.selectedServiceIds();
     let updated: number[];
     if (current.includes(service.id)) {
@@ -428,6 +776,7 @@ export class BookingModalComponent implements OnInit {
     } else {
       this.selectedServiceId = null;
       this.selectedService = null;
+      sessionStorage.removeItem('pending_booking_draft');
     }
 
     if (this.isAdmin()) {
@@ -449,6 +798,7 @@ export class BookingModalComponent implements OnInit {
     } else {
       this.selectedServiceId = null;
       this.selectedService = null;
+      sessionStorage.removeItem('pending_booking_draft');
     }
     this.selectedSlot = null;
     if (this.currentStep === 2) {
@@ -482,6 +832,7 @@ export class BookingModalComponent implements OnInit {
   }
 
   clearCartInBookingModal(): void {
+    sessionStorage.removeItem('pending_booking_draft');
     this.selectedServiceIds.set([]);
     this.selectedServiceId = null;
     this.selectedService = null;
@@ -509,7 +860,13 @@ export class BookingModalComponent implements OnInit {
       const u = this.authService.currentUser();
       return u?.fullName || 'Your Schedule';
     }
-    return '';
+    if (this.isMultiSpecialistBooking()) {
+      const sessions = this.groupedBookingSessions();
+      const names = sessions.map(s => s.providerName).filter(Boolean);
+      if (names.length > 0) return names.join(' + ');
+      return 'Assigned Specialists';
+    }
+    return 'Specialist';
   }
 
   get progressPercentage(): number {
@@ -707,7 +1064,18 @@ export class BookingModalComponent implements OnInit {
           this.selectedProvider = myProvider;
         }
       }
+    } else if (this.isAdmin()) {
+      // Admin: Direct assignment flow (never broadcast)
+      this.bookingMode = 'direct';
+      this.step1SubState.set('services');
+      this.currentStep = 1;
+      this.selectedServiceIds.set([]);
+      this.selectedServiceId = null;
+      this.selectedService = null;
+      this.selectedProviderId = null;
+      this.selectedProvider = null;
     } else {
+      // Customer: Broadcast flow (requires specialist acceptance)
       this.bookingMode = 'broadcast';
       this.step1SubState.set('services');
       this.currentStep = 1;
@@ -778,9 +1146,14 @@ export class BookingModalComponent implements OnInit {
   loadServices(): void {
     this.resolveTenantId();
     this.isLoadingServices.set(true);
-    this.serviceCatalogService.getActiveServices(this.tenantId).subscribe({
+    // Strictly load only services that have active assigned specialists for customer booking
+    this.serviceCatalogService.getActiveServices(this.tenantId, true).subscribe({
       next: (services) => {
-        const list = services || [];
+        const list = (services || []).filter(s =>
+          (s.providersCount ?? 0) > 0 ||
+          (s.assignedProviders && s.assignedProviders.length > 0) ||
+          (s.assignedProviderIds && s.assignedProviderIds.length > 0)
+        );
         const filtered = (this.tenantId && this.tenantId > 0)
           ? list.filter(s => !s.tenantId || s.tenantId === Number(this.tenantId))
           : list;
@@ -850,6 +1223,8 @@ export class BookingModalComponent implements OnInit {
 
     try {
       const draft = JSON.parse(draftRaw);
+      // Clean up session storage immediately so it does not linger or auto-select services on next opening
+      sessionStorage.removeItem('pending_booking_draft');
       if (draft && (draft.slot || draft.selectedSlot || draft.serviceId || draft.serviceIds || draft.providerId)) {
         const slot = draft.slot || draft.selectedSlot;
         if (slot) {
@@ -857,10 +1232,20 @@ export class BookingModalComponent implements OnInit {
         }
         if (draft.selectedDate) {
           this.selectedDate = draft.selectedDate;
+          const dateObj = new Date(draft.selectedDate);
+          if (!isNaN(dateObj.getTime())) {
+            this.currentMonthDate = new Date(dateObj.getFullYear(), dateObj.getMonth(), 1);
+          }
         }
 
         if (draft.bookingMode) {
           this.bookingMode = draft.bookingMode;
+        }
+
+        if (draft.services && Array.isArray(draft.services) && draft.services.length > 0) {
+          if (this.catalogServices().length === 0) {
+            this.catalogServices.set(draft.services);
+          }
         }
 
         if (draft.serviceIds && Array.isArray(draft.serviceIds) && draft.serviceIds.length > 0) {
@@ -898,10 +1283,16 @@ export class BookingModalComponent implements OnInit {
         const targetStep = draft.targetStep || draft.currentStep || 3;
         this.currentStep = (targetStep >= 2 && targetStep <= 4) ? targetStep : 3;
 
+        if (this.currentStep === 2) {
+          this.fetchSlots();
+        }
+
         // Ensure availableSlots contains the draft slot so slot summary displays properly
         if (slot && (!this.availableSlots || this.availableSlots.length === 0)) {
           this.availableSlots = [slot];
         }
+
+        this.cdr.markForCheck();
       }
     } catch {
       sessionStorage.removeItem('pending_booking_draft');
@@ -1113,6 +1504,10 @@ export class BookingModalComponent implements OnInit {
             }
           }
         }
+
+        if (this.isMultiSpecialistBooking() && this.perServiceSpecialistAssignments().size === 0) {
+          this.autoAssignDefaultSpecialists();
+        }
         this.cdr.markForCheck();
       },
       error: () => {
@@ -1154,11 +1549,17 @@ export class BookingModalComponent implements OnInit {
         this.errorMessage.set('Please select at least one service to proceed.');
         return;
       }
-      if (!this.selectedProviderId) {
-        this.errorMessage.set('Please choose a specialist to assign this appointment to.');
-        return;
-      }
       this.bookingMode = 'direct';
+      if (this.isMultiSpecialistBooking()) {
+        if (this.perServiceSpecialistAssignments().size === 0) {
+          this.autoAssignDefaultSpecialists();
+        }
+      } else {
+        if (!this.selectedProviderId) {
+          this.errorMessage.set('Please choose a specialist to assign this appointment to.');
+          return;
+        }
+      }
     } else {
       // Customer: Always broadcast flow (first available certified specialist accepts)
       if (this.selectedServiceIds().length === 0 && !this.selectedServiceId) {
@@ -1168,6 +1569,11 @@ export class BookingModalComponent implements OnInit {
       this.bookingMode = 'broadcast';
       this.selectedProviderId = null;
       this.selectedProvider = null;
+    }
+    if (this.isMultiSpecialistBooking()) {
+      if (this.perServiceSpecialistAssignments().size === 0) {
+        this.autoAssignDefaultSpecialists();
+      }
     }
     this.errorMessage.set('');
     this.currentStep = 2;
@@ -1180,35 +1586,64 @@ export class BookingModalComponent implements OnInit {
     const sIds = this.selectedServiceIds();
     const primaryServiceId = sIds.length > 0 ? sIds[0] : this.selectedServiceId;
 
-    if (this.bookingMode === 'broadcast' && !primaryServiceId) return;
+    if (!primaryServiceId && !this.selectedProviderId) return;
 
-    if (this.bookingMode === 'direct' && !this.selectedProviderId) {
-      if (this.authService.isServiceProvider()) {
-        const currentUser = this.authService.currentUser();
-        if (currentUser) {
-          const list = this.providers();
-          const myProvider = list.find(p =>
-            (p.userId && currentUser.id && Number(p.userId) === Number(currentUser.id)) ||
-            (p.email && currentUser.email && p.email.trim().toLowerCase() === currentUser.email.toLowerCase().trim()) ||
-            (p.name && currentUser.fullName && p.name.trim().toLowerCase() === currentUser.fullName.toLowerCase().trim())
-          );
-          if (myProvider) {
-            this.selectedProviderId = myProvider.id;
-            this.selectedProvider = myProvider;
-          }
+    if (this.authService.isServiceProvider() && !this.selectedProviderId) {
+      const currentUser = this.authService.currentUser();
+      if (currentUser) {
+        const list = this.providers();
+        const myProvider = list.find(p =>
+          (p.userId && currentUser.id && Number(p.userId) === Number(currentUser.id)) ||
+          (p.email && currentUser.email && p.email.trim().toLowerCase() === currentUser.email.toLowerCase().trim()) ||
+          (p.name && currentUser.fullName && p.name.trim().toLowerCase() === currentUser.fullName.toLowerCase().trim())
+        );
+        if (myProvider) {
+          this.selectedProviderId = myProvider.id;
+          this.selectedProvider = myProvider;
         }
       }
-      if (!this.selectedProviderId) {
-        return;
-      }
+    }
+
+    // Direct mode single-provider bookings require selectedProviderId; multi-specialist calculates across assigned providers
+    if (!this.isMultiSpecialistBooking() && this.bookingMode === 'direct' && !this.selectedProviderId) {
+      return;
     }
 
     this.isLoadingSlots.set(true);
     this.errorMessage.set('');
 
-    const slots$ = this.bookingMode === 'broadcast'
-      ? this.appointmentService.getAvailableSlotsByService(primaryServiceId!, this.selectedDate, this.tenantId, sIds.length > 0 ? sIds : undefined)
-      : this.appointmentService.getAvailableSlots(this.selectedProviderId!, this.selectedDate, sIds.length > 0 ? sIds : undefined);
+    let assignedProviderIdsQuery: string | undefined = undefined;
+    if (this.isMultiSpecialistBooking()) {
+      if (this.perServiceSpecialistAssignments().size === 0) {
+        this.autoAssignDefaultSpecialists();
+      }
+      const assignments = this.perServiceSpecialistAssignments();
+      const pairs: string[] = [];
+      assignments.forEach((provId, sId) => {
+        if (provId) {
+          pairs.push(`${sId}:${provId}`);
+        }
+      });
+      if (pairs.length > 0) {
+        assignedProviderIdsQuery = pairs.join(',');
+      }
+    }
+
+    const useServiceSlots = this.isMultiSpecialistBooking() || this.bookingMode === 'broadcast' || !this.selectedProviderId;
+
+    const slots$ = useServiceSlots
+      ? this.appointmentService.getAvailableSlotsByService(
+        primaryServiceId!,
+        this.selectedDate,
+        this.tenantId,
+        sIds.length > 0 ? sIds : undefined,
+        assignedProviderIdsQuery
+      )
+      : this.appointmentService.getAvailableSlots(
+        this.selectedProviderId!,
+        this.selectedDate,
+        sIds.length > 0 ? sIds : undefined
+      );
 
     slots$.subscribe({
       next: (res: ProviderDailyAvailabilityResponseDto) => {
@@ -1275,6 +1710,7 @@ export class BookingModalComponent implements OnInit {
       serviceId: this.selectedServiceId,
       serviceIds: this.selectedServiceIds(),
       service: this.selectedService,
+      services: this.selectedServices(),
       providerId: this.selectedProviderId,
       provider: this.selectedProvider,
       selectedDate: this.selectedDate,
@@ -1290,7 +1726,6 @@ export class BookingModalComponent implements OnInit {
       returnUrl: this.router.url
     };
     sessionStorage.setItem('pending_booking_draft', JSON.stringify(draft));
-    this.close.emit();
     this.router.navigate(['/login'], {
       queryParams: {
         mode: mode,
@@ -1397,7 +1832,7 @@ export class BookingModalComponent implements OnInit {
   // --- Step 4: Confirm Booking Submission ---
   confirmBooking(): void {
     if (!this.selectedSlot) return;
-    if (this.bookingMode === 'direct' && !this.selectedProviderId) return;
+    if (this.bookingMode === 'direct' && !this.selectedProviderId && !this.isMultiSpecialistBooking()) return;
     const sIds = this.selectedServiceIds();
     const primaryServiceId = sIds.length > 0 ? sIds[0] : this.selectedServiceId;
     if (this.bookingMode === 'broadcast' && !primaryServiceId) return;
@@ -1410,12 +1845,106 @@ export class BookingModalComponent implements OnInit {
     this.isSubmitting.set(true);
     this.errorMessage.set('');
 
+    // --- Branch A: Multi-Specialist Booking (When services span multiple distinct specialists/categories) ---
+    if (this.isMultiSpecialistBooking()) {
+      const sessions = this.groupedBookingSessions();
+      const [startH, startM] = this.selectedSlot.startTime.split(':').map(Number);
+      let currentMinute = startH * 60 + startM;
+
+      const legs: AppointmentLegRequest[] = [];
+      for (const session of sessions) {
+        const sessionStartMinutes = currentMinute;
+        const sessionEndMinutes = currentMinute + session.totalDurationMinutes;
+
+        const legStartH = Math.floor(sessionStartMinutes / 60).toString().padStart(2, '0');
+        const legStartM = (sessionStartMinutes % 60).toString().padStart(2, '0');
+        const legEndH = Math.floor(sessionEndMinutes / 60).toString().padStart(2, '0');
+        const legEndM = (sessionEndMinutes % 60).toString().padStart(2, '0');
+
+        const allSessionServiceIds: number[] = [];
+        for (const s of session.services) {
+          allSessionServiceIds.push(s.id);
+        }
+
+        let assignedPid = (this.isAdmin() || this.bookingMode === 'direct')
+          ? (session.providerId || this.selectedProviderId || null)
+          : null;
+
+        if ((this.isAdmin() || this.bookingMode === 'direct') && !assignedPid && session.services.length > 0) {
+          const qp = this.getQualifiedProvidersForService(session.services[0].id);
+          if (qp && qp.length > 0) {
+            assignedPid = qp[0].id;
+          }
+        }
+
+        legs.push({
+          serviceProviderId: assignedPid,
+          serviceId: session.services[0].id,
+          serviceIds: allSessionServiceIds,
+          appointmentDate: this.selectedDate,
+          startTime: `${legStartH}:${legStartM}`,
+          endTime: `${legEndH}:${legEndM}`
+        });
+
+        currentMinute = sessionEndMinutes;
+      }
+
+      const multiReq: BookMultiAppointmentRequest = {
+        legs: legs,
+        customerName: this.customerName.trim(),
+        customerEmail: this.customerEmail.trim(),
+        customerPhone: this.customerPhone.trim(),
+        customerAddress: this.customerAddress.trim(),
+        reason: this.bookingNotes.trim() || undefined
+      };
+
+      this.appointmentService.bookMultiAppointment(multiReq, this.tenantId).subscribe({
+        next: (resList: AppointmentDto[]) => {
+          sessionStorage.removeItem('pending_booking_draft');
+          this.isSubmitting.set(false);
+          this.confirmedAppointments.set(resList);
+          if (resList.length > 0) {
+            this.confirmedAppointment.set(resList[0]);
+            this.booked.emit(resList[0]);
+          }
+          this.currentStep = 5;
+        },
+        error: (err) => {
+          this.isSubmitting.set(false);
+          const errorMsg = err.error?.message || 'Failed to confirm multi-service booking. Please try again.';
+          this.errorMessage.set(errorMsg);
+
+          if (err.status === 409) {
+            this.fetchSlots();
+            this.currentStep = 2;
+            this.confirmService.alert({
+              title: 'Slot Conflict',
+              message: errorMsg,
+              variant: 'warning',
+              buttonText: 'Choose Another Slot'
+            });
+          } else {
+            this.confirmService.alert({
+              title: 'Booking Notice',
+              message: errorMsg,
+              variant: 'danger',
+              buttonText: 'OK'
+            });
+          }
+        }
+      });
+      return;
+    }
+
+    // --- Branch B: Standard Single Appointment Booking ---
     const resolvedServiceId = (this.selectedProvider?.serviceId || (this.selectedService ? this.selectedService.id : (sIds.length > 0 ? sIds[0] : primaryServiceId))) || null;
 
     const req: BookAppointmentRequestDto = {
-      serviceProviderId: this.bookingMode === 'direct' ? this.selectedProviderId : null,
+      serviceProviderId: (this.isAdmin() || this.bookingMode === 'direct')
+        ? (this.selectedProviderId || (resolvedServiceId ? (this.getQualifiedProvidersForService(resolvedServiceId)[0]?.id || null) : null))
+        : null,
       serviceId: resolvedServiceId,
-      serviceIds: sIds.length > 0 ? sIds : (resolvedServiceId ? [resolvedServiceId] : []),
+      serviceIds: sIds.length > 0 ? Array.from(new Set(sIds)) : (resolvedServiceId ? [resolvedServiceId] : []),
       appointmentDate: this.selectedDate,
       startTime: this.selectedSlot.startTime,
       endTime: this.selectedSlot.endTime,
@@ -1431,6 +1960,7 @@ export class BookingModalComponent implements OnInit {
         sessionStorage.removeItem('pending_booking_draft');
         this.isSubmitting.set(false);
         this.confirmedAppointment.set(res);
+        this.confirmedAppointments.set([res]);
         this.booked.emit(res);
         this.currentStep = 5;
       },
@@ -1475,6 +2005,7 @@ export class BookingModalComponent implements OnInit {
   }
 
   finishAndClose(): void {
+    sessionStorage.removeItem('pending_booking_draft');
     this.close.emit();
     if (this.authService.isCustomer()) {
       this.router.navigate(['/my-appointments']);
@@ -1482,9 +2013,7 @@ export class BookingModalComponent implements OnInit {
   }
 
   onModalClose(): void {
-    if (!this.authService.isAuthenticated()) {
-      sessionStorage.removeItem('pending_booking_draft');
-    }
+    sessionStorage.removeItem('pending_booking_draft');
     if (this.currentStep === 5 && this.authService.isCustomer()) {
       this.finishAndClose();
       return;
@@ -1526,6 +2055,13 @@ export class BookingModalComponent implements OnInit {
     }
     const index = Math.abs(hash) % gradients.length;
     return gradients[index];
+  }
+
+  getCleanReason(reason?: string | null): string | null {
+    if (!reason) return null;
+    const clean = reason.replace(/Part\s+\d+\s+of\s+\d+/gi, '').replace(/\(\s*\)/g, '').trim();
+    if (clean.includes('Rescheduled via') || clean.length === 0) return null;
+    return clean;
   }
 }
 

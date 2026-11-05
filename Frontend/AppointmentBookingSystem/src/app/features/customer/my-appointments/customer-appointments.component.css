@@ -1002,27 +1002,26 @@
   flex-shrink: 0;
 }
 
-/* Schedule & Pricing Strip (Non-clipped, crystal clear) */
+/* Schedule Date Strip (Clean, Date-Only) */
 .card-schedule-strip {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 0.5rem;
   padding: 0.5rem 0.75rem;
   background: #f8faf9;
   border: 1px solid #e6f0eb;
   border-radius: 8px;
-  font-size: 0.78rem;
+  font-size: 0.8rem;
 }
 
 .schedule-datetime-group {
   display: flex;
   align-items: center;
   gap: 0.4rem;
-  color: #3d5e53;
-  font-weight: 500;
+  color: #1e5142;
+  font-weight: 600;
   min-width: 0;
-  overflow: hidden;
 }
 
 .schedule-date-item,

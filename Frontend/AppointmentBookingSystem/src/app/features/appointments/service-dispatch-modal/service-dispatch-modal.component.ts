@@ -1,5 +1,6 @@
 import { Component, EventEmitter, Input, Output, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { forkJoin } from 'rxjs';
 import { AppointmentService } from '../../../core/services/appointment.service';
 import { AppointmentDto } from '../../../core/models/appointment.models';
 import { AppDatePipe, AppTimePipe, AppPhonePipe } from '../../../shared/pipes';
@@ -71,7 +72,7 @@ export class ServiceDispatchModalComponent {
 
   acceptRequest(req: AppointmentDto): void {
     if (this.isRequestExpired(req)) {
-      const errorMsg = 'This request has expired. The 10-minute specialist acceptance window has elapsed.';
+      const errorMsg = 'This request has expired. The specialist acceptance window has elapsed.';
       this.requests = this.requests.filter(r => r.id !== req.id);
       const remaining = this.activeRequestsList;
       if (remaining.length > 0) {
@@ -92,17 +93,20 @@ export class ServiceDispatchModalComponent {
     this.isAcceptingId.set(req.id);
     this.errorMessage.set('');
 
-    this.appointmentService.acceptBroadcastAppointment(req.id).subscribe({
-      next: (res: AppointmentDto) => {
+    const partIds: number[] = (req as any).partIds || [req.id];
+    const acceptCalls = partIds.map(id => this.appointmentService.acceptBroadcastAppointment(id));
+
+    forkJoin(acceptCalls).subscribe({
+      next: (results: AppointmentDto[]) => {
         this.isAcceptingId.set(null);
-        this.accepted.emit(res);
+        this.accepted.emit(results[0]);
       },
       error: (err) => {
         this.isAcceptingId.set(null);
         const errorMsg = err.error?.message || 'This appointment request has already been accepted and confirmed by another specialist.';
         
         // Immediately remove this already-accepted request from the UI
-        this.requests = this.requests.filter(r => r.id !== req.id);
+        this.requests = this.requests.filter(r => !partIds.includes(r.id));
         const remaining = this.activeRequestsList;
         if (remaining.length > 0) {
           this.selectedRequest = remaining[0];
@@ -124,5 +128,12 @@ export class ServiceDispatchModalComponent {
 
   onClose(): void {
     this.close.emit();
+  }
+
+  getCleanReason(reason?: string | null): string | null {
+    if (!reason) return null;
+    const clean = reason.replace(/Part\s+\d+\s+of\s+\d+/gi, '').replace(/\(\s*\)/g, '').trim();
+    if (clean.includes('Rescheduled via') || clean.length === 0) return null;
+    return clean;
   }
 }

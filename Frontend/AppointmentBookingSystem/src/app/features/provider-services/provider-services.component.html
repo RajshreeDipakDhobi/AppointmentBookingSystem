@@ -1,14 +1,9 @@
 <div class="provider-services-container">
 
-  <!-- Clean, Purpose-Driven Page Header -->
+  <!-- Executive Page Header -->
   <div class="page-header">
     <div class="header-titles">
-      <div class="title-with-badge">
-        <h2>My Services</h2>
-        <span *ngIf="overview() as data" class="services-badge-counter">
-          {{ data.totalServicesCount }} {{ data.totalServicesCount === 1 ? 'Service' : 'Services' }}
-        </span>
-      </div>
+      <h2>My Services</h2>
       <p>Services assigned to your specialist profile by your organization administrator.</p>
     </div>
 
@@ -23,17 +18,6 @@
           <path d="M16 21h5v-5"/>
         </svg>
         <span>Refresh</span>
-      </button>
-
-      <!-- View Appointments Button -->
-      <button type="button" class="btn btn-primary" (click)="viewAllAppointments()">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-          <rect width="18" height="18" x="3" y="4" rx="2" ry="2"/>
-          <line x1="16" y1="2" x2="16" y2="6"/>
-          <line x1="8" y1="2" x2="8" y2="6"/>
-          <line x1="3" y1="10" x2="21" y2="10"/>
-        </svg>
-        <span>View Appointments</span>
       </button>
     </div>
   </div>
@@ -55,10 +39,11 @@
   </div>
 
   <ng-container *ngIf="!isLoading() && overview() as data">
-    <!-- Filter Bar / Search Dock -->
-    <div class="filter-bar glass-card">
+
+    <!-- Search & Filter Toolbar -->
+    <div class="table-toolbar glass-card">
       <div class="search-box">
-        <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+        <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none"
           stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="11" cy="11" r="8" />
           <line x1="21" y1="21" x2="16.65" y2="16.65" />
@@ -68,10 +53,8 @@
         <button *ngIf="searchQuery()" type="button" class="btn-clear-search" (click)="searchQuery.set('')" title="Clear search">✕</button>
       </div>
 
-      <div class="filter-controls">
-        <div class="services-count">
-          <span>Showing <strong>{{ filteredServices().length }}</strong> of {{ data.totalServicesCount }} Services</span>
-        </div>
+      <div class="toolbar-meta">
+        <span class="services-count">Showing <strong>{{ filteredServices().length }}</strong> of {{ data.totalServicesCount }} Services</span>
       </div>
     </div>
 
@@ -100,70 +83,166 @@
       <button type="button" class="btn btn-secondary btn-sm" (click)="searchQuery.set('')">Clear Filter</button>
     </div>
 
-    <!-- Full-Width Premium Assigned Services Grid -->
-    <div *ngIf="filteredServices().length > 0" class="assigned-services-grid animate-fade-in">
-      <div *ngFor="let s of filteredServices()" class="assigned-service-card glass-card">
-        
-        <!-- Card Head: Icon, Title, Status Chip -->
-        <div class="card-head">
-          <div class="service-icon-box">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <!-- =========================================================================
+         SERVICES DATA GRID (HIGH-END, CLEAN, PERFECTLY BALANCED)
+         ========================================================================= -->
+    <div *ngIf="filteredServices().length > 0" class="table-card glass-card animate-fade-in">
+      <div class="table-responsive">
+        <table class="custom-table">
+          <colgroup>
+            <col class="col-service-title" />
+            <col class="col-service-duration" />
+            <col class="col-service-price" />
+            <col class="col-service-status" />
+            <col class="col-service-actions" />
+          </colgroup>
+          <thead>
+            <tr>
+              <th class="col-service-title">Service Title</th>
+              <th class="col-service-duration">Duration</th>
+              <th class="col-service-price">Standard Fee</th>
+              <th class="col-service-status">Status</th>
+              <th class="col-service-actions text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let s of filteredServices()" class="table-row">
+
+              <!-- 1. Service Title, Icon & Description -->
+              <td class="col-service-title">
+                <div class="service-cell">
+                  <div class="service-icon-box">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
+                      <line x1="7" y1="7" x2="7.01" y2="7"/>
+                    </svg>
+                  </div>
+                  <div class="service-info">
+                    <span class="service-name-text" (click)="openServiceDetails(s)" title="Click to view details">
+                      {{ s.name }}
+                    </span>
+                    <span *ngIf="s.description" class="service-desc-subtext" [title]="s.description">
+                      {{ s.description }}
+                    </span>
+                  </div>
+                </div>
+              </td>
+
+              <!-- 2. Duration (Single-line, no wrapping) -->
+              <td class="col-service-duration">
+                <span class="duration-badge-pill" [title]="s.durationMinutes + ' minutes duration per session'">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10" />
+                    <polyline points="12 6 12 12 16 14" />
+                  </svg>
+                  <span>{{ formatDuration(s.durationMinutes) }}</span>
+                </span>
+              </td>
+
+              <!-- 3. Standard Fee -->
+              <td class="col-service-price">
+                <div class="charges-chip" [title]="'Standard Price: ₹' + (s.price | number:'1.2-2')">
+                  <span class="currency">₹</span>
+                  <span>{{ s.price | number:'1.2-2' }}</span>
+                </div>
+              </td>
+
+              <!-- 4. Status -->
+              <td class="col-service-status">
+                <span class="status-chip" [ngClass]="s.isActive ? 'chip-active' : 'chip-inactive'">
+                  <span class="chip-dot"></span>
+                  <span>{{ s.isActive ? 'Active' : 'Inactive' }}</span>
+                </span>
+              </td>
+
+              <!-- 5. Actions -->
+              <td class="col-service-actions text-right">
+                <div class="action-buttons-group">
+                  <button type="button" class="btn-action-bookings" (click)="viewServiceBookings(s)" title="View appointments for this service">
+                    <span>View Bookings</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                      <line x1="5" y1="12" x2="19" y2="12"/>
+                      <polyline points="12 5 19 12 12 19"/>
+                    </svg>
+                  </button>
+                </div>
+              </td>
+
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </ng-container>
+
+  <!-- =========================================================================
+       SERVICE DETAILS QUICK MODAL
+       ========================================================================= -->
+  <div *ngIf="selectedServiceForDetails() as s" class="modal-backdrop animate-fade-in" (click)="closeServiceDetails()">
+    <div class="modal-dialog glass-card animate-scale-up" (click)="$event.stopPropagation()">
+      <div class="modal-head">
+        <div class="modal-title-wrap">
+          <div class="modal-icon-wrap">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
               <line x1="7" y1="7" x2="7.01" y2="7"/>
             </svg>
           </div>
-          <div class="service-title-info">
-            <h4 class="service-name">{{ s.name }}</h4>
-          </div>
-          <span class="status-chip" [ngClass]="s.isActive ? 'chip-active' : 'chip-inactive'">
-            <span class="chip-dot"></span>
-            <span>{{ s.isActive ? 'Active' : 'Inactive' }}</span>
-          </span>
-        </div>
-
-        <!-- Description -->
-        <p class="service-desc" [title]="s.description || s.name">
-          {{ s.description || 'Professional standardized service offered to clients.' }}
-        </p>
-
-        <!-- Pricing & Duration Strip -->
-        <div class="service-specs-strip">
-          <div class="spec-price">
-            <span class="price-val">₹{{ s.price | number }}</span>
-            <span class="price-lbl">Standard Fee</span>
-          </div>
-          <div class="spec-divider"></div>
-          <div class="spec-duration">
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="12" cy="12" r="10"/>
-              <polyline points="12 6 12 12 16 14"/>
-            </svg>
-            <span>{{ formatDuration(s.durationMinutes) }}</span>
-          </div>
-        </div>
-
-        <!-- Card Foot: Stats & Action Button -->
-        <div class="card-foot">
-          <div class="foot-stats">
-            <span class="stat-pill">
-              <strong>{{ s.todayBookingsCount }}</strong> today
-            </span>
-            <span class="stat-pill-sub">
-              <strong>{{ s.allTimeBookingsCount }}</strong> total served
+          <div>
+            <h3>{{ s.name }}</h3>
+            <span class="status-chip" [ngClass]="s.isActive ? 'chip-active' : 'chip-inactive'">
+              <span class="chip-dot"></span>
+              <span>{{ s.isActive ? 'Active Service' : 'Inactive Service' }}</span>
             </span>
           </div>
-
-          <button type="button" class="btn-card-action" (click)="viewAllAppointments()" title="View appointments for this service">
-            <span>View Bookings</span>
-            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="5" y1="12" x2="19" y2="12"/>
-              <polyline points="12 5 19 12 12 19"/>
-            </svg>
-          </button>
         </div>
 
+        <button type="button" class="modal-close-btn" (click)="closeServiceDetails()" title="Close details">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="modal-specs-bar">
+          <div class="modal-spec-item">
+            <span class="m-spec-label">Standard Fee</span>
+            <span class="m-spec-val">₹{{ s.price | number:'1.2-2' }}</span>
+          </div>
+          <div class="modal-spec-divider"></div>
+          <div class="modal-spec-item">
+            <span class="m-spec-label">Duration</span>
+            <span class="m-spec-val">{{ formatDuration(s.durationMinutes) }}</span>
+          </div>
+          <div class="modal-spec-divider"></div>
+          <div class="modal-spec-item">
+            <span class="m-spec-label">Today's Bookings</span>
+            <span class="m-spec-val">{{ s.todayBookingsCount }}</span>
+          </div>
+          <div class="modal-spec-divider"></div>
+          <div class="modal-spec-item">
+            <span class="m-spec-label">Total Served</span>
+            <span class="m-spec-val">{{ s.allTimeBookingsCount }}</span>
+          </div>
+        </div>
+
+        <div class="modal-desc-box">
+          <h6>Service Description & Treatment Scope</h6>
+          <p>{{ s.description || 'Professional service offered to clients according to organization standards.' }}</p>
+        </div>
+      </div>
+
+      <div class="modal-foot">
+        <button type="button" class="btn btn-secondary" (click)="closeServiceDetails()">Close</button>
+        <button type="button" class="btn btn-primary" (click)="viewServiceBookings(s); closeServiceDetails()">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect width="18" height="18" x="3" y="4" rx="2" ry="2"/>
+            <line x1="16" y1="2" x2="16" y2="6"/>
+            <line x1="8" y1="2" x2="8" y2="6"/>
+            <line x1="3" y1="10" x2="21" y2="10"/>
+          </svg>
+          <span>View Bookings for this Service</span>
+        </button>
       </div>
     </div>
-  </ng-container>
+  </div>
 
 </div>

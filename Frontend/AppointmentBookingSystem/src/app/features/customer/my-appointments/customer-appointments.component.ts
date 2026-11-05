@@ -6,7 +6,7 @@ import { Subscription } from 'rxjs';
 import { AuthService } from '../../../core/services/auth.service';
 import { AppointmentService } from '../../../core/services/appointment.service';
 import { LayoutService } from '../../../core/services/layout.service';
-import { AppointmentDto, AppointmentStatus, AppointmentStatsDto } from '../../../core/models/appointment.models';
+import { AppointmentDto, AppointmentStatus, AppointmentStatsDto, AppointmentItemDto } from '../../../core/models/appointment.models';
 import { BookingModalComponent } from '../../appointments/booking-modal/booking-modal.component';
 import { BookingTicketComponent } from '../../../shared/components/booking-ticket/booking-ticket.component';
 import { RescheduleModalComponent } from '../../appointments/reschedule-modal/reschedule-modal.component';
@@ -137,8 +137,100 @@ export class CustomerAppointmentsComponent implements OnInit, OnDestroy {
   readonly completedCount = computed(() => this.stats()?.completedAppointments ?? 0);
   readonly cancelledCount = computed(() => this.stats()?.cancelledAppointments ?? 0);
 
-  // For compatibility with template
-  readonly filteredAppointments = computed(() => this.appointments());
+  readonly filteredAppointments = computed<AppointmentDto[]>(() => {
+    return this.groupMultiPartAppointments(this.appointments() || []);
+  });
+
+  private groupMultiPartAppointments(list: AppointmentDto[]): AppointmentDto[] {
+    if (!list || list.length === 0) return [];
+    const result: AppointmentDto[] = [];
+    const groupedIds = new Set<number>();
+
+    for (const apt of list) {
+      if (groupedIds.has(apt.id)) continue;
+
+      if (apt.journeyParts && apt.journeyParts.length > 1) {
+        groupedIds.add(apt.id);
+        result.push(apt);
+        continue;
+      }
+
+      const parts = list.filter(other =>
+        other.appointmentDate === apt.appointmentDate &&
+        other.customerId === apt.customerId &&
+        Math.abs(new Date(other.createdAt).getTime() - new Date(apt.createdAt).getTime()) < 120000
+      );
+
+      if (parts.length > 1) {
+        parts.forEach(p => groupedIds.add(p.id));
+        parts.sort((a, b) => (a.startTime || '').localeCompare(b.startTime || ''));
+
+        const firstPart = parts[0];
+        const lastPart = parts[parts.length - 1];
+
+        const combinedItems: any[] = [];
+        const combinedNames: string[] = [];
+        let sumAmount = 0;
+        let sumDur = 0;
+
+        parts.forEach(p => {
+          sumAmount += p.totalAmount || p.servicePrice || 0;
+          sumDur += p.totalDurationMinutes || p.serviceDurationMinutes || 30;
+
+          if (p.items && p.items.length > 0) {
+            p.items.forEach(it => {
+              combinedItems.push(it);
+              if (it.serviceName && !combinedNames.includes(it.serviceName)) {
+                combinedNames.push(it.serviceName);
+              }
+            });
+          } else if (p.serviceName) {
+            combinedItems.push({
+              id: 0,
+              appointmentId: p.id,
+              serviceId: p.serviceId || 0,
+              serviceName: p.serviceName,
+              price: p.servicePrice || 0,
+              durationMinutes: p.serviceDurationMinutes || 30
+            });
+            if (!combinedNames.includes(p.serviceName)) {
+              combinedNames.push(p.serviceName);
+            }
+          }
+        });
+
+        const distinctProviders = parts
+          .map(p => p.serviceProviderName)
+          .filter((name): name is string => !!name && name.trim().length > 0);
+        const uniqueProviders = Array.from(new Set(distinctProviders));
+        const hasAssignedProviders = parts.some(p => !!p.serviceProviderId);
+
+        const unified: AppointmentDto = {
+          ...firstPart,
+          id: firstPart.id,
+          serviceProviderId: hasAssignedProviders ? (firstPart.serviceProviderId || parts.find(p => !!p.serviceProviderId)?.serviceProviderId || null) : null,
+          startTime: firstPart.startTime,
+          endTime: lastPart.endTime,
+          totalAmount: sumAmount,
+          totalDurationMinutes: sumDur,
+          items: combinedItems,
+          serviceNames: combinedNames,
+          serviceName: combinedNames.join(' + '),
+          serviceProviderName: uniqueProviders.length > 1 ? uniqueProviders.join(' • ') : (uniqueProviders[0] || firstPart.serviceProviderName),
+          serviceProviderType: uniqueProviders.length > 1 ? 'Multi-Specialist Session' : firstPart.serviceProviderType,
+          journeyParts: parts
+        };
+
+        result.push(unified);
+        continue;
+      }
+
+      groupedIds.add(apt.id);
+      result.push(apt);
+    }
+
+    return result;
+  }
 
   ngOnInit(): void {
     this.loadStats();
@@ -207,14 +299,40 @@ export class CustomerAppointmentsComponent implements OnInit, OnDestroy {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')} remaining`;
   }
 
+  isAdminBooking(apt: AppointmentDto): boolean {
+    if (apt.createdBy && (
+      apt.createdBy.includes('Admin') || 
+      apt.createdBy.includes('SuperAdmin') || 
+      apt.createdBy.includes('Staff')
+    )) {
+      return true;
+    }
+    if (apt.journeyParts && apt.journeyParts.some(p => 
+      p.createdBy && (
+        p.createdBy.includes('Admin') || 
+        p.createdBy.includes('SuperAdmin') || 
+        p.createdBy.includes('Staff')
+      )
+    )) {
+      return true;
+    }
+    return false;
+  }
+
   isAwaitingSpecialist(apt: AppointmentDto): boolean {
+    if (this.isAdminBooking(apt)) return false;
     if (apt.serviceProviderId) return false;
+    if (apt.journeyParts && apt.journeyParts.some(p => !!p.serviceProviderId)) return false;
+    if (apt.serviceProviderName && apt.serviceProviderName !== '—' && !apt.serviceProviderName.includes('Auto-Dispatch') && !apt.serviceProviderName.includes('Awaiting')) return false;
     if (apt.status !== AppointmentStatus.Booked) return false;
     return this.getRemainingSeconds(apt) > 0;
   }
 
   isExpired(apt: AppointmentDto): boolean {
+    if (this.isAdminBooking(apt)) return false;
     if (apt.serviceProviderId) return false;
+    if (apt.journeyParts && apt.journeyParts.some(p => !!p.serviceProviderId)) return false;
+    if (apt.serviceProviderName && apt.serviceProviderName !== '—' && !apt.serviceProviderName.includes('Auto-Dispatch') && !apt.serviceProviderName.includes('Awaiting')) return false;
     if (apt.status === AppointmentStatus.Cancelled) {
       return !!(apt.cancellationReason && (apt.cancellationReason.includes('10 minutes') || apt.cancellationReason.includes('specialist')));
     }
@@ -224,7 +342,30 @@ export class CustomerAppointmentsComponent implements OnInit, OnDestroy {
     return false;
   }
 
+  canRebookOrChooseSlot(apt: AppointmentDto): boolean {
+    if (this.hasPartialApproval(apt)) return false;
+    // Admin bookings must NEVER give customer the "Choose Slot" / "Select Another Slot" option
+    if (this.isAdminBooking(apt)) return false;
+    // Provider-assigned bookings waiting for provider approval must NOT give choose slot
+    if (apt.serviceProviderId && apt.status === AppointmentStatus.Booked) return false;
+    if (apt.journeyParts && apt.journeyParts.some(p => !!p.serviceProviderId) && apt.status === AppointmentStatus.Booked) return false;
+    if (apt.status === AppointmentStatus.RescheduleProposed) return false;
+    if (apt.status === AppointmentStatus.Approved) return false;
+
+    // Only allow for expired customer broadcast or cancelled due to specialist unavailability
+    if (this.isExpired(apt)) return true;
+    if (apt.status === AppointmentStatus.Cancelled) {
+      return !!(apt.cancellationReason && (
+        apt.cancellationReason.includes('10 minutes') || 
+        apt.cancellationReason.includes('specialist') || 
+        apt.cancellationReason.includes('unavailable')
+      ));
+    }
+    return false;
+  }
+
   rebookService(apt: AppointmentDto): void {
+    sessionStorage.removeItem('pending_booking_draft');
     let ids: number[] = [];
     if (apt.items && apt.items.length > 0) {
       ids = apt.items.map(it => it.serviceId).filter(id => id > 0);
@@ -236,10 +377,66 @@ export class CustomerAppointmentsComponent implements OnInit, OnDestroy {
     this.isBookingModalOpen.set(true);
   }
 
+  // --- Partial Acceptance Helpers ---
+  hasPartialApproval(apt: AppointmentDto): boolean {
+    return !!apt.hasPartialApproval && !!apt.journeyParts && apt.journeyParts.length > 1;
+  }
+
+  getApprovedParts(apt: AppointmentDto): AppointmentDto[] {
+    return apt.journeyParts ? apt.journeyParts.filter(p => p.status === AppointmentStatus.Approved) : [];
+  }
+
+  getUnacceptedParts(apt: AppointmentDto): AppointmentDto[] {
+    return apt.journeyParts ? apt.journeyParts.filter(p => p.status !== AppointmentStatus.Approved && !this.isAwaitingSpecialist(p)) : [];
+  }
+
+  getAwaitingParts(apt: AppointmentDto): AppointmentDto[] {
+    return apt.journeyParts ? apt.journeyParts.filter(p => this.isAwaitingSpecialist(p)) : [];
+  }
+
+  getPartServicesDisplay(part: AppointmentDto): string {
+    if (part.items && part.items.length > 0) {
+      return part.items.map(it => it.serviceName).join(', ');
+    }
+    return part.serviceName || 'Service';
+  }
+
+  onRebookPartFromTicket(event: { part: AppointmentDto; parent: AppointmentDto }): void {
+    this.closeTicket();
+    this.rebookSpecificPart(event.part, event.parent);
+  }
+
+  rebookSpecificPart(part: AppointmentDto, parentApt: AppointmentDto): void {
+    sessionStorage.removeItem('pending_booking_draft');
+    const serviceIds: number[] = [];
+    if (part.items && part.items.length > 0) {
+      part.items.forEach(it => serviceIds.push(it.serviceId));
+    } else if (part.serviceId) {
+      serviceIds.push(part.serviceId);
+    }
+
+    if (serviceIds.length === 0) {
+      this.rebookService(parentApt);
+      return;
+    }
+
+    this.selectedServiceIdsForModal.set(serviceIds);
+    this.selectedServiceIdForModal.set(serviceIds[0]);
+    this.isBookingModalOpen.set(true);
+  }
+
   openBookingModal(serviceId?: number): void {
+    sessionStorage.removeItem('pending_booking_draft');
     this.selectedServiceIdsForModal.set(serviceId ? [serviceId] : []);
     this.selectedServiceIdForModal.set(serviceId || null);
     this.isBookingModalOpen.set(true);
+  }
+
+  closeBookingModal(): void {
+    sessionStorage.removeItem('pending_booking_draft');
+    this.selectedServiceIdsForModal.set([]);
+    this.selectedServiceIdForModal.set(null);
+    this.isBookingModalOpen.set(false);
   }
 
   loadStats(): void {
@@ -289,7 +486,7 @@ export class CustomerAppointmentsComponent implements OnInit, OnDestroy {
   }
 
   onAppointmentBooked(apt: AppointmentDto): void {
-    this.isBookingModalOpen.set(false);
+    this.closeBookingModal();
     this.successMessage.set(`Appointment ${apt.appointmentNumber} booked successfully!`);
     this.loadStats();
     this.loadAppointments();
@@ -390,12 +587,33 @@ export class CustomerAppointmentsComponent implements OnInit, OnDestroy {
   }
 
   getServiceDisplay(apt: AppointmentDto): string {
-    if (apt.serviceNames && apt.serviceNames.length > 1) {
-      return apt.serviceNames.join(' + ');
+    const names = apt.serviceNames && apt.serviceNames.length > 0
+      ? apt.serviceNames
+      : (apt.items && apt.items.length > 0 ? apt.items.map(i => i.serviceName) : (apt.serviceName ? [apt.serviceName] : []));
+
+    if (names.length === 0) {
+      return apt.serviceProviderType || 'General Service';
     }
-    if (apt.items && apt.items.length > 1) {
-      return apt.items.map(i => i.serviceName).join(' + ');
+
+    if (names.length === 1) {
+      return names[0];
     }
-    return apt.serviceName || apt.serviceProviderType || 'General Service';
+
+    return `${names[0]} + ${names.length - 1} more`;
+  }
+
+  getFullServiceNames(apt: AppointmentDto): string {
+    const names = apt.serviceNames && apt.serviceNames.length > 0
+      ? apt.serviceNames
+      : (apt.items && apt.items.length > 0 ? apt.items.map(i => i.serviceName) : (apt.serviceName ? [apt.serviceName] : []));
+    return names.join(', ');
+  }
+
+  isSpecialistAssigned(apt: AppointmentDto): boolean {
+    if (apt.serviceProviderId) return true;
+    if (apt.journeyParts && apt.journeyParts.some(p => !!p.serviceProviderId)) return true;
+    const name = apt.serviceProviderName?.trim();
+    if (!name || name.toLowerCase().includes('dispatching') || name === '—' || name.toLowerCase().includes('awaiting')) return false;
+    return true;
   }
 }

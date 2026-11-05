@@ -17,9 +17,10 @@ export class ServiceCatalogService {
     return this.http.get<ServiceDto[]>(this.apiUrl, { params });
   }
 
-  getActiveServices(tenantId?: number): Observable<ServiceDto[]> {
+  getActiveServices(tenantId?: number, onlyWithProviders?: boolean): Observable<ServiceDto[]> {
     let params = new HttpParams();
     if (tenantId) params = params.set('tenantId', tenantId);
+    if (onlyWithProviders !== undefined) params = params.set('onlyWithProviders', onlyWithProviders);
     return this.http.get<ServiceDto[]>(`${this.apiUrl}/active`, { params });
   }
 

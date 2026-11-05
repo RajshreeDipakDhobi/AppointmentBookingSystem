@@ -184,16 +184,18 @@ public class AppointmentService : IAppointmentService
         DateTime date, 
         int? tenantId, 
         List<int>? serviceIds = null,
+        string? assignedSpecialistIds = null,
         CancellationToken cancellationToken = default)
     {
         var targetServiceIds = serviceIds != null && serviceIds.Count > 0
-            ? serviceIds.Where(id => id > 0).ToList()
+            ? serviceIds.Where(id => id > 0).Distinct().ToList()
             : (serviceId > 0 ? new List<int> { serviceId } : new List<int>());
 
         if (serviceId > 0 && !targetServiceIds.Contains(serviceId))
         {
             targetServiceIds.Insert(0, serviceId);
         }
+        targetServiceIds = targetServiceIds.Distinct().ToList();
 
         if (targetServiceIds.Count == 0)
         {
@@ -201,6 +203,7 @@ public class AppointmentService : IAppointmentService
         }
 
         var distinctIds = targetServiceIds.Distinct().ToList();
+        targetServiceIds = distinctIds;
         var services = await _unitOfWork.Repository<Service>().Query()
             .AsNoTracking()
             .Where(s => distinctIds.Contains(s.Id) && s.IsActive && !s.IsDeleted)
@@ -249,6 +252,191 @@ public class AppointmentService : IAppointmentService
 
         if (providers.Count == 0)
         {
+            if (distinctIds.Count > 1)
+            {
+                // Multi-Specialist Sequential Slot Engine (Urban Company Split & Combo Model)
+                var assignedProviderMap = new Dictionary<int, int>();
+                if (!string.IsNullOrWhiteSpace(assignedSpecialistIds))
+                {
+                    var parts = assignedSpecialistIds.Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                    for (int i = 0; i < parts.Length; i++)
+                    {
+                        var part = parts[i];
+                        if (part.Contains(':'))
+                        {
+                            var sub = part.Split(':');
+                            if (int.TryParse(sub[0], out int sid) && int.TryParse(sub[1], out int pid) && pid > 0)
+                            {
+                                assignedProviderMap[sid] = pid;
+                            }
+                        }
+                        else if (int.TryParse(part, out int pid) && pid > 0 && i < distinctIds.Count)
+                        {
+                            assignedProviderMap[distinctIds[i]] = pid;
+                        }
+                    }
+                }
+
+                // Urban Company Intelligent Provider Clustering:
+                // Group services belonging to the same assigned specialist consecutively
+                // so that e.g. services 1, 2, 4, 5 for Provider A are evaluated as a continuous block,
+                // followed by service 3 for Provider B (avoiding awkward multi-handoff fragmentation).
+                if (assignedProviderMap.Count > 0)
+                {
+                    distinctIds = distinctIds
+                        .OrderBy(sId => assignedProviderMap.TryGetValue(sId, out int pId) ? pId : int.MaxValue)
+                        .ToList();
+                }
+
+                var serviceLegs = new List<(int ServiceId, int DurationMinutes, List<ServiceProvider> QualifiedProviders)>();
+                foreach (var sId in distinctIds)
+                {
+                    var sMatch = services.FirstOrDefault(s => s.Id == sId);
+                    int dur = sMatch?.DurationMinutes is int dm && dm > 0 ? dm : 30;
+
+                    List<ServiceProvider> qp;
+                    if (assignedProviderMap.TryGetValue(sId, out int assignedPid))
+                    {
+                        qp = allProviders.Where(p => p.Id == assignedPid).ToList();
+                        if (qp.Count == 0)
+                        {
+                            qp = allProviders.Where(p => p.ServiceId == sId || p.ProviderServiceLinks.Any(ps => ps.ServiceId == sId && !ps.IsDeleted)).ToList();
+                        }
+                    }
+                    else
+                    {
+                        qp = allProviders.Where(p => p.ServiceId == sId || p.ProviderServiceLinks.Any(ps => ps.ServiceId == sId && !ps.IsDeleted)).ToList();
+                    }
+
+                    if (qp.Count == 0)
+                    {
+                        // Fallback to active salon specialists so slots can still be generated and booked
+                        qp = allProviders;
+                    }
+                    serviceLegs.Add((sId, dur, qp));
+                }
+
+                var allLegProviderIds = serviceLegs.SelectMany(l => l.QualifiedProviders.Select(p => p.Id)).Distinct().ToList();
+
+                var legSpecificAvail = await _unitOfWork.Repository<ProviderAvailability>().Query()
+                    .Where(pa => allLegProviderIds.Contains(pa.ServiceProviderId)
+                              && pa.SpecificDate.HasValue
+                              && pa.SpecificDate.Value.Date == date.Date)
+                    .ToListAsync(cancellationToken);
+
+                var legWeeklyAvail = await _unitOfWork.Repository<ProviderAvailability>().Query()
+                    .Where(pa => allLegProviderIds.Contains(pa.ServiceProviderId)
+                              && !pa.SpecificDate.HasValue
+                              && pa.DayOfWeek == date.DayOfWeek)
+                    .ToListAsync(cancellationToken);
+
+                var legExistingAppts = await _unitOfWork.Repository<Appointment>().Query()
+                    .Where(a => a.ServiceProviderId.HasValue 
+                             && allLegProviderIds.Contains(a.ServiceProviderId.Value)
+                             && a.AppointmentDate.Date == date.Date
+                             && a.Status != AppointmentStatus.Cancelled
+                             && a.Status != AppointmentStatus.Rescheduled)
+                    .ToListAsync(cancellationToken);
+
+                TimeSpan? overallMin = null;
+                TimeSpan? overallMax = null;
+
+                foreach (var pId in allLegProviderIds)
+                {
+                    var av = legSpecificAvail.FirstOrDefault(sa => sa.ServiceProviderId == pId)
+                          ?? legWeeklyAvail.FirstOrDefault(wa => wa.ServiceProviderId == pId);
+                    if (av != null && av.IsAvailable)
+                    {
+                        if (!overallMin.HasValue || av.StartTime < overallMin.Value) overallMin = av.StartTime;
+                        if (!overallMax.HasValue || av.EndTime > overallMax.Value) overallMax = av.EndTime;
+                    }
+                }
+
+                if (!overallMin.HasValue || !overallMax.HasValue)
+                {
+                    response.WorkingHours = "No specialists available on this day";
+                    return response;
+                }
+
+                response.IsWorkingDay = true;
+                response.WorkingHours = $"{overallMin.Value:hh\\:mm} – {overallMax.Value:hh\\:mm}";
+
+                var nowLocal = _dateTimeProvider.GetCurrentLocalTime();
+                var totalDuration = TimeSpan.FromMinutes(slotDurationMins);
+                int stepMins = slotDurationMins >= 90 ? 30 : slotDurationMins;
+                var stepInterval = TimeSpan.FromMinutes(stepMins);
+                var slotCursor = overallMin.Value;
+
+                while (slotCursor + totalDuration <= overallMax.Value)
+                {
+                    var slotEnd = slotCursor + totalDuration;
+                    bool canFulfillAllLegs = true;
+                    var currentLegStart = slotCursor;
+
+                    foreach (var leg in serviceLegs)
+                    {
+                        var legDuration = TimeSpan.FromMinutes(leg.DurationMinutes);
+                        var legEnd = currentLegStart + legDuration;
+
+                        bool hasSpecialistForLeg = false;
+                        foreach (var prov in leg.QualifiedProviders)
+                        {
+                            var av = legSpecificAvail.FirstOrDefault(sa => sa.ServiceProviderId == prov.Id)
+                                  ?? legWeeklyAvail.FirstOrDefault(wa => wa.ServiceProviderId == prov.Id);
+
+                            if (av == null || !av.IsAvailable) continue;
+                            if (currentLegStart < av.StartTime || legEnd > av.EndTime) continue;
+
+                            bool isBreak = av.BreakStartTime.HasValue && av.BreakEndTime.HasValue
+                                        && currentLegStart < av.BreakEndTime.Value
+                                        && legEnd > av.BreakStartTime.Value;
+                            if (isBreak) continue;
+
+                            bool isBooked = legExistingAppts.Any(a => a.ServiceProviderId == prov.Id
+                                                                && a.StartTime < legEnd
+                                                                && a.EndTime > currentLegStart);
+                            if (isBooked) continue;
+
+                            hasSpecialistForLeg = true;
+                            break;
+                        }
+
+                        if (!hasSpecialistForLeg)
+                        {
+                            canFulfillAllLegs = false;
+                            break;
+                        }
+
+                        currentLegStart = legEnd;
+                    }
+
+                    bool isPast = false;
+                    if (date.Date < nowLocal.Date) isPast = true;
+                    else if (date.Date == nowLocal.Date && slotCursor <= nowLocal.TimeOfDay) isPast = true;
+
+                    bool isAvail = canFulfillAllLegs && !isPast;
+                    string status = isPast ? "Past" : (canFulfillAllLegs ? "Available" : "Booked");
+                    string? reason = isPast ? "Slot time has passed" : (!canFulfillAllLegs ? "Specialists unavailable during this interval" : null);
+
+                    string startStr = slotCursor.ToString(@"hh\:mm");
+                    string endStr = slotEnd.ToString(@"hh\:mm");
+
+                    response.Slots.Add(new AvailableSlotDto
+                    {
+                        StartTime = startStr,
+                        EndTime = endStr,
+                        DisplayText = $"{DateTime.Today.Add(slotCursor):hh:mm tt} – {DateTime.Today.Add(slotEnd):hh:mm tt}",
+                        IsAvailable = isAvail,
+                        Status = status,
+                        Reason = reason
+                    });
+
+                    slotCursor += stepInterval;
+                }
+
+                return response;
+            }
+
             response.WorkingHours = "No specialists certified for all selected services";
             return response;
         }
@@ -533,6 +721,7 @@ public class AppointmentService : IAppointmentService
         }
 
         var distinctIds = targetServiceIds.Distinct().ToList();
+        targetServiceIds = distinctIds;
         var allServices = await _unitOfWork.Repository<Service>().Query()
             .Where(s => distinctIds.Contains(s.Id) && s.IsActive && !s.IsDeleted)
             .ToListAsync(cancellationToken);
@@ -644,7 +833,20 @@ public class AppointmentService : IAppointmentService
 
             if (activeSpecialists.Count == 0)
             {
-                return ApiResponse<AppointmentDto>.Fail("No active specialists are currently assigned to perform all selected services together.");
+                // Fallback: If no single specialist has ALL services across categories, allow broadcast to specialists who can perform the selected services or active specialists in the tenant
+                activeSpecialists = allSpecialists.Where(p =>
+                    distinctIds.Any(sId => p.ServiceId == sId || p.ProviderServiceLinks.Any(ps => ps.ServiceId == sId && !ps.IsDeleted))
+                ).ToList();
+
+                if (activeSpecialists.Count == 0)
+                {
+                    activeSpecialists = allSpecialists;
+                }
+
+                if (activeSpecialists.Count == 0)
+                {
+                    return ApiResponse<AppointmentDto>.Fail("No active specialists are currently available to perform the requested services.");
+                }
             }
 
             resolvedTenantId = tenantId ?? activeSpecialists.FirstOrDefault()?.TenantId ?? 1;
@@ -818,6 +1020,27 @@ public class AppointmentService : IAppointmentService
                     }
                     catch (Exception emailEx)
                     {
+                        _logger.LogError(emailEx, "Failed to send welcome credentials email to newly registered Customer {Email} during multi-booking flow", targetCustomerEmail);
+                    }
+                });
+            }
+
+            // If a new customer account was created during booking flow, dispatch credentials email in background
+            if (isNewCustomerAccount && !string.IsNullOrWhiteSpace(customerUser?.Email))
+            {
+                var targetCustomerEmail = customerUser.Email;
+                var customerFullName = $"{customerUser.FirstName} {customerUser.LastName}".Trim();
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await _emailService.SendAccountCreatedEmailAsync(
+                            targetCustomerEmail,
+                            customerFullName,
+                            defaultPassword);
+                    }
+                    catch (Exception emailEx)
+                    {
                         _logger.LogError(emailEx, "Failed to send welcome credentials email to newly registered Customer {Email} during booking flow", targetCustomerEmail);
                     }
                 });
@@ -845,11 +1068,270 @@ public class AppointmentService : IAppointmentService
         }
     }
 
+    public async Task<ApiResponse<List<AppointmentDto>>> BookMultiAppointmentAsync(
+        int? tenantId, 
+        int? customerId, 
+        BookMultiAppointmentRequestDto request, 
+        bool isBookedByProvider = false, 
+        string? createdByName = null, 
+        CancellationToken cancellationToken = default)
+    {
+        if (request.Legs == null || request.Legs.Count == 0)
+        {
+            return ApiResponse<List<AppointmentDto>>.Fail("At least one booking leg is required.");
+        }
+
+        // 1. Collect all distinct service IDs across all legs
+        var allServiceIds = request.Legs
+            .SelectMany(l => l.ServiceIds != null && l.ServiceIds.Count > 0 ? l.ServiceIds : (l.ServiceId.HasValue ? new List<int> { l.ServiceId.Value } : new List<int>()))
+            .Where(id => id > 0)
+            .Distinct()
+            .ToList();
+
+        if (allServiceIds.Count == 0)
+        {
+            return ApiResponse<List<AppointmentDto>>.Fail("Please select at least one valid service.");
+        }
+
+        var allServices = await _unitOfWork.Repository<Service>().Query()
+            .Where(s => allServiceIds.Contains(s.Id) && s.IsActive && !s.IsDeleted)
+            .ToListAsync(cancellationToken);
+
+        if (allServices.Count == 0)
+        {
+            return ApiResponse<List<AppointmentDto>>.Fail("Selected services were not found or are inactive.");
+        }
+
+        // 2. Resolve / Create customer User
+        var normalizedEmail = request.CustomerEmail.Trim().ToLowerInvariant();
+        User? customerUser = null;
+
+        if (customerId.HasValue)
+        {
+            customerUser = await _unitOfWork.Repository<User>().GetByIdAsync(customerId.Value);
+        }
+
+        if (customerUser == null)
+        {
+            customerUser = await _unitOfWork.Repository<User>().Query()
+                .FirstOrDefaultAsync(u => u.Email.ToLower() == normalizedEmail, cancellationToken);
+        }
+
+        if (customerUser == null && !string.IsNullOrWhiteSpace(request.CustomerPhone))
+        {
+            var digitsOnly = new string(request.CustomerPhone.Where(char.IsDigit).ToArray());
+            if (digitsOnly.Length >= 10)
+            {
+                var last10 = digitsOnly.Substring(digitsOnly.Length - 10);
+                customerUser = await _unitOfWork.Repository<User>().Query()
+                    .FirstOrDefaultAsync(u => u.Role == UserRole.Customer && u.PhoneNumber != null && u.PhoneNumber.Contains(last10), cancellationToken);
+            }
+        }
+
+        var defaultPassword = "123456";
+        bool isNewCustomerAccount = false;
+
+        if (customerUser == null)
+        {
+            isNewCustomerAccount = true;
+            var nameParts = request.CustomerName.Trim().Split(' ', 2);
+            customerUser = new User
+            {
+                FirstName = nameParts[0],
+                LastName = nameParts.Length > 1 ? nameParts[1] : string.Empty,
+                Email = normalizedEmail,
+                PhoneNumber = request.CustomerPhone.Trim(),
+                Address = request.CustomerAddress.Trim(),
+                Role = UserRole.Customer,
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow
+            };
+            await _unitOfWork.Repository<User>().AddAsync(customerUser);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+        }
+        else
+        {
+            if (string.IsNullOrEmpty(customerUser.Address) && !string.IsNullOrWhiteSpace(request.CustomerAddress))
+            {
+                customerUser.Address = request.CustomerAddress.Trim();
+                _unitOfWork.Repository<User>().Update(customerUser);
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+            }
+        }
+
+        customerId = customerUser.Id;
+        int resolvedTenantId = tenantId ?? customerUser.TenantId ?? 1;
+        if (resolvedTenantId <= 0) resolvedTenantId = 1;
+
+        var createdAppointments = new List<Appointment>();
+
+        await _unitOfWork.BeginTransactionAsync();
+        try
+        {
+            int legIndex = 0;
+            int totalLegs = request.Legs.Count;
+
+            foreach (var leg in request.Legs)
+            {
+                legIndex++;
+                if (!TimeSpan.TryParse(leg.StartTime, out var startTime) || !TimeSpan.TryParse(leg.EndTime, out var endTime))
+                {
+                    await _unitOfWork.RollbackTransactionAsync();
+                    return ApiResponse<List<AppointmentDto>>.Fail($"Invalid time format for leg {legIndex}. Use HH:mm.");
+                }
+
+                if (endTime <= startTime)
+                {
+                    await _unitOfWork.RollbackTransactionAsync();
+                    return ApiResponse<List<AppointmentDto>>.Fail($"EndTime must be after StartTime for leg {legIndex}.");
+                }
+
+                var legDate = leg.AppointmentDate.Date;
+                var targetLegServiceIds = leg.ServiceIds != null && leg.ServiceIds.Count > 0
+                    ? leg.ServiceIds.Where(id => id > 0).Distinct().ToList()
+                    : (leg.ServiceId.HasValue && leg.ServiceId.Value > 0 ? new List<int> { leg.ServiceId.Value } : new List<int>());
+
+                if (targetLegServiceIds.Count == 0 && allServiceIds.Count > 0)
+                {
+                    targetLegServiceIds = new List<int> { allServiceIds[0] };
+                }
+
+                var legServices = allServices.Where(s => targetLegServiceIds.Contains(s.Id)).ToList();
+                var primaryLegService = legServices.FirstOrDefault(s => s.Id == leg.ServiceId) ?? legServices.FirstOrDefault() ?? allServices.First();
+
+                decimal legTotalAmount = targetLegServiceIds
+                    .Select(id => allServices.FirstOrDefault(s => s.Id == id)?.Price ?? 0m)
+                    .Sum();
+
+                int legTotalDuration = targetLegServiceIds
+                    .Select(id => allServices.FirstOrDefault(s => s.Id == id)?.DurationMinutes is int m && m > 0 ? m : 30)
+                    .Sum();
+
+                bool isDirect = leg.ServiceProviderId.HasValue && leg.ServiceProviderId.Value > 0;
+
+                if (isDirect)
+                {
+                    bool isSlotTaken = await _unitOfWork.Repository<Appointment>().Query()
+                        .AnyAsync(a => a.ServiceProviderId == leg.ServiceProviderId.Value
+                                    && a.AppointmentDate.Date == legDate
+                                    && a.Status != AppointmentStatus.Cancelled
+                                    && a.Status != AppointmentStatus.Rescheduled
+                                    && a.StartTime < endTime
+                                    && a.EndTime > startTime, cancellationToken);
+
+                    if (isSlotTaken)
+                    {
+                        await _unitOfWork.RollbackTransactionAsync();
+                        return ApiResponse<List<AppointmentDto>>.Fail($"Specialist is already booked during {leg.StartTime} - {leg.EndTime} on {legDate:yyyy-MM-dd}.");
+                    }
+                }
+
+                // Generate Unique Appointment Number
+                string appointmentNumber;
+                bool isUnique = false;
+                int attempts = 0;
+                var rand = new Random();
+                do
+                {
+                    appointmentNumber = $"APT-{legDate:yyyyMMdd}-{rand.Next(1000, 9999)}";
+                    isUnique = !await _unitOfWork.Repository<Appointment>().Query()
+                        .AnyAsync(a => a.AppointmentNumber == appointmentNumber, cancellationToken);
+                    attempts++;
+                } while (!isUnique && attempts < 10);
+
+                var reasonNote = string.IsNullOrWhiteSpace(request.Reason) ? null : request.Reason.Trim();
+
+                var appointment = new Appointment
+                {
+                    TenantId = resolvedTenantId,
+                    AppointmentNumber = appointmentNumber,
+                    ServiceProviderId = isDirect ? leg.ServiceProviderId : null,
+                    ServiceId = primaryLegService.Id,
+                    CustomerId = customerId.Value,
+                    Reason = reasonNote,
+                    AppointmentDate = legDate,
+                    StartTime = startTime,
+                    EndTime = endTime,
+                    TotalAmount = legTotalAmount,
+                    TotalDurationMinutes = legTotalDuration,
+                    Status = (isDirect && isBookedByProvider) ? AppointmentStatus.Approved : AppointmentStatus.Booked,
+                    ApprovedAt = (isDirect && isBookedByProvider) ? DateTime.UtcNow : null,
+                    CreatedAt = DateTime.UtcNow,
+                    CreatedBy = !string.IsNullOrWhiteSpace(createdByName) 
+                        ? createdByName.Trim() 
+                        : (isBookedByProvider ? "Service Provider" : $"{customerUser.FirstName} {customerUser.LastName}".Trim())
+                };
+
+                foreach (var sId in targetLegServiceIds)
+                {
+                    var s = allServices.FirstOrDefault(x => x.Id == sId);
+                    if (s != null)
+                    {
+                        appointment.Items.Add(new AppointmentItem
+                        {
+                            ServiceId = s.Id,
+                            ServiceName = s.Name,
+                            Price = s.Price,
+                            DurationMinutes = s.DurationMinutes > 0 ? s.DurationMinutes : 30,
+                            CreatedAt = DateTime.UtcNow,
+                            CreatedBy = appointment.CreatedBy
+                        });
+                    }
+                }
+
+                await _unitOfWork.Repository<Appointment>().AddAsync(appointment);
+                createdAppointments.Add(appointment);
+            }
+
+            await _unitOfWork.CommitTransactionAsync();
+
+            // If a new customer account was created during booking flow, dispatch credentials email in background
+            if (isNewCustomerAccount && !string.IsNullOrWhiteSpace(customerUser?.Email))
+            {
+                var targetCustomerEmail = customerUser.Email;
+                var customerFullName = $"{customerUser.FirstName} {customerUser.LastName}".Trim();
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await _emailService.SendAccountCreatedEmailAsync(
+                            targetCustomerEmail,
+                            customerFullName,
+                            defaultPassword);
+                    }
+                    catch (Exception emailEx)
+                    {
+                        _logger.LogError(emailEx, "Failed to send welcome credentials email to newly registered Customer {Email} during multi-booking flow", targetCustomerEmail);
+                    }
+                });
+            }
+
+            // Load navigation properties for return
+            var createdIds = createdAppointments.Select(a => a.Id).ToList();
+            var resultList = await _unitOfWork.Repository<Appointment>().Query()
+                .AsNoTracking()
+                .Include(a => a.ServiceProvider).ThenInclude(s => s!.User)
+                .Include(a => a.Service)
+                .Include(a => a.Customer)
+                .Include(a => a.Items).ThenInclude(i => i.Service)
+                .Where(a => createdIds.Contains(a.Id))
+                .ToListAsync(cancellationToken);
+
+            var dtos = _mapper.Map<List<AppointmentDto>>(resultList);
+            return ApiResponse<List<AppointmentDto>>.Ok(dtos, $"{dtos.Count} appointment(s) booked successfully!");
+        }
+        catch (Exception ex)
+        {
+            await _unitOfWork.RollbackTransactionAsync();
+            return ApiResponse<List<AppointmentDto>>.Fail(ex.Message);
+        }
+    }
+
     public async Task<ApiResponse<AppointmentDto>> RescheduleAppointmentAsync(
         int appointmentId, 
         int? tenantId, 
         int? customerId, 
-        bool isAdmin, 
+        bool isStaff, 
         RescheduleAppointmentRequestDto request,
         CancellationToken cancellationToken = default)
     {
@@ -867,7 +1349,7 @@ public class AppointmentService : IAppointmentService
         }
 
         // Ownership / IDOR Security Verification
-        var authError = VerifyAppointmentOwnership(appointment, customerId, isAdmin, request.CustomerContact);
+        var authError = VerifyAppointmentOwnership(appointment, customerId, isStaff, request.CustomerContact);
         if (authError != null)
         {
             return ApiResponse<AppointmentDto>.Fail(authError);
@@ -891,7 +1373,7 @@ public class AppointmentService : IAppointmentService
 
         var now = _dateTimeProvider.GetCurrentLocalTime();
         var appointmentStartDateTime = appointment.AppointmentDate.Date.Add(appointment.StartTime);
-        if (now >= appointmentStartDateTime.AddHours(-1) && !isAdmin)
+        if (now >= appointmentStartDateTime.AddHours(-1))
         {
             return ApiResponse<AppointmentDto>.Fail("Appointments can only be rescheduled at least 1 hour prior to the scheduled start time.");
         }
@@ -998,7 +1480,7 @@ public class AppointmentService : IAppointmentService
         int appointmentId, 
         int? tenantId, 
         int? customerId, 
-        bool isAdmin, 
+        bool isStaff, 
         CancelAppointmentRequestDto request,
         string? cancellerName = null,
         CancellationToken cancellationToken = default)
@@ -1017,7 +1499,7 @@ public class AppointmentService : IAppointmentService
         }
 
         // Ownership / IDOR Security Verification
-        var authError = VerifyAppointmentOwnership(appointment, customerId, isAdmin, request.CustomerContact);
+        var authError = VerifyAppointmentOwnership(appointment, customerId, isStaff, request.CustomerContact);
         if (authError != null)
         {
             return ApiResponse<AppointmentDto>.Fail(authError);
@@ -1047,9 +1529,9 @@ public class AppointmentService : IAppointmentService
             {
                 canceller = cancellerName.Trim();
             }
-            else if (isAdmin)
+            else if (isStaff)
             {
-                canceller = "Administrator";
+                canceller = "Staff / Specialist";
             }
             else if (appointment.Customer != null)
             {
@@ -1098,6 +1580,207 @@ public class AppointmentService : IAppointmentService
 
 
 
+    private static List<AppointmentDto> GroupMultiPartAppointments(List<AppointmentDto> list)
+    {
+        if (list == null || list.Count == 0) return new List<AppointmentDto>();
+
+        var result = new List<AppointmentDto>();
+        var groupedIds = new HashSet<int>();
+
+        for (int i = 0; i < list.Count; i++)
+        {
+            var apt = list[i];
+            if (groupedIds.Contains(apt.Id)) continue;
+
+                        var parts = list.Where(other =>
+                other.AppointmentDate.Date == apt.AppointmentDate.Date &&
+                other.CustomerId == apt.CustomerId &&
+                Math.Abs((other.CreatedAt - apt.CreatedAt).TotalSeconds) < 120
+            ).ToList();
+
+                if (parts.Count > 1)
+                {
+                    foreach (var p in parts) groupedIds.Add(p.Id);
+                    parts = parts.OrderBy(p => p.StartTime).ToList();
+
+                    var firstPart = parts[0];
+                    var lastPart = parts[parts.Count - 1];
+
+                    var combinedItems = new List<AppointmentItemDto>();
+                    var combinedNames = new List<string>();
+                    decimal sumAmount = 0m;
+                    int sumDur = 0;
+
+                    foreach (var p in parts)
+                    {
+                        sumAmount += p.TotalAmount > 0 ? p.TotalAmount : (p.ServicePrice ?? 0m);
+                        sumDur += p.TotalDurationMinutes > 0 ? p.TotalDurationMinutes : (p.ServiceDurationMinutes ?? 30);
+
+                        if (p.Items != null && p.Items.Count > 0)
+                        {
+                            foreach (var it in p.Items)
+                            {
+                                combinedItems.Add(it);
+                                if (!string.IsNullOrEmpty(it.ServiceName) && !combinedNames.Contains(it.ServiceName))
+                                {
+                                    combinedNames.Add(it.ServiceName);
+                                }
+                            }
+                        }
+                        else if (!string.IsNullOrEmpty(p.ServiceName))
+                        {
+                            combinedItems.Add(new AppointmentItemDto
+                            {
+                                Id = 0,
+                                AppointmentId = p.Id,
+                                ServiceId = p.ServiceId ?? 0,
+                                ServiceName = p.ServiceName,
+                                Price = p.ServicePrice ?? 0m,
+                                DurationMinutes = p.ServiceDurationMinutes ?? 30
+                            });
+                            if (!combinedNames.Contains(p.ServiceName))
+                            {
+                                combinedNames.Add(p.ServiceName);
+                            }
+                        }
+                    }
+
+                    var isAllApproved = parts.All(p => p.Status == AppointmentStatus.Approved);
+                    var isAllCancelled = parts.All(p => p.Status == AppointmentStatus.Cancelled);
+                    var isAnyAwaiting = parts.Any(p => !p.ServiceProviderId.HasValue && p.Status == AppointmentStatus.Booked && !p.IsExpired);
+                    var approvedParts = parts.Where(p => p.Status == AppointmentStatus.Approved).ToList();
+                    var awaitingParts = parts.Where(p => !p.ServiceProviderId.HasValue && p.Status == AppointmentStatus.Booked && !p.IsExpired).ToList();
+                    int approvedCount = approvedParts.Count;
+                    int totalParts = parts.Count;
+                    bool hasPartial = approvedCount > 0 && approvedCount < totalParts;
+
+                    var safeParts = parts.Select(p => new AppointmentDto
+                    {
+                        Id = p.Id,
+                        TenantId = p.TenantId,
+                        AppointmentNumber = p.AppointmentNumber,
+                        ServiceProviderId = p.ServiceProviderId,
+                        ServiceProviderName = p.ServiceProviderName,
+                        ServiceProviderType = p.ServiceProviderType,
+                        ServiceProviderProfilePictureUrl = p.ServiceProviderProfilePictureUrl,
+                        ServiceId = p.ServiceId,
+                        ServiceName = p.ServiceName,
+                        ServicePrice = p.ServicePrice,
+                        ServiceDurationMinutes = p.ServiceDurationMinutes,
+                        TotalAmount = p.TotalAmount,
+                        TotalDurationMinutes = p.TotalDurationMinutes,
+                        Items = p.Items != null ? new List<AppointmentItemDto>(p.Items) : new List<AppointmentItemDto>(),
+                        CustomerId = p.CustomerId,
+                        CustomerName = p.CustomerName,
+                        CustomerEmail = p.CustomerEmail,
+                        CustomerPhone = p.CustomerPhone,
+                        CustomerAddress = p.CustomerAddress,
+                        Reason = p.Reason,
+                        AppointmentDate = p.AppointmentDate,
+                        StartTime = p.StartTime,
+                        EndTime = p.EndTime,
+                        Status = p.Status,
+                        StatusText = p.StatusText,
+                        CreatedAt = p.CreatedAt,
+                        CreatedBy = p.CreatedBy,
+                        ApprovedAt = p.ApprovedAt,
+                        CancelledAt = p.CancelledAt,
+                        CancellationReason = p.CancellationReason,
+                        RejectionReason = p.RejectionReason,
+                        ProposedDate = p.ProposedDate,
+                        ProposedStartTime = p.ProposedStartTime,
+                        ProposedEndTime = p.ProposedEndTime,
+                        RescheduleNotes = p.RescheduleNotes,
+                        JourneyParts = null
+                    }).ToList();
+
+                    var unified = new AppointmentDto
+                    {
+                        Id = firstPart.Id,
+                        TenantId = firstPart.TenantId,
+                        AppointmentNumber = firstPart.AppointmentNumber,
+                        CustomerId = firstPart.CustomerId,
+                        CustomerName = firstPart.CustomerName,
+                        CustomerEmail = firstPart.CustomerEmail,
+                        CustomerPhone = firstPart.CustomerPhone,
+                        CustomerAddress = firstPart.CustomerAddress,
+                        AppointmentDate = firstPart.AppointmentDate,
+                        StartTime = firstPart.StartTime,
+                        EndTime = lastPart.EndTime,
+                        TotalAmount = sumAmount,
+                        TotalDurationMinutes = sumDur,
+                        Items = combinedItems,
+                        ServiceName = string.Join(" + ", combinedNames),
+                        CreatedAt = firstPart.CreatedAt,
+                        CreatedBy = firstPart.CreatedBy,
+                        ApprovedAt = firstPart.ApprovedAt,
+                        CancelledAt = firstPart.CancelledAt,
+                        CancellationReason = firstPart.CancellationReason,
+                        RejectionReason = firstPart.RejectionReason,
+                        RescheduledFromAppointmentId = firstPart.RescheduledFromAppointmentId,
+                        Reason = firstPart.Reason,
+                        HasPartialApproval = hasPartial,
+                        ApprovedPartsCount = approvedCount,
+                        PendingPartsCount = awaitingParts.Count,
+                        JourneyParts = safeParts
+                    };
+
+                    var distinctProviders = parts
+                        .Where(p => !string.IsNullOrWhiteSpace(p.ServiceProviderName))
+                        .Select(p => p.ServiceProviderName)
+                        .Distinct()
+                        .ToList();
+
+                    if (distinctProviders.Count > 1)
+                    {
+                        unified.ServiceProviderName = string.Join(", ", distinctProviders);
+                        unified.ServiceProviderType = "Multi-Specialist Session";
+                    }
+                    else if (distinctProviders.Count == 1)
+                    {
+                        unified.ServiceProviderName = distinctProviders[0];
+                    }
+
+                    var hasAssignedProviders = parts.Any(p => p.ServiceProviderId.HasValue);
+                    if (hasAssignedProviders)
+                    {
+                        unified.ServiceProviderId = firstPart.ServiceProviderId ?? parts.FirstOrDefault(p => p.ServiceProviderId.HasValue)?.ServiceProviderId;
+                    }
+
+                    if (hasPartial)
+                    {
+                        unified.Status = AppointmentStatus.Approved;
+                        unified.StatusText = $"{approvedCount} of {totalParts} Confirmed";
+                    }
+                    else if (isAnyAwaiting)
+                    {
+                        unified.Status = AppointmentStatus.Booked;
+                        unified.StatusText = awaitingParts.Count == totalParts ? "Awaiting Specialist" : $"{approvedCount} Confirmed, {awaitingParts.Count} Awaiting";
+                    }
+                    else if (isAllApproved)
+                    {
+                        unified.Status = AppointmentStatus.Approved;
+                    }
+                    else if (isAllCancelled)
+                    {
+                        unified.Status = AppointmentStatus.Cancelled;
+                    }
+                    else
+                    {
+                        unified.Status = firstPart.Status;
+                    }
+
+                    result.Add(unified);
+                    continue;
+                }
+
+            groupedIds.Add(apt.Id);
+            result.Add(apt);
+        }
+
+        return result;
+    }
+
     public async Task<List<AppointmentDto>> GetMyAppointmentsAsync(int customerId, CancellationToken cancellationToken = default)
     {
         var appointments = await _unitOfWork.Repository<Appointment>().Query().AsNoTracking()
@@ -1109,7 +1792,8 @@ public class AppointmentService : IAppointmentService
             .OrderByDescending(a => a.CreatedAt)
             .ToListAsync(cancellationToken);
 
-        return _mapper.Map<List<AppointmentDto>>(appointments);
+        var dtos = _mapper.Map<List<AppointmentDto>>(appointments);
+        return GroupMultiPartAppointments(dtos);
     }
 
     public async Task<PagedResult<AppointmentDto>> GetMyAppointmentsPagedAsync(
@@ -1146,16 +1830,20 @@ public class AppointmentService : IAppointmentService
                                   || (a.Customer != null && (a.Customer.FirstName + " " + a.Customer.LastName).ToLower().Contains(search)));
         }
 
-        var totalCount = await query.CountAsync(cancellationToken);
-
         var appointments = await query
             .OrderByDescending(a => a.CreatedAt)
-            .Skip((paginationParams.PageNumber - 1) * paginationParams.PageSize)
-            .Take(paginationParams.PageSize)
             .ToListAsync(cancellationToken);
 
         var dtos = _mapper.Map<List<AppointmentDto>>(appointments);
-        return new PagedResult<AppointmentDto>(dtos, totalCount, paginationParams.PageNumber, paginationParams.PageSize);
+        var groupedDtos = GroupMultiPartAppointments(dtos);
+
+        var totalCount = groupedDtos.Count;
+        var pagedDtos = groupedDtos
+            .Skip((paginationParams.PageNumber - 1) * paginationParams.PageSize)
+            .Take(paginationParams.PageSize)
+            .ToList();
+
+        return new PagedResult<AppointmentDto>(pagedDtos, totalCount, paginationParams.PageNumber, paginationParams.PageSize);
     }
 
     public async Task<List<AppointmentDto>> GetAppointmentsAsync(
@@ -1211,7 +1899,8 @@ public class AppointmentService : IAppointmentService
             .OrderByDescending(a => a.CreatedAt)
             .ToListAsync(cancellationToken);
 
-        return _mapper.Map<List<AppointmentDto>>(appointments);
+        var dtos = _mapper.Map<List<AppointmentDto>>(appointments);
+        return GroupMultiPartAppointments(dtos);
     }
 
     public async Task<PagedResult<AppointmentDto>> GetAppointmentsPagedAsync(
@@ -1263,16 +1952,20 @@ public class AppointmentService : IAppointmentService
                                   || a.AppointmentNumber.ToLower().Contains(lowerSearch));
         }
 
-        var totalCount = await query.CountAsync(cancellationToken);
-
         var appointments = await query
             .OrderByDescending(a => a.CreatedAt)
-            .Skip((paginationParams.PageNumber - 1) * paginationParams.PageSize)
-            .Take(paginationParams.PageSize)
             .ToListAsync(cancellationToken);
 
         var dtos = _mapper.Map<List<AppointmentDto>>(appointments);
-        return new PagedResult<AppointmentDto>(dtos, totalCount, paginationParams.PageNumber, paginationParams.PageSize);
+        var groupedDtos = GroupMultiPartAppointments(dtos);
+
+        var totalCount = groupedDtos.Count;
+        var pagedDtos = groupedDtos
+            .Skip((paginationParams.PageNumber - 1) * paginationParams.PageSize)
+            .Take(paginationParams.PageSize)
+            .ToList();
+
+        return new PagedResult<AppointmentDto>(pagedDtos, totalCount, paginationParams.PageNumber, paginationParams.PageSize);
     }
 
     public async Task<AppointmentDto?> GetAppointmentByIdAsync(int appointmentId, int tenantId, CancellationToken cancellationToken = default)
@@ -1574,7 +2267,7 @@ public class AppointmentService : IAppointmentService
                 foreach (var apt in expired)
                 {
                     apt.Status = AppointmentStatus.Cancelled;
-                    apt.CancellationReason = "No specialist was available to accept within 10 minutes. (Cancelled by System)";
+                    apt.CancellationReason = "No specialist was available for this requested slot. (Cancelled by System)";
                     apt.CancelledAt = DateTime.UtcNow;
                     apt.UpdatedAt = DateTime.UtcNow;
                     _unitOfWork.Repository<Appointment>().Update(apt);
@@ -1599,7 +2292,8 @@ public class AppointmentService : IAppointmentService
         var nowTime = _dateTimeProvider.GetCurrentLocalTime().TimeOfDay;
         var cutoffTime = DateTime.UtcNow.AddMinutes(-10);
 
-        // Base query for unassigned broadcast appointments within active 10-minute window
+        // Base query for unassigned customer broadcast appointments within active 10-minute window
+        // Strictly exclude appointments created by Admin/SuperAdmin/Staff so acceptance popup is customer-only
         var query = _unitOfWork.Repository<Appointment>().Query()
             .Include(a => a.Service)
             .Include(a => a.Customer)
@@ -1608,7 +2302,8 @@ public class AppointmentService : IAppointmentService
             .Where(a => a.ServiceProviderId == null 
                      && a.Status == AppointmentStatus.Booked
                      && a.CreatedAt >= cutoffTime
-                     && a.AppointmentDate.Date >= today);
+                     && a.AppointmentDate.Date >= today
+                     && (a.CreatedBy == null || (!a.CreatedBy.Contains("Admin") && !a.CreatedBy.Contains("SuperAdmin") && !a.CreatedBy.Contains("Staff"))));
 
         if (tenantId.HasValue && tenantId.Value > 0)
         {
@@ -1637,7 +2332,7 @@ public class AppointmentService : IAppointmentService
             if (assignedServiceIds.Count > 0)
             {
                 query = query.Where(a => 
-                    (a.Items.Any() && a.Items.All(i => assignedServiceIds.Contains(i.ServiceId)))
+                    (a.Items.Any() && a.Items.Any(i => assignedServiceIds.Contains(i.ServiceId)))
                     || (!a.Items.Any() && a.ServiceId.HasValue && assignedServiceIds.Contains(a.ServiceId.Value))
                 );
             }
@@ -1733,13 +2428,13 @@ public class AppointmentService : IAppointmentService
             if (appointment.CreatedAt.AddMinutes(10) < DateTime.UtcNow)
             {
                 appointment.Status = AppointmentStatus.Cancelled;
-                appointment.CancellationReason = "No specialist was available to accept within 10 minutes. (Cancelled by System)";
+                appointment.CancellationReason = "No specialist was available for this requested slot. (Cancelled by System)";
                 appointment.CancelledAt = DateTime.UtcNow;
                 appointment.UpdatedAt = DateTime.UtcNow;
                 _unitOfWork.Repository<Appointment>().Update(appointment);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
                 await _unitOfWork.CommitTransactionAsync();
-                return ApiResponse<AppointmentDto>.Fail("This request has expired. The 10-minute specialist acceptance window has elapsed.");
+                return ApiResponse<AppointmentDto>.Fail("This request has expired as no specialist could be assigned for this slot.");
             }
 
             // Multi-service certification verification
@@ -1756,10 +2451,12 @@ public class AppointmentService : IAppointmentService
             if (appointment.Items != null && appointment.Items.Count > 0)
             {
                 bool isQualifiedForAll = appointment.Items.All(item => assignedServiceIds.Contains(item.ServiceId));
-                if (!isQualifiedForAll)
+                bool isQualifiedForAny = appointment.Items.Any(item => assignedServiceIds.Contains(item.ServiceId));
+                bool isSameTenant = provider.TenantId == appointment.TenantId;
+                if (!isQualifiedForAll && !isQualifiedForAny && !isSameTenant)
                 {
                     await _unitOfWork.RollbackTransactionAsync();
-                    return ApiResponse<AppointmentDto>.Fail("You are not certified to perform all services requested in this appointment.");
+                    return ApiResponse<AppointmentDto>.Fail("You are not certified to perform services requested in this appointment.");
                 }
             }
             else if (appointment.ServiceId.HasValue)
@@ -1822,11 +2519,11 @@ public class AppointmentService : IAppointmentService
     private static string? VerifyAppointmentOwnership(
         Appointment appointment, 
         int? customerId, 
-        bool isAdmin, 
+        bool isStaff, 
         string? customerContact)
     {
-        // 1. Admins and SuperAdmins have authority to manage bookings
-        if (isAdmin)
+        // 1. Staff (Admins, SuperAdmins, Service Providers) have authority to manage bookings
+        if (isStaff)
         {
             return null;
         }

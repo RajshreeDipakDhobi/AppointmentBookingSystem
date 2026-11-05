@@ -3,35 +3,74 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { ServiceCatalogService } from '../../core/services/service-catalog.service';
-import { AuthService } from '../../core/services/auth.service';
-import { ProviderServicesOverviewDto, ProviderAssignedServiceItemDto } from '../../core/models/service.models';
+import {
+  ProviderServicesOverviewDto,
+  ProviderAssignedServiceItemDto
+} from '../../core/models/service.models';
 
 @Component({
   selector: 'app-provider-services',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [
+    CommonModule,
+    FormsModule,
+    RouterModule
+  ],
   templateUrl: './provider-services.component.html',
   styleUrls: ['./provider-services.component.css']
 })
 export class ProviderServicesComponent implements OnInit {
   private readonly serviceCatalogService = inject(ServiceCatalogService);
-  private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
 
   readonly overview = signal<ProviderServicesOverviewDto | null>(null);
   readonly isLoading = signal<boolean>(true);
   readonly errorMessage = signal<string | null>(null);
   readonly searchQuery = signal<string>('');
+  readonly selectedStatusFilter = signal<'ALL' | 'ACTIVE' | 'INACTIVE'>('ALL');
 
-  // Filtered assigned services
+  // Service Details Modal / Drawer
+  readonly selectedServiceForDetails = signal<ProviderAssignedServiceItemDto | null>(null);
+
+  // Computed metrics for stats bar
+  readonly activeServicesCount = computed<number>(() => {
+    const list = this.overview()?.services || [];
+    return list.filter(s => s.isActive).length;
+  });
+
+  readonly inactiveServicesCount = computed<number>(() => {
+    const list = this.overview()?.services || [];
+    return list.filter(s => !s.isActive).length;
+  });
+
+  readonly allTimeTotalServed = computed<number>(() => {
+    const list = this.overview()?.services || [];
+    return list.reduce((sum, s) => sum + (s.allTimeBookingsCount || 0), 0);
+  });
+
+  readonly todayTotalBookings = computed<number>(() => {
+    const list = this.overview()?.services || [];
+    return list.reduce((sum, s) => sum + (s.todayBookingsCount || 0), 0);
+  });
+
+  // Filtered assigned services for data grid
   readonly filteredServices = computed<ProviderAssignedServiceItemDto[]>(() => {
     const list = this.overview()?.services || [];
     const query = this.searchQuery().trim().toLowerCase();
-    if (!query) return list;
-    return list.filter(s =>
-      s.name.toLowerCase().includes(query) ||
-      (s.description && s.description.toLowerCase().includes(query))
-    );
+    const filter = this.selectedStatusFilter();
+
+    return list.filter(s => {
+      const matchesQuery = !query ||
+        s.name.toLowerCase().includes(query) ||
+        (s.description && s.description.toLowerCase().includes(query));
+
+      const matchesStatus =
+        filter === 'ALL' ||
+        (filter === 'ACTIVE' && s.isActive) ||
+        (filter === 'INACTIVE' && !s.isActive);
+
+      return matchesQuery && matchesStatus;
+    });
   });
 
   ngOnInit(): void {
@@ -69,5 +108,17 @@ export class ProviderServicesComponent implements OnInit {
 
   viewAllAppointments(): void {
     this.router.navigate(['/appointments']);
+  }
+
+  viewServiceBookings(service: ProviderAssignedServiceItemDto): void {
+    this.router.navigate(['/appointments'], { queryParams: { search: service.name } });
+  }
+
+  openServiceDetails(service: ProviderAssignedServiceItemDto): void {
+    this.selectedServiceForDetails.set(service);
+  }
+
+  closeServiceDetails(): void {
+    this.selectedServiceForDetails.set(null);
   }
 }

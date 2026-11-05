@@ -33,6 +33,12 @@ public class ExceptionHandlingMiddleware
 
     private async Task HandleExceptionAsync(HttpContext context, Exception exception)
     {
+        if (context.Response.HasStarted)
+        {
+            _logger.LogWarning(exception, "The response has already started, cannot write error response for {Path}: {Message}", context.Request.Path, exception.Message);
+            return;
+        }
+
         var statusCode = HttpStatusCode.InternalServerError;
         string message = "An unexpected error occurred while processing your request.";
 
@@ -79,6 +85,11 @@ public class ExceptionHandlingMiddleware
             default:
                 _logger.LogError(exception, "Unhandled Exception on {Path}: {Message}", context.Request.Path, exception.Message);
                 break;
+        }
+
+        if (context.Response.HasStarted)
+        {
+            return;
         }
 
         context.Response.ContentType = "application/json";

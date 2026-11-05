@@ -70,6 +70,7 @@ public class AppointmentsController : BaseApiController
         [FromQuery] DateTime date,
         [FromQuery] int? tenantId,
         [FromQuery] string? serviceIds,
+        [FromQuery] string? providerIds,
         CancellationToken cancellationToken)
     {
         var parsedIds = ParseServiceIds(serviceIds, serviceId);
@@ -82,7 +83,7 @@ public class AppointmentsController : BaseApiController
         {
             var activeTenantId = ResolveTenantId(tenantId);
             var effectiveServiceId = serviceId > 0 ? serviceId : parsedIds![0];
-            var result = await _appointmentService.GetAvailableSlotsByServiceAsync(effectiveServiceId, date, activeTenantId, parsedIds, cancellationToken);
+            var result = await _appointmentService.GetAvailableSlotsByServiceAsync(effectiveServiceId, date, activeTenantId, parsedIds, providerIds, cancellationToken);
             if (result == null)
             {
                 return NotFoundResponse($"Service with ID {effectiveServiceId} was not found or is inactive.");
@@ -219,7 +220,7 @@ public class AppointmentsController : BaseApiController
             customerId, 
             request, 
             isBookedByProvider: isBookedByProvider, 
-            createdByName: CurrentUserName, 
+            createdByName: (IsAdmin || IsSuperAdmin) ? $"{CurrentUserName} (Admin)" : CurrentUserName,
             cancellationToken: cancellationToken);
 
         if (!result.Success)
@@ -230,6 +231,48 @@ public class AppointmentsController : BaseApiController
                               result.Message.Contains("already booked", StringComparison.OrdinalIgnoreCase))
                              ? StatusCodes.Status409Conflict 
                              : StatusCodes.Status400BadRequest;
+
+            return StatusCode(statusCode, result);
+        }
+
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Module 4B: Multi-Specialist Booking (Supports sequential back-to-back or custom slots for multi-service cart)
+    /// </summary>
+    [HttpPost("multi")]
+    [Authorize]
+    [ProducesResponseType(typeof(ApiResponse<List<AppointmentDto>>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> BookMultiAppointment(
+        [FromBody] BookMultiAppointmentRequestDto request, 
+        [FromQuery] int? tenantId,
+        CancellationToken cancellationToken)
+    {
+        if (!ModelState.IsValid)
+        {
+            return ValidationResponse();
+        }
+
+        var activeTenantId = ResolveTenantId(tenantId);
+        var customerId = (IsAdmin || IsSuperAdmin || IsServiceProvider) ? null : ResolveCustomerId();
+        bool isBookedByProvider = IsServiceProvider && !IsAdmin && !IsSuperAdmin;
+
+        var result = await _appointmentService.BookMultiAppointmentAsync(
+            activeTenantId, 
+            customerId, 
+            request, 
+            isBookedByProvider: isBookedByProvider, 
+            createdByName: (IsAdmin || IsSuperAdmin) ? $"{CurrentUserName} (Admin)" : CurrentUserName,
+            cancellationToken: cancellationToken);
+
+        if (!result.Success)
+        {
+            int statusCode = result.Message.Contains("already booked", StringComparison.OrdinalIgnoreCase)
+                ? StatusCodes.Status409Conflict 
+                : StatusCodes.Status400BadRequest;
 
             return StatusCode(statusCode, result);
         }
@@ -455,13 +498,13 @@ public class AppointmentsController : BaseApiController
 
         var activeTenantId = ResolveTenantId(tenantId);
         var customerId = ResolveCustomerId();
-        bool isAdmin = IsAdmin || IsSuperAdmin;
+        bool isStaff = IsAdmin || IsSuperAdmin || IsServiceProvider;
 
         var result = await _appointmentService.CancelAppointmentAsync(
             appointmentId, 
             activeTenantId, 
             customerId, 
-            isAdmin, 
+            isStaff, 
             request,
             CurrentUserName,
             cancellationToken);
@@ -497,14 +540,14 @@ public class AppointmentsController : BaseApiController
         var activeTenantId = ResolveTenantId(tenantId);
         var providerId = CurrentProviderId;
         var currentUserId = CurrentUserId;
-        bool isAdmin = IsAdmin || IsSuperAdmin;
+        bool isStaff = IsAdmin || IsSuperAdmin || IsServiceProvider;
 
         var result = await _appointmentService.UpdateStatusAsync(
             appointmentId, 
             activeTenantId, 
             providerId, 
             currentUserId, 
-            isAdmin, 
+            isStaff, 
             request,
             CurrentUserName,
             cancellationToken);

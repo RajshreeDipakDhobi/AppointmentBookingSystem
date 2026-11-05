@@ -4,6 +4,7 @@ import { Observable, map } from 'rxjs';
 import { 
   AppointmentDto, 
   BookAppointmentRequestDto, 
+  BookMultiAppointmentRequest,
   RescheduleAppointmentRequestDto, 
   CancelAppointmentRequestDto, 
   UpdateAppointmentStatusDto, 
@@ -47,13 +48,16 @@ export class AppointmentService {
   /**
    * Urban Company Style: Get merged available slots for all specialists offering service(s)
    */
-  getAvailableSlotsByService(serviceId: number, date: string, tenantId?: number, serviceIds?: number[]): Observable<ProviderDailyAvailabilityResponseDto> {
+  getAvailableSlotsByService(serviceId: number, date: string, tenantId?: number, serviceIds?: number[], providerIds?: string): Observable<ProviderDailyAvailabilityResponseDto> {
     let url = `${this.apiUrl}/service-slots?serviceId=${serviceId}&date=${date}`;
     if (tenantId) {
       url += `&tenantId=${tenantId}`;
     }
     if (serviceIds && serviceIds.length > 0) {
       url += `&serviceIds=${serviceIds.join(',')}`;
+    }
+    if (providerIds) {
+      url += `&providerIds=${providerIds}`;
     }
     return this.http.get<any>(url).pipe(
       map(res => (res && res.data !== undefined) ? res.data : res)
@@ -89,6 +93,16 @@ export class AppointmentService {
     const url = tenantId ? `${this.apiUrl}?tenantId=${tenantId}` : this.apiUrl;
     return this.http.post<any>(url, dto).pipe(
       map(res => (res && res.data !== undefined) ? res.data : res)
+    );
+  }
+
+  /**
+   * Module 4B: Book multiple appointments across specialists (Unwraps ApiResponse.data as array)
+   */
+  bookMultiAppointment(dto: BookMultiAppointmentRequest, tenantId?: number): Observable<AppointmentDto[]> {
+    const url = tenantId ? `${this.apiUrl}/multi?tenantId=${tenantId}` : `${this.apiUrl}/multi`;
+    return this.http.post<any>(url, dto).pipe(
+      map(res => (res && res.data !== undefined) ? res.data : (Array.isArray(res) ? res : [res]))
     );
   }
 

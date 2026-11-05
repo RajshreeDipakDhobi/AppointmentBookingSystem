@@ -229,7 +229,7 @@
 
           <!-- SERVICES GRID -->
           <div *ngIf="!isLoadingServices() && filteredServices().length > 0" class="services-grid">
-            <div *ngFor="let s of filteredServices()" class="service-card" [class.in-cart]="getServiceQuantity(s.id) > 0">
+            <div *ngFor="let s of filteredServices()" class="service-card" [class.in-cart]="isServiceInCart(s.id)">
               <div class="service-top">
                 <div class="service-icon-wrap">
                   <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
@@ -262,34 +262,17 @@
 
               <div class="service-footer-row">
                 <div class="service-actions-deck">
-                  <!-- When not added: show Add button -->
-                  <button *ngIf="getServiceQuantity(s.id) === 0" type="button" class="btn-toggle-cart" (click)="toggleCartService(s, $event)" title="Add to booking cart">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <button type="button" class="btn-toggle-cart" [class.added]="isServiceInCart(s.id)"
+                    (click)="toggleCartService(s, $event)" [title]="isServiceInCart(s.id) ? 'Remove from cart' : 'Add to booking cart'">
+                    <svg *ngIf="!isServiceInCart(s.id)" xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                       <line x1="12" y1="5" x2="12" y2="19"></line>
                       <line x1="5" y1="12" x2="19" y2="12"></line>
                     </svg>
-                    <span>Add</span>
+                    <svg *ngIf="isServiceInCart(s.id)" xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                    <span>{{ isServiceInCart(s.id) ? 'Added' : 'Add' }}</span>
                   </button>
-
-                  <!-- When added: show interactive inline stepper -->
-                  <div *ngIf="getServiceQuantity(s.id) > 0" class="service-card-stepper" (click)="$event.stopPropagation()">
-                    <button type="button" class="btn-card-step" (click)="decrementService(s.id, $event)" [title]="getServiceQuantity(s.id) === 1 ? 'Remove service' : 'Decrease quantity'">
-                      <svg *ngIf="getServiceQuantity(s.id) > 1" xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                        <line x1="5" y1="12" x2="19" y2="12" />
-                      </svg>
-                      <svg *ngIf="getServiceQuantity(s.id) === 1" class="trash-icon" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                        <polyline points="3 6 5 6 21 6" />
-                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                      </svg>
-                    </button>
-                    <span class="card-step-qty">{{ getServiceQuantity(s.id) }}</span>
-                    <button type="button" class="btn-card-step" (click)="incrementService(s.id, $event)" [title]="'Add another ' + s.name">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                        <line x1="12" y1="5" x2="12" y2="19" />
-                        <line x1="5" y1="12" x2="19" y2="12" />
-                      </svg>
-                    </button>
-                  </div>
 
                   <button type="button" class="btn-book-service" (click)="openBookingModal(s.id)">
                     <span>Book Now</span>
@@ -315,10 +298,10 @@
   <app-cart-modal *ngIf="isCartModalOpen() && cartServices().length > 0"
     [items]="cartServices()"
     title="Booking Cart"
+    subtitle="Review selected services"
+    [allowQuantity]="false"
     proceedButtonText="Proceed to Schedule Slot"
     (close)="closeCartModal()"
-    (increment)="incrementService($event)"
-    (decrement)="decrementService($event)"
     (removeItem)="removeFromCart($event)"
     (clearAll)="clearCart()"
     (proceed)="openCartBooking()">

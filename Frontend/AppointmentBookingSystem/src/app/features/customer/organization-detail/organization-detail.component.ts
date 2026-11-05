@@ -157,9 +157,15 @@ export class OrganizationDetailComponent implements OnInit {
 
   loadServices(tenantId: number): void {
     this.isLoadingServices.set(true);
-    this.serviceCatalogService.getActiveServices(tenantId).subscribe({
+    // Strictly load only services that have assigned specialists for booking
+    this.serviceCatalogService.getActiveServices(tenantId, true).subscribe({
       next: (list) => {
-        this.services.set(list || []);
+        const bookable = (list || []).filter(s =>
+          (s.providersCount ?? 0) > 0 ||
+          (s.assignedProviders && s.assignedProviders.length > 0) ||
+          (s.assignedProviderIds && s.assignedProviderIds.length > 0)
+        );
+        this.services.set(bookable);
         this.isLoadingServices.set(false);
         this.checkResumeBooking();
       },
@@ -191,18 +197,23 @@ export class OrganizationDetailComponent implements OnInit {
       try {
         const draft = JSON.parse(draftRaw);
         if (draft) {
-          if (draft.serviceId) {
-            this.selectedServiceId.set(draft.serviceId);
-            this.selectedProviderId.set(null);
-            this.isBookingModalOpen.set(true);
-          } else if (draft.providerId) {
-            this.selectedProviderId.set(draft.providerId);
-            this.selectedServiceId.set(null);
-            this.isBookingModalOpen.set(true);
+          if (draft.serviceIds && Array.isArray(draft.serviceIds) && draft.serviceIds.length > 0) {
+            this.selectedServiceId.set(Number(draft.serviceIds[0]));
+          } else if (draft.serviceId) {
+            this.selectedServiceId.set(Number(draft.serviceId));
           } else {
             this.selectedServiceId.set(null);
-            this.selectedProviderId.set(null);
-            this.isBookingModalOpen.set(true);
+          }
+          this.selectedProviderId.set(draft.providerId ? Number(draft.providerId) : null);
+          this.isBookingModalOpen.set(true);
+
+          if (this.route.snapshot.queryParamMap.has('resumeBooking')) {
+            this.router.navigate([], {
+              relativeTo: this.route,
+              queryParams: { resumeBooking: null },
+              queryParamsHandling: 'merge',
+              replaceUrl: true
+            });
           }
         }
       } catch {
@@ -229,8 +240,7 @@ export class OrganizationDetailComponent implements OnInit {
   }
 
   getServiceQuantity(serviceId: number): number {
-    const item = this.cartServices().find(s => s.id === serviceId);
-    return item ? (item.quantity || 1) : 0;
+    return this.isServiceInCart(serviceId) ? 1 : 0;
   }
 
   toggleCartService(service: ServiceDto, event?: Event): void {
@@ -239,6 +249,7 @@ export class OrganizationDetailComponent implements OnInit {
     const existing = current.find(s => s.id === service.id);
     if (existing) {
       this.removeFromCart(service.id);
+      this.showToast(`Removed "${service.name}" from booking cart.`);
     } else {
       this.cartServices.set([...current, { ...service, quantity: 1 }]);
       this.showToast(`Added "${service.name}" to booking cart.`);
@@ -247,34 +258,15 @@ export class OrganizationDetailComponent implements OnInit {
 
   incrementService(serviceId: number, event?: Event): void {
     if (event) event.stopPropagation();
-    const current = this.cartServices();
-    const existing = current.find(s => s.id === serviceId);
-    if (existing) {
-      const nextQty = (existing.quantity || 1) + 1;
-      this.cartServices.set(current.map(s => s.id === serviceId ? { ...s, quantity: nextQty } : s));
-      this.showToast(`Updated "${existing.name}" quantity to ${nextQty}.`);
-    } else {
-      const match = this.services().find(s => s.id === serviceId);
-      if (match) {
-        this.cartServices.set([...current, { ...match, quantity: 1 }]);
-        this.showToast(`Added "${match.name}" to booking cart.`);
-      }
+    const match = this.services().find(s => s.id === serviceId);
+    if (match && !this.isServiceInCart(serviceId)) {
+      this.cartServices.set([...this.cartServices(), { ...match, quantity: 1 }]);
     }
   }
 
   decrementService(serviceId: number, event?: Event): void {
     if (event) event.stopPropagation();
-    const current = this.cartServices();
-    const existing = current.find(s => s.id === serviceId);
-    if (!existing) return;
-    const currentQty = existing.quantity || 1;
-    if (currentQty > 1) {
-      const nextQty = currentQty - 1;
-      this.cartServices.set(current.map(s => s.id === serviceId ? { ...s, quantity: nextQty } : s));
-      this.showToast(`Updated "${existing.name}" quantity to ${nextQty}.`);
-    } else {
-      this.removeFromCart(serviceId);
-    }
+    this.removeFromCart(serviceId);
   }
 
   openCartModal(): void {
@@ -325,6 +317,9 @@ export class OrganizationDetailComponent implements OnInit {
   }
 
   openBookingModal(serviceId?: number): void {
+    if (!this.route.snapshot.queryParamMap.has('resumeBooking')) {
+      sessionStorage.removeItem('pending_booking_draft');
+    }
     if (serviceId) {
       const match = this.services().find(s => s.id === serviceId);
       if (match && !this.isServiceInCart(serviceId)) {

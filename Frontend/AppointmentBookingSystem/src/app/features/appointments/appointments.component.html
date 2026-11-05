@@ -9,9 +9,8 @@
 
     <div class="header-actions">
       <!-- Service Provider Dispatch Shortcut (Only visible to Specialist, NEVER Admin) -->
-      <button *ngIf="isServiceProvider && incomingRequests().length > 0" type="button" 
-        class="btn-dispatch-round animate-fade-in" 
-        (click)="openDispatchModal()"
+      <button *ngIf="isServiceProvider && incomingRequests().length > 0" type="button"
+        class="btn-dispatch-round animate-fade-in" (click)="openDispatchModal()"
         [title]="incomingRequests().length + ' incoming service request(s) available'">
         <span class="dispatch-count">{{ incomingRequests().length }}</span>
       </button>
@@ -419,9 +418,9 @@
 
               <!-- 3. Service Provider (Hidden for Service Provider themselves) -->
               <td *ngIf="!isServiceProvider" class="td-provider">
-                <span *ngIf="!apt.serviceProviderId" class="unassigned-dash" title="No specialist assigned">—</span>
+                <span *ngIf="!apt.serviceProviderId && (!apt.serviceProviderName || apt.serviceProviderName === '—')" class="unassigned-dash" title="No specialist assigned">—</span>
 
-                <div *ngIf="apt.serviceProviderId" class="provider-cell">
+                <div *ngIf="apt.serviceProviderId || (apt.serviceProviderName && apt.serviceProviderName !== '—')" class="provider-cell">
                   <div class="provider-avatar-circle"
                     [ngStyle]="{'background': getAvatarGradient(apt.serviceProviderName || 'Specialist')}">
                     <img *ngIf="apt.serviceProviderProfilePictureUrl" [src]="apt.serviceProviderProfilePictureUrl"
@@ -470,7 +469,9 @@
 
               <!-- 5. Status -->
               <td class="td-status">
-                <span *ngIf="!apt.serviceProviderId" class="badge" [ngClass]="isExpired(apt) ? 'badge-cancelled' : 'badge-dispatch-open'" [title]="getDispatchTooltip(apt)">
+                <span *ngIf="!apt.serviceProviderId" class="badge"
+                  [ngClass]="isExpired(apt) ? 'badge-cancelled' : 'badge-dispatch-open'"
+                  [title]="getDispatchTooltip(apt)">
                   <span class="dot"></span>
                   <span>{{ isExpired(apt) ? 'Specialist Unavailable' : 'Awaiting Specialist' }}</span>
                 </span>
@@ -486,8 +487,8 @@
               <td class="td-actions text-right">
                 <div class="row-actions-group">
                   <!-- Direct View Details Button: For Admin (who only monitors/views), or on Terminal/Unassigned Bookings -->
-                  <button *ngIf="!isServiceProvider || isTerminalStatus(apt.status) || !apt.serviceProviderId" type="button" class="btn-direct-view"
-                    (click)="viewDetails(apt)" title="View Details">
+                  <button *ngIf="!isServiceProvider || isTerminalStatus(apt.status) || !apt.serviceProviderId || !hasManageableActions(apt)"
+                    type="button" class="btn-direct-view" (click)="viewDetails(apt)" title="View Details">
                     <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none"
                       stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                       <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
@@ -497,8 +498,9 @@
                   </button>
 
                   <!-- Manage Dropdown: Strictly for Service Provider / Specialist on active assigned bookings -->
-                  <div *ngIf="isServiceProvider && !isTerminalStatus(apt.status) && apt.serviceProviderId" class="action-dropdown-wrap"
-                    [class.is-open]="openActionDropdownId() === apt.id" [class.drop-up]="i >= 3 && i >= count - 2">
+                  <div *ngIf="isServiceProvider && !isTerminalStatus(apt.status) && apt.serviceProviderId && hasManageableActions(apt)"
+                    class="action-dropdown-wrap" [class.is-open]="openActionDropdownId() === apt.id"
+                    [class.drop-up]="i >= 3 && i >= count - 2">
                     <button type="button" class="btn-action-dropdown-trigger"
                       [class.active]="openActionDropdownId() === apt.id" (click)="toggleActionDropdown(apt.id, $event)"
                       title="Manage Appointment Actions" aria-label="Manage appointment">
@@ -515,7 +517,7 @@
                       (click)="$event.stopPropagation()">
 
                       <!-- 1. Approve Booking (When Booked / Pending Approval) -->
-                      <button *ngIf="apt.status === AppointmentStatus.Booked" type="button"
+                      <button *ngIf="canApprove(apt)" type="button"
                         class="dropdown-menu-item item-approve" (click)="approveAppointment(apt)">
                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
                           stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -525,10 +527,8 @@
                       </button>
 
                       <!-- 2. Mark Complete (ONLY when Approved) -->
-                      <button
-                        *ngIf="apt.status === AppointmentStatus.Approved"
-                        type="button" class="dropdown-menu-item item-complete"
-                        (click)="closeActionDropdown(); markAsCompleted(apt)">
+                      <button *ngIf="canComplete(apt)" type="button"
+                        class="dropdown-menu-item item-complete" (click)="closeActionDropdown(); markAsCompleted(apt)">
                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
                           stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                           <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
@@ -538,8 +538,7 @@
                       </button>
 
                       <!-- 3. Reschedule Appointment / Propose New Time -->
-                      <button *ngIf="canModify(apt)" type="button"
-                        class="dropdown-menu-item item-reschedule"
+                      <button *ngIf="canModify(apt)" type="button" class="dropdown-menu-item item-reschedule"
                         (click)="closeActionDropdown(); openRescheduleModal(apt)">
                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
                           stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
@@ -561,7 +560,7 @@
                         <span>Cancel Appointment</span>
                       </button>
 
-                      <div class="dropdown-menu-divider"></div>
+                      <div *ngIf="canModify(apt) || canCancel(apt)" class="dropdown-menu-divider"></div>
 
                       <!-- 5. View Details (Always available) -->
                       <button type="button" class="dropdown-menu-item item-details" (click)="viewDetails(apt)">
@@ -609,11 +608,8 @@
   <!-- MODALS -->
 
   <!-- Service Dispatch Opportunities Modal (Specialist Only) -->
-  <app-service-dispatch-modal *ngIf="isServiceProvider && showDispatchModal" 
-    [requests]="incomingRequests()" 
-    [selectedRequest]="selectedDispatchRequest" 
-    (close)="closeDispatchModal()" 
-    (accepted)="onDispatchAccepted($event)">
+  <app-service-dispatch-modal *ngIf="isServiceProvider && showDispatchModal" [requests]="incomingRequests()"
+    [selectedRequest]="selectedDispatchRequest" (close)="closeDispatchModal()" (accepted)="onDispatchAccepted($event)">
   </app-service-dispatch-modal>
 
   <!-- 1. Book New Appointment Modal -->
@@ -680,7 +676,8 @@
                 <circle cx="12" cy="12" r="10" />
                 <polyline points="12 6 12 12 16 14" />
               </svg>
-              <span class="banner-time">{{ selectedAppointmentForDetail.startTime | appTime }} – {{ selectedAppointmentForDetail.endTime | appTime }}</span>
+              <span class="banner-time">{{ selectedAppointmentForDetail.startTime | appTime }} – {{
+                selectedAppointmentForDetail.endTime | appTime }}</span>
             </div>
           </div>
 
@@ -774,7 +771,8 @@
             <div class="section-card-body">
               <div class="info-row">
                 <span class="info-label">Specialist</span>
-                <span class="info-val info-val-strong">{{ selectedAppointmentForDetail.serviceProviderId ? selectedAppointmentForDetail.serviceProviderName : '—' }}</span>
+                <span class="info-val info-val-strong">{{ selectedAppointmentForDetail.serviceProviderId ?
+                  selectedAppointmentForDetail.serviceProviderName : '—' }}</span>
               </div>
               <div class="info-row" *ngIf="selectedAppointmentForDetail.serviceProviderType">
                 <span class="info-label">Specialization</span>
@@ -782,28 +780,38 @@
                   <span class="provider-specialty-pill">{{ selectedAppointmentForDetail.serviceProviderType }}</span>
                 </span>
               </div>
-              <div *ngIf="(selectedAppointmentForDetail.items && selectedAppointmentForDetail.items.length > 0) || selectedAppointmentForDetail.serviceName" class="detail-receipt-block">
+              <div
+                *ngIf="(selectedAppointmentForDetail.items && selectedAppointmentForDetail.items.length > 0) || selectedAppointmentForDetail.serviceName"
+                class="detail-receipt-block">
                 <div class="receipt-header-row">
-                  <span class="info-label">Booked Services ({{ selectedAppointmentForDetail.items?.length || 1 }})</span>
-                  <span class="receipt-duration-pill" *ngIf="selectedAppointmentForDetail.totalDurationMinutes || selectedAppointmentForDetail.serviceDurationMinutes">
-                    {{ selectedAppointmentForDetail.totalDurationMinutes || selectedAppointmentForDetail.serviceDurationMinutes }} mins
+                  <span class="info-label">Booked Services ({{ selectedAppointmentForDetail.items?.length || 1
+                    }})</span>
+                  <span class="receipt-duration-pill"
+                    *ngIf="selectedAppointmentForDetail.totalDurationMinutes || selectedAppointmentForDetail.serviceDurationMinutes">
+                    {{ selectedAppointmentForDetail.totalDurationMinutes ||
+                    selectedAppointmentForDetail.serviceDurationMinutes }} mins
                   </span>
                 </div>
                 <!-- Multi-item list -->
-                <div *ngIf="selectedAppointmentForDetail.items && selectedAppointmentForDetail.items.length > 0" class="receipt-items-deck">
+                <div *ngIf="selectedAppointmentForDetail.items && selectedAppointmentForDetail.items.length > 0"
+                  class="receipt-items-deck">
                   <div *ngFor="let it of selectedAppointmentForDetail.items" class="receipt-item-row">
-                    <span class="receipt-item-name">{{ it.serviceName }} <small class="text-muted">({{ it.durationMinutes }}m)</small></span>
+                    <span class="receipt-item-name">{{ it.serviceName }} <small class="text-muted">({{
+                        it.durationMinutes }}m)</small></span>
                     <span class="receipt-item-price">₹{{ it.price | number }}</span>
                   </div>
                   <div class="receipt-total-row">
                     <span class="receipt-total-label">Total Amount</span>
-                    <span class="receipt-total-price">₹{{ (selectedAppointmentForDetail.totalAmount || 0) | number }}</span>
+                    <span class="receipt-total-price">₹{{ (selectedAppointmentForDetail.totalAmount || 0) | number
+                      }}</span>
                   </div>
                 </div>
                 <!-- Single service fallback -->
-                <div *ngIf="!selectedAppointmentForDetail.items || selectedAppointmentForDetail.items.length === 0" class="receipt-single-row">
+                <div *ngIf="!selectedAppointmentForDetail.items || selectedAppointmentForDetail.items.length === 0"
+                  class="receipt-single-row">
                   <span class="info-val info-val-strong">{{ selectedAppointmentForDetail.serviceName }}</span>
-                  <span *ngIf="selectedAppointmentForDetail.servicePrice" class="service-price-tag">₹{{ selectedAppointmentForDetail.servicePrice | number }}</span>
+                  <span *ngIf="selectedAppointmentForDetail.servicePrice" class="service-price-tag">₹{{
+                    selectedAppointmentForDetail.servicePrice | number }}</span>
                 </div>
               </div>
               <div *ngIf="selectedAppointmentForDetail.rescheduledFromAppointmentId" class="info-row">
@@ -824,10 +832,10 @@
 
 
 
-        <!-- 4. Notes & Remarks Card (If reason or cancellation reason exists) -->
-        <div *ngIf="selectedAppointmentForDetail.reason" class="detail-memo-card">
+        <!-- 4. Notes & Remarks Card (If clean reason exists) -->
+        <div *ngIf="getCleanReason(selectedAppointmentForDetail.reason)" class="detail-memo-card">
           <span class="memo-title">Booking Notes / Reason</span>
-          <p class="memo-text">{{ selectedAppointmentForDetail.reason }}</p>
+          <p class="memo-text">{{ getCleanReason(selectedAppointmentForDetail.reason) }}</p>
         </div>
 
         <div
@@ -922,12 +930,15 @@
             <span class="strip-label">Services</span>
             <span class="strip-val font-semibold">
               <span *ngIf="selectedAppointmentForComplete.items && selectedAppointmentForComplete.items.length > 0">
-                {{ selectedAppointmentForComplete.serviceNames ? selectedAppointmentForComplete.serviceNames.join(' + ') : (selectedAppointmentForComplete.items.length + ' Services') }}
-                <span class="service-price-tag">₹{{ (selectedAppointmentForComplete.totalAmount || selectedAppointmentForComplete.servicePrice) | number }}</span>
+                {{ selectedAppointmentForComplete.serviceNames ? selectedAppointmentForComplete.serviceNames.join(' + ')
+                : (selectedAppointmentForComplete.items.length + ' Services') }}
+                <span class="service-price-tag">₹{{ (selectedAppointmentForComplete.totalAmount ||
+                  selectedAppointmentForComplete.servicePrice) | number }}</span>
               </span>
               <span *ngIf="!selectedAppointmentForComplete.items || selectedAppointmentForComplete.items.length === 0">
                 {{ selectedAppointmentForComplete.serviceName || selectedAppointmentForComplete.serviceProviderType }}
-                <span *ngIf="selectedAppointmentForComplete.servicePrice" class="service-price-tag">₹{{ selectedAppointmentForComplete.servicePrice | number }}</span>
+                <span *ngIf="selectedAppointmentForComplete.servicePrice" class="service-price-tag">₹{{
+                  selectedAppointmentForComplete.servicePrice | number }}</span>
               </span>
             </span>
           </div>

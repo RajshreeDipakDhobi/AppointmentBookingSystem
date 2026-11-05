@@ -10,7 +10,7 @@
             {{ activeRequestsList.length }} Requests
           </span>
         </div>
-        <p class="modal-subtitle">Review incoming booking details to accept or decline.</p>
+        <p class="modal-subtitle">Review incoming booking details to accept or close.</p>
       </div>
 
       <button type="button" class="btn-close" (click)="onClose()" aria-label="Close modal">
@@ -126,9 +126,9 @@
           </span>
         </div>
 
-        <div class="strip-item" *ngIf="req.reason">
+        <div class="strip-item" *ngIf="getCleanReason(req.reason)">
           <span class="strip-label">Customer Note</span>
-          <span class="strip-val notes-val">“{{ req.reason }}”</span>
+          <span class="strip-val notes-val">“{{ getCleanReason(req.reason) }}”</span>
         </div>
       </div>
 
@@ -141,10 +141,10 @@
       </div>
     </div>
 
-    <!-- Modal Footer Actions: ONLY ACCEPT & DECLINE -->
+    <!-- Modal Footer Actions: ONLY ACCEPT & CLOSE -->
     <div class="modal-footer">
-      <button type="button" class="btn btn-secondary" [disabled]="isAcceptingId() !== null" (click)="declineCurrent()">
-        Decline
+      <button type="button" class="btn btn-secondary" [disabled]="isAcceptingId() !== null" (click)="onClose()">
+        Close
       </button>
 
       <button *ngIf="activeRequest as req" 

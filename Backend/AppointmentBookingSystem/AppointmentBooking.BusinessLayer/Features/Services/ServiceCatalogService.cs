@@ -54,7 +54,7 @@ public class ServiceCatalogService : IServiceCatalogService
         return _mapper.Map<IReadOnlyList<ServiceDto>>(services);
     }
 
-    public async Task<IReadOnlyList<ServiceDto>> GetActiveServicesAsync(int? tenantId = null, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<ServiceDto>> GetActiveServicesAsync(int? tenantId = null, bool onlyWithProviders = false, CancellationToken cancellationToken = default)
     {
         var query = _unitOfWork.Repository<Service>()
             .Query()
@@ -76,7 +76,14 @@ public class ServiceCatalogService : IServiceCatalogService
             .OrderBy(s => s.Name)
             .ToListAsync(cancellationToken);
 
-        return _mapper.Map<IReadOnlyList<ServiceDto>>(services);
+        var dtos = _mapper.Map<IReadOnlyList<ServiceDto>>(services);
+
+        if (onlyWithProviders)
+        {
+            return dtos.Where(s => s.ProvidersCount > 0).ToList();
+        }
+
+        return dtos;
     }
 
     public async Task<ServiceDto?> GetServiceByIdAsync(int id, CancellationToken cancellationToken = default)

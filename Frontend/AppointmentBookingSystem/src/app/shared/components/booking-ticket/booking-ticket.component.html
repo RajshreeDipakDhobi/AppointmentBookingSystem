@@ -3,28 +3,6 @@
   <!-- Digital Ticket Card -->
   <div class="ticket-card" id="printable-ticket">
 
-    <!-- Ticket Header / Top Stub -->
-    <div class="ticket-head">
-      <div class="brand-stub">
-        <div class="stub-icon">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
-          </svg>
-        </div>
-        <div>
-          <h4 class="brand-title">{{ appointment.status === AppointmentStatus.Approved ? 'Appointment Pass' : 'Appointment Details' }}</h4>
-          <span class="stub-subtitle">{{ appointment.status === AppointmentStatus.Cancelled ? 'Cancelled Booking' : (appointment.status === AppointmentStatus.Approved ? 'Confirmed Booking' : 'Pending Confirmation') }}</span>
-        </div>
-      </div>
-
-      <div class="badge" [ngClass]="appointment.status | appStatusBadge">
-        <span class="dot"></span>
-        <span *ngIf="appointment.status === AppointmentStatus.Booked">Pending Approval</span>
-        <span *ngIf="appointment.status === AppointmentStatus.Approved">Confirmed</span>
-        <span *ngIf="appointment.status !== AppointmentStatus.Booked && appointment.status !== AppointmentStatus.Approved">{{ appointment.statusText || 'Booked' }}</span>
-      </div>
-    </div>
-
     <!-- Main Reference Bar -->
     <div class="ticket-reference-bar">
       <div class="ref-col">
@@ -38,7 +16,7 @@
               <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
               <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
             </svg>
-            <span *ngIf="copied()" class="copy-success-check">✓ Copied</span>
+            <span *ngIf="copied()" class="copy-success-check">Copied</span>
           </button>
         </div>
       </div>
@@ -77,19 +55,24 @@
       <!-- Service Provider Section -->
       <div class="info-cell cell-provider">
         <span class="cell-label">Service Provider</span>
-        <div class="provider-ticket-flex">
+        <div class="provider-ticket-flex" *ngIf="isSpecialistAssigned(appointment)">
           <div class="provider-ticket-avatar"
             [style.background]="appointment.serviceProviderProfilePictureUrl ? 'transparent' : ''">
             <img *ngIf="appointment.serviceProviderProfilePictureUrl"
               [src]="appointment.serviceProviderProfilePictureUrl" alt="" class="ticket-avatar-img"
               (error)="appointment.serviceProviderProfilePictureUrl = undefined" />
-            <span *ngIf="!appointment.serviceProviderProfilePictureUrl">{{ appointment.serviceProviderName | appInitials
-              }}</span>
+            <span *ngIf="!appointment.serviceProviderProfilePictureUrl">{{ appointment.serviceProviderName | appInitials }}</span>
           </div>
           <div class="provider-ticket-details">
             <h5 class="cell-title">{{ appointment.serviceProviderName }}</h5>
-            <span class="cell-sub">{{ appointment.serviceProviderType }}</span>
+            <span class="cell-sub" *ngIf="appointment.serviceProviderType">{{ appointment.serviceProviderType }}</span>
           </div>
+        </div>
+        <div class="provider-unassigned-block" *ngIf="!isSpecialistAssigned(appointment)">
+          <h5 class="cell-title unassigned-title">
+            {{ appointment.status === AppointmentStatus.Cancelled ? 'Not Assigned' : 'Awaiting Assignment' }}
+          </h5>
+          <span class="cell-sub">No specialist assigned</span>
         </div>
       </div>
 
@@ -132,8 +115,66 @@
 
       <!-- Booked Services Itemized Cell -->
       <div *ngIf="(appointment.items && appointment.items.length > 0) || appointment.serviceName" class="info-cell cell-services">
-        <span class="cell-label">Booked Services ({{ (appointment.items?.length || 1) }})</span>
-        <div class="ticket-items-list" *ngIf="appointment.items && appointment.items.length > 0">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+          <span class="cell-label">Booked Services ({{ (appointment.items?.length || 1) }})</span>
+          <span *ngIf="appointment.hasPartialApproval" style="font-size: 0.72rem; font-weight: 700; color: #b45309; background: #fef3c7; padding: 2px 8px; border-radius: 999px;">
+            {{ appointment.statusText }}
+          </span>
+        </div>
+
+        <!-- Multi-part / Multi-specialist Sessions breakdown -->
+        <div *ngIf="appointment.journeyParts && appointment.journeyParts.length > 1" class="ticket-sessions-container">
+          <div *ngFor="let part of appointment.journeyParts; let pIdx = index" class="ticket-session-card"
+            [class.session-confirmed]="part.status === AppointmentStatus.Approved"
+            [class.session-unavailable]="part.status !== AppointmentStatus.Approved && !isAwaiting(part)">
+
+            <div class="session-header-row">
+              <span class="session-title">
+                <strong>Session {{ pIdx + 1 }}:</strong> {{ getPartServicesText(part) }}
+              </span>
+              <span class="session-price">
+                ₹{{ (part.totalAmount || part.servicePrice || 0) | number }}
+              </span>
+            </div>
+
+            <div class="session-meta-row">
+              <span class="session-time">
+                {{ part.startTime | appTime }} – {{ part.endTime | appTime }}
+                <span class="session-sep">•</span>
+                <strong>{{ part.serviceProviderName || 'Awaiting Specialist' }}</strong>
+              </span>
+
+              <span class="session-status-badge"
+                [class.badge-confirmed]="part.status === AppointmentStatus.Approved"
+                [class.badge-unavailable]="part.status !== AppointmentStatus.Approved && !isAwaiting(part)"
+                [class.badge-awaiting]="part.status !== AppointmentStatus.Approved && isAwaiting(part)">
+                {{ part.status === AppointmentStatus.Approved ? 'Confirmed' : (isAwaiting(part) ? (part.serviceProviderId ? 'Awaiting Specialist Approval' : 'Awaiting Specialist') : 'Specialist Unavailable') }}
+              </span>
+            </div>
+
+            <!-- "Select Another Slot" button (ONLY for customer broadcasts that timed out/unavailable, NEVER for admin bookings) -->
+            <div *ngIf="canSelectAnotherSlot(part)" class="session-action-row">
+              <button type="button" class="btn-ticket-select-slot" (click)="onSelectAnotherSlot(part)"
+                title="Select another date or time slot for this session">
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+                  <rect width="18" height="18" x="3" y="4" rx="2" ry="2" />
+                  <line x1="16" y1="2" x2="16" y2="6" />
+                  <line x1="8" y1="8" y1="2" y2="6" />
+                  <line x1="3" y1="10" x2="21" y2="10" />
+                </svg>
+                <span>Select Another Slot</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="ticket-item-total">
+            <span>Total ({{ appointment.totalDurationMinutes || appointment.serviceDurationMinutes }} mins)</span>
+            <span class="total-val">₹{{ (appointment.totalAmount || 0) | number }}</span>
+          </div>
+        </div>
+
+        <div class="ticket-items-list" *ngIf="(!appointment.journeyParts || appointment.journeyParts.length <= 1) && appointment.items && appointment.items.length > 0">
           <div class="ticket-item-row" *ngFor="let it of appointment.items">
             <span class="item-title">{{ it.serviceName }} <small class="text-muted">({{ it.durationMinutes }}m)</small></span>
             <span class="item-val">₹{{ it.price | number }}</span>
@@ -143,7 +184,7 @@
             <span class="total-val">₹{{ (appointment.totalAmount || 0) | number }}</span>
           </div>
         </div>
-        <div class="ticket-single-service" *ngIf="(!appointment.items || appointment.items.length === 0) && appointment.serviceName">
+        <div class="ticket-single-service" *ngIf="(!appointment.journeyParts || appointment.journeyParts.length <= 1) && (!appointment.items || appointment.items.length === 0) && appointment.serviceName">
           <h5 class="cell-title">{{ appointment.serviceName }} <small class="text-muted" *ngIf="appointment.serviceDurationMinutes">({{ appointment.serviceDurationMinutes }}m)</small></h5>
           <span class="cell-sub" *ngIf="appointment.servicePrice">₹{{ appointment.servicePrice | number }}</span>
         </div>
@@ -151,10 +192,10 @@
 
       <!-- Optional Reason / Service Notes -->
       <div
-        *ngIf="appointment.reason && !appointment.reason.includes('Rescheduled via')"
+        *ngIf="getCleanServiceNotes(appointment.reason)"
         class="info-cell cell-notes">
-        <span class="cell-label">Service Notes / Reason</span>
-        <p class="cell-text">{{ appointment.reason }}</p>
+        <span class="cell-label">Service Notes</span>
+        <p class="cell-text">{{ getCleanServiceNotes(appointment.reason) }}</p>
       </div>
 
       <!-- Cancellation Details (If cancelled) -->
@@ -165,8 +206,7 @@
             Cancelled by: {{ appointment.cancelledByName }}
           </span>
         </div>
-        <p class="cancellation-text">{{ appointment.cleanCancellationReason || appointment.cancellationReason ||
-          'Cancelled upon request' }}</p>
+        <p class="cancellation-text">{{ getDisplayCancellationReason(appointment) }}</p>
       </div>
 
       <!-- Reschedule Proposal Pending Notice -->

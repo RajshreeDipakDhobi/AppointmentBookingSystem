@@ -52,19 +52,24 @@ public class AppointmentDto
     public string TimeSlotText => FormatSlotTimeRange(StartTime, EndTime);
 
     public AppointmentStatus Status { get; set; }
-    public string StatusText => Status switch
+    private string? _customStatusText;
+    public string StatusText
     {
-        AppointmentStatus.Cancelled when CancellationReason != null && CancellationReason.Contains("10 minutes") => "Specialist Unavailable",
-        AppointmentStatus.Pending when !ServiceProviderId.HasValue && UtcCreatedAt.AddMinutes(10) < DateTime.UtcNow => "Specialist Unavailable",
-        AppointmentStatus.Pending when !ServiceProviderId.HasValue => "Awaiting Specialist",
-        AppointmentStatus.Pending => "Booked",
-        AppointmentStatus.Approved => "Approved",
-        AppointmentStatus.Completed => "Completed",
-        AppointmentStatus.Cancelled => "Cancelled",
-        AppointmentStatus.Rescheduled => "Rescheduled",
-        AppointmentStatus.RescheduleProposed => "Reschedule Proposed",
-        _ => Status.ToString()
-    };
+        get => _customStatusText ?? (Status switch
+        {
+            AppointmentStatus.Cancelled when CancellationReason != null && (CancellationReason.Contains("10 minutes") || CancellationReason.Contains("specialist") || CancellationReason.Contains("unavailable") || CancellationReason.Contains("System")) => "Specialist Unavailable",
+            AppointmentStatus.Pending when !ServiceProviderId.HasValue && UtcCreatedAt.AddMinutes(10) < DateTime.UtcNow => "Specialist Unavailable",
+            AppointmentStatus.Pending when !ServiceProviderId.HasValue => "Awaiting Specialist",
+            AppointmentStatus.Pending => "Booked",
+            AppointmentStatus.Approved => "Approved",
+            AppointmentStatus.Completed => "Completed",
+            AppointmentStatus.Cancelled => "Cancelled",
+            AppointmentStatus.Rescheduled => "Rescheduled",
+            AppointmentStatus.RescheduleProposed => "Reschedule Proposed",
+            _ => Status.ToString()
+        });
+        set => _customStatusText = value;
+    }
 
     public DateTime? ApprovedAt { get; set; }
     public DateTime? RejectedAt { get; set; }
@@ -74,6 +79,7 @@ public class AppointmentDto
 
     public int? RescheduledFromAppointmentId { get; set; }
     public DateTime CreatedAt { get; set; }
+    public string? CreatedBy { get; set; }
 
     // Provider-Initiated Reschedule Proposal Details
     public DateTime? ProposedDate { get; set; }
@@ -84,6 +90,12 @@ public class AppointmentDto
         ? FormatSlotTimeRange(ProposedStartTime, ProposedEndTime) 
         : null;
     public string? RescheduleNotes { get; set; }
+
+    // Multi-Part / Multi-Session breakdown & partial acceptance tracking
+    public List<AppointmentDto>? JourneyParts { get; set; }
+    public bool HasPartialApproval { get; set; }
+    public int? ApprovedPartsCount { get; set; }
+    public int? PendingPartsCount { get; set; }
 
     public string? CancelledByName
     {

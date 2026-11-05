@@ -25,7 +25,7 @@ export class CartModalComponent {
   @Input() showClearButton: boolean = true;
   @Input() showProceedButton: boolean = true;
   @Input() allowRemove: boolean = true;
-  @Input() allowQuantity: boolean = true;
+  @Input() allowQuantity: boolean = false;
 
   @Output() close = new EventEmitter<void>();
   @Output() removeItem = new EventEmitter<number>();

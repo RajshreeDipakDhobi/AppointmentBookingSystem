@@ -86,6 +86,11 @@ export interface AppointmentDto {
   proposedTimeSlotText?: string;
   rescheduleNotes?: string;
   createdAt: string;
+  createdBy?: string;
+  journeyParts?: AppointmentDto[];
+  hasPartialApproval?: boolean;
+  approvedPartsCount?: number;
+  pendingPartsCount?: number;
 }
 
 export interface BookAppointmentRequestDto {
@@ -95,6 +100,24 @@ export interface BookAppointmentRequestDto {
   appointmentDate: string; // "YYYY-MM-DD"
   startTime: string;       // "10:00"
   endTime: string;         // "10:30"
+  customerName: string;
+  customerEmail: string;
+  customerPhone: string;
+  customerAddress: string;
+  reason?: string;
+}
+
+export interface AppointmentLegRequest {
+  serviceProviderId?: number | null;
+  serviceId?: number | null;
+  serviceIds?: number[];
+  appointmentDate: string; // "YYYY-MM-DD"
+  startTime: string;       // "HH:mm"
+  endTime: string;         // "HH:mm"
+}
+
+export interface BookMultiAppointmentRequest {
+  legs: AppointmentLegRequest[];
   customerName: string;
   customerEmail: string;
   customerPhone: string;

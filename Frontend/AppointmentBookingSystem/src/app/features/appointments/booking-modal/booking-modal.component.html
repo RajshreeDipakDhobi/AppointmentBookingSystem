@@ -20,7 +20,7 @@
           <h3 class="modal-title">
             <ng-container [ngSwitch]="currentStep">
               <span *ngSwitchCase="1">{{ authService.isServiceProvider() ? 'Select Services' : (isAdmin() &&
-                step1SubState() === 'specialist' ? 'Choose Specialist' : 'Select Service') }}</span>
+                step1SubState() === 'specialist' ? (isMultiSpecialistBooking() ? 'Multi-Specialist Assignment' : 'Choose Specialist') : 'Select Service') }}</span>
               <span *ngSwitchCase="2">Select Date & Available Time</span>
               <span *ngSwitchCase="3">{{ isStaffOrAdmin() ? 'Customer Details' : 'Your Information' }}</span>
               <span *ngSwitchCase="4">Review & Confirm</span>
@@ -38,8 +38,8 @@
           <p class="modal-subtitle">
             <ng-container [ngSwitch]="currentStep">
               <span *ngSwitchCase="1">{{ authService.isServiceProvider() ? 'Select which service(s) to schedule for this
-                customer' : (isAdmin() && step1SubState() === 'specialist' ? 'Select a specialist certified for the
-                selected service(s)' : 'Choose a service from our catalog to book your appointment') }}</span>
+                customer' : (isAdmin() && step1SubState() === 'specialist' ? (isMultiSpecialistBooking() ? 'Assign specialists per service or proceed with auto-dispatch' : 'Select a specialist certified for the
+                selected service(s)') : 'Choose a service from our catalog to book your appointment') }}</span>
               <span *ngSwitchCase="2">Choose an appointment date and available time slot</span>
               <span *ngSwitchCase="3">{{ isStaffOrAdmin() ? 'Search existing customer to auto-fill or enter walk-in
                 details' : 'Provide contact details for booking confirmation' }}</span>
@@ -153,43 +153,20 @@
                   </div>
                 </div>
 
-                <!-- Single / Multi-Quantity Actions on Service Card -->
-                <button *ngIf="getServiceCount(s.id) === 0" type="button" class="btn-select-provider"
-                  (click)="incrementServiceSelection(s.id, $event)" title="Add service to cart">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none"
+                <!-- Single Selection Add/Added Action on Service Card -->
+                <button type="button" class="btn-select-provider" [class.selected]="isServiceSelected(s.id)"
+                  (click)="toggleServiceSelection(s, $event)" [title]="isServiceSelected(s.id) ? 'Remove service' : 'Add service to cart'">
+                  <svg *ngIf="!isServiceSelected(s.id)" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none"
                     stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                     <line x1="12" y1="5" x2="12" y2="19"></line>
                     <line x1="5" y1="12" x2="19" y2="12"></line>
                   </svg>
-                  <span>Add</span>
+                  <svg *ngIf="isServiceSelected(s.id)" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                  <span>{{ isServiceSelected(s.id) ? 'Added' : 'Add' }}</span>
                 </button>
-
-                <!-- When added: show interactive mini-stepper -->
-                <div *ngIf="getServiceCount(s.id) > 0" class="card-qty-stepper" (click)="$event.stopPropagation()">
-                  <button type="button" class="btn-card-step" (click)="decrementServiceSelection(s.id, $event)"
-                    [title]="getServiceCount(s.id) === 1 ? 'Remove service' : 'Decrease quantity'">
-                    <svg *ngIf="getServiceCount(s.id) > 1" xmlns="http://www.w3.org/2000/svg" width="10" height="10"
-                      viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
-                      stroke-linejoin="round">
-                      <line x1="5" y1="12" x2="19" y2="12" />
-                    </svg>
-                    <svg *ngIf="getServiceCount(s.id) === 1" class="trash-icon" xmlns="http://www.w3.org/2000/svg"
-                      width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
-                      stroke-linecap="round" stroke-linejoin="round">
-                      <polyline points="3 6 5 6 21 6" />
-                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                    </svg>
-                  </button>
-                  <span class="card-step-val">{{ getServiceCount(s.id) }}</span>
-                  <button type="button" class="btn-card-step" (click)="incrementServiceSelection(s.id, $event)"
-                    [title]="'Add another ' + s.name">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none"
-                      stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                      <line x1="12" y1="5" x2="12" y2="19" />
-                      <line x1="5" y1="12" x2="19" y2="12" />
-                    </svg>
-                  </button>
-                </div>
               </div>
 
               <p *ngIf="s.description && s.description.trim().toLowerCase() !== s.name.trim().toLowerCase()"
@@ -233,8 +210,8 @@
             </button>
           </div>
 
-          <!-- Specialist Filter/Search Bar -->
-          <div class="provider-filters-row">
+          <!-- Specialist Filter/Search Bar (Hidden in Multi-Specialist mode to keep UI clean and focused) -->
+          <div *ngIf="!isMultiSpecialistBooking()" class="provider-filters-row">
             <div class="provider-search-box">
               <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
                 fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
@@ -260,7 +237,7 @@
           </div>
 
           <!-- Certified Specialists Grid (Clean horizontal cards, compact & elegant) -->
-          <div *ngIf="!isLoadingProviders() && qualifiedProvidersForSelectedServices().length > 0"
+          <div *ngIf="!isLoadingProviders() && qualifiedProvidersForSelectedServices().length > 0 && !isMultiSpecialistBooking()"
             class="specialist-cards-grid">
             <div *ngFor="let p of qualifiedProvidersForSelectedServices()" class="specialist-row-card"
               [class.is-selected]="bookingMode === 'direct' && selectedProviderId === p.id"
@@ -327,8 +304,77 @@
             </div>
           </div>
 
+          <!-- Multi-Specialist Assignment Deck (When selected services require multiple different specialists) -->
+          <div *ngIf="!isLoadingProviders() && isMultiSpecialistBooking()" class="multi-specialist-deck">
+            
+            <!-- Grouped Sessions Overview (Shows e.g. 3 services to Priya Patil, 1 to Rajat Dalal) -->
+            <div class="grouped-sessions-overview">
+              <div class="overview-header">
+                <span class="overview-title">Assigned Specialist Sessions ({{ groupedBookingSessions().length }})</span>
+                <span class="overview-badge">{{ totalServicesDuration() }} mins Total</span>
+              </div>
+              <div class="overview-cards-deck">
+                <div *ngFor="let session of groupedBookingSessions(); let idx = index" class="session-overview-card">
+                  <div class="session-card-header">
+                    <span class="session-badge">Session {{ idx + 1 }}</span>
+                    <span class="session-duration-tag">{{ session.totalDurationMinutes }} mins</span>
+                  </div>
+                  <div class="session-card-body">
+                    <div class="provider-line">
+                      <div class="p-avatar-sm">{{ getInitials(session.providerName) }}</div>
+                      <strong class="p-name">{{ session.providerName }}</strong>
+                    </div>
+                    <div class="services-list-line">
+                      <span class="services-count">{{ session.services.length }} {{ session.services.length === 1 ? 'Service' : 'Services' }}:</span>
+                      <span *ngFor="let s of session.services; let isLast = last" class="service-pill-item">
+                        {{ s.name }}<span *ngIf="!isLast">, </span>
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="multi-specialist-assignment-list">
+              <div *ngFor="let item of cartModalItems(); let idx = index" class="service-assign-row-card">
+                <div class="service-assign-info">
+                  <span class="step-sequence-dot">{{ idx + 1 }}</span>
+                  <div class="service-name-wrap">
+                    <div class="service-name-title-row">
+                      <h5 class="service-assign-name">{{ item.name }}</h5>
+                    </div>
+                    <div class="service-assign-meta">
+                      <span>{{ item.durationMinutes || 30 }} mins</span>
+                      <span class="dot-sep">•</span>
+                      <span>₹{{ (item.price || 0) | number }}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="service-assign-control">
+                  <label class="assign-label">Specialist:</label>
+                  <div class="custom-select-wrap">
+                    <select class="service-provider-select"
+                      [value]="getAssignedProviderForService(item.id) || ''"
+                      (change)="onServiceSpecialistChange(item.id, $event)">
+                      <option *ngIf="!isAdmin()" value="">Auto-Dispatch</option>
+                      <option *ngIf="isAdmin() && !getAssignedProviderForService(item.id)" value="" disabled selected>Select Specialist</option>
+                      <option *ngFor="let prov of getQualifiedProvidersForService(item.id)" [value]="prov.id">
+                        {{ prov.name }} ({{ prov.serviceType || 'Specialist' }})
+                      </option>
+                    </select>
+                    <svg class="select-chevron" xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none"
+                      stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="6 9 12 15 18 9" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <!-- Empty State when no certified specialists -->
-          <div *ngIf="!isLoadingProviders() && qualifiedProvidersForSelectedServices().length === 0"
+          <div *ngIf="!isLoadingProviders() && qualifiedProvidersForSelectedServices().length === 0 && !isMultiSpecialistBooking()"
             class="providers-empty-pane">
             <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none"
               stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -362,21 +408,46 @@
               </svg>
             </div>
             <div class="summary-details">
-              <span class="summary-role">Service Booking ({{ totalCartItemsCount() || 1 }} {{ (totalCartItemsCount() ||
-                1) === 1 ? 'service' : 'services' }})</span>
-              <div class="summary-name-row">
-                <h4 class="summary-name">{{ selectedServicesNamesSummary() }}</h4>
-                <span *ngIf="totalServicesPrice()" class="card-charges-badge">₹{{ totalServicesPrice() | number
-                  }}</span>
-                <span *ngIf="totalServicesDuration()" class="card-service-type-badge">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none"
-                    stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="12" cy="12" r="10" />
-                    <polyline points="12 6 12 12 16 14" />
-                  </svg>
-                  <span>{{ totalServicesDuration() }} mins</span>
-                </span>
-              </div>
+              <!-- Multi-Service View: Clean Structured Presentation -->
+              <ng-container *ngIf="totalCartItemsCount() > 1">
+                <div class="summary-top-meta">
+                  <span class="summary-badge-count">{{ totalCartItemsCount() }} Services Selected</span>
+                  <span *ngIf="totalServicesPrice()" class="summary-meta-pill price-pill">₹{{ totalServicesPrice() | number }}</span>
+                  <span *ngIf="totalServicesDuration()" class="summary-meta-pill duration-pill">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none"
+                      stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                      <circle cx="12" cy="12" r="10" />
+                      <polyline points="12 6 12 12 16 14" />
+                    </svg>
+                    <span>{{ totalServicesDuration() }} mins</span>
+                    <span class="human-duration" *ngIf="totalServicesDuration() >= 60">({{ formatDurationHours(totalServicesDuration()) }})</span>
+                  </span>
+                </div>
+                <!-- Clean chips for each selected service -->
+                <div class="summary-services-chips-row">
+                  <span *ngFor="let s of cartModalItems()" class="summary-chip" [title]="s.name + ' (' + (s.durationMinutes || 30) + ' mins)'">
+                    <span class="chip-name">{{ s.name }}</span>
+                    <span class="chip-dur">{{ s.durationMinutes || 30 }}m</span>
+                  </span>
+                </div>
+              </ng-container>
+
+              <!-- Single Service View -->
+              <ng-container *ngIf="totalCartItemsCount() <= 1">
+                <span class="summary-role">Selected Service</span>
+                <div class="summary-name-row">
+                  <h4 class="summary-name">{{ selectedServicesNamesSummary() }}</h4>
+                  <span *ngIf="totalServicesPrice()" class="card-charges-badge">₹{{ totalServicesPrice() | number }}</span>
+                  <span *ngIf="totalServicesDuration()" class="card-service-type-badge">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none"
+                      stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                      <circle cx="12" cy="12" r="10" />
+                      <polyline points="12 6 12 12 16 14" />
+                    </svg>
+                    <span>{{ totalServicesDuration() }} mins</span>
+                  </span>
+                </div>
+              </ng-container>
             </div>
           </div>
 
@@ -387,11 +458,10 @@
               <img *ngIf="selectedProvider?.profilePictureUrl" [src]="selectedProvider?.profilePictureUrl"
                 (error)="selectedProvider!.profilePictureUrl = undefined" [alt]="selectedProvider?.name"
                 class="avatar-img" />
-              <span *ngIf="!selectedProvider?.profilePictureUrl">{{ getInitials(providerDisplayName) }}</span>
+              <span *ngIf="!selectedProvider?.profilePictureUrl">{{ isMultiSpecialistBooking() ? 'MS' : getInitials(providerDisplayName) }}</span>
             </div>
             <div class="summary-details">
-              <span class="summary-role">{{ authService.isServiceProvider() ? 'Your Schedule' : 'Assigned Specialist'
-                }}</span>
+              <span class="summary-role">{{ authService.isServiceProvider() ? 'Your Schedule' : (isMultiSpecialistBooking() ? 'Assigned Specialists' : 'Assigned Specialist') }}</span>
               <div class="summary-name-row">
                 <h4 class="summary-name">{{ providerDisplayName }}</h4>
                 <span *ngIf="selectedServicesNamesSummary()" class="summary-services-chip">{{
@@ -527,6 +597,53 @@
                 </div>
                 <span class="slot-time-text">{{ formatSlotRange(slot) }}</span>
               </button>
+            </div>
+
+            <!-- Sequential Service Schedule Timeline for Selected Slot -->
+            <div *ngIf="selectedSlot && (isMultiSpecialistBooking() || totalCartItemsCount() > 1)" class="slot-timeline-card animate-fade-in">
+              <div class="timeline-header">
+                <div class="timeline-title-row">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                    <line x1="16" y1="2" x2="16" y2="6" />
+                    <line x1="8" y1="2" x2="8" y2="6" />
+                    <line x1="3" y1="10" x2="21" y2="10" />
+                  </svg>
+                  <span class="timeline-heading">Service Schedule & Slots</span>
+                </div>
+                <span class="timeline-total-badge">{{ totalServicesDuration() }} mins Total</span>
+              </div>
+
+              <div class="timeline-sessions-list">
+                <div *ngFor="let s of getComputedSlotSessions(); let idx = index; let isLast = last" class="timeline-session-item">
+                  <div class="timeline-rail">
+                    <span class="rail-node">{{ idx + 1 }}</span>
+                    <span *ngIf="!isLast" class="rail-line"></span>
+                  </div>
+                  <div class="timeline-session-body">
+                    <div class="timeline-compact-row">
+                      <div class="timeline-service-col">
+                        <div class="service-name-row">
+                          <strong class="session-service-title">
+                            <span *ngFor="let serv of s.services; let isLastServ = last">
+                              {{ serv.name }}<span *ngIf="!isLastServ"> + </span>
+                            </span>
+                          </strong>
+                          <span class="service-dur-tag">({{ s.totalDurationMinutes }} mins)</span>
+                        </div>
+                        <div *ngIf="s.providerId && isAdmin()" class="service-assigned-staff">
+                          Specialist: <strong>{{ s.providerName }}</strong>
+                        </div>
+                      </div>
+
+                      <div class="session-time-pill">
+                        <strong>{{ formatTime(s.startTime) }} – {{ formatTime(s.endTime) }}</strong>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <!-- Prominent Next Button (Bottom Right) -->
@@ -809,43 +926,33 @@
 
         <div class="review-compact-deck">
 
-          <!-- LEFT COLUMN: Appointment Schedule & Services Breakdown -->
+          <!-- LEFT COLUMN: Unified Schedule & Service Breakdown (Zero Repetition) -->
           <div class="review-column review-order-column">
 
-            <!-- Appointment Schedule Box -->
-            <div class="compact-hero-strip">
-              <div class="compact-box-header">
-                <span class="box-title">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none"
-                    stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                    <rect width="18" height="18" x="3" y="4" rx="2" />
-                    <line x1="16" y1="2" x2="16" y2="6" />
-                    <line x1="8" y1="2" x2="8" y2="6" />
-                    <line x1="3" y1="10" x2="21" y2="10" />
-                  </svg>
-                  <span>Appointment Schedule</span>
-                </span>
-                <span *ngIf="bookingMode === 'direct' && selectedProvider" class="box-meta">Assigned Specialist</span>
+            <div class="review-unified-card">
+              <!-- Card Header -->
+              <div class="unified-card-header">
+                <div class="unified-header-left">
+                  <span class="unified-card-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none"
+                      stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                      <rect x="3" y="4" width="18" height="18" rx="2" />
+                      <line x1="16" y1="2" x2="16" y2="6" />
+                      <line x1="8" y1="2" x2="8" y2="6" />
+                      <line x1="3" y1="10" x2="21" y2="10" />
+                    </svg>
+                  </span>
+                  <div class="unified-title-text">
+                    <h4 class="unified-title">Appointment & Service Schedule</h4>
+                    <span class="unified-subtitle">All scheduled services, slot timings and itemized charges</span>
+                  </div>
+                </div>
+                <span class="unified-count-badge">{{ totalCartItemsCount() }} {{ totalCartItemsCount() === 1 ? 'Service' : 'Services' }}</span>
               </div>
 
-              <!-- Direct Specialist Fulfillment (When a specific provider was selected) -->
-              <div *ngIf="bookingMode === 'direct' && selectedProvider" class="compact-provider-line">
-                <div class="compact-avatar"
-                  [style.background]="selectedProvider.profilePictureUrl ? 'transparent' : getAvatarGradient(selectedProvider.name)">
-                  <img *ngIf="selectedProvider.profilePictureUrl" [src]="selectedProvider.profilePictureUrl"
-                    (error)="selectedProvider.profilePictureUrl = undefined" [alt]="selectedProvider.name"
-                    class="avatar-img" />
-                  <span *ngIf="!selectedProvider.profilePictureUrl">{{ getInitials(selectedProvider.name) }}</span>
-                </div>
-                <div class="compact-provider-meta">
-                  <span class="meta-label">Selected Specialist</span>
-                  <strong class="meta-name">{{ selectedProvider.name }}</strong>
-                </div>
-              </div>
-
-              <!-- Schedule Row: Date + Time + Combined Duration in one neat row -->
-              <div class="compact-schedule-row" [class.no-border]="bookingMode === 'broadcast' || !selectedProvider">
-                <div class="compact-sched-pill">
+              <!-- Overall Schedule Strip (Date + Total Time Window + Assigned Specialist if direct) -->
+              <div class="unified-timing-strip">
+                <div class="unified-pill unified-date-pill">
                   <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none"
                     stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                     <rect width="18" height="18" x="3" y="4" rx="2" />
@@ -856,64 +963,63 @@
                   <span>{{ formatDate(selectedDate) }}</span>
                 </div>
 
-                <div class="compact-sched-pill pill-time">
+                <div class="unified-pill unified-time-pill">
                   <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none"
                     stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                     <circle cx="12" cy="12" r="10" />
                     <polyline points="12 6 12 12 16 14" />
                   </svg>
-                  <span>{{ formatTime(selectedSlot?.startTime || '') }} – {{ formatTime(selectedSlot?.endTime || '')
-                    }}</span>
-                  <span class="duration-micro-pill">{{ totalServicesDuration() }}m</span>
+                  <span>{{ formatTime(selectedSlot?.startTime || '') }} – {{ formatTime(selectedSlot?.endTime || '') }}</span>
+                  <span class="unified-dur-pill">{{ totalServicesDuration() }}m</span>
+                </div>
+
+                <div *ngIf="bookingMode === 'direct' && selectedProvider" class="unified-pill unified-provider-pill">
+                  <span class="provider-label">Specialist:</span>
+                  <strong>{{ selectedProvider.name }}</strong>
                 </div>
               </div>
-            </div>
 
-            <!-- Itemized Services List -->
-            <div class="compact-services-box">
-              <div class="compact-box-header">
-                <span class="box-title">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none"
-                    stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
-                    <line x1="7" y1="7" x2="7.01" y2="7" />
-                  </svg>
-                  <span>Selected Services ({{ totalCartItemsCount() }})</span>
-                </span>
-                <span class="box-meta">{{ totalServicesDuration() }} mins</span>
-              </div>
-
-              <!-- Multi-Service Rows with Quantities -->
-              <div class="compact-items-scroll custom-scrollbar" *ngIf="cartModalItems().length > 0">
-                <div class="compact-item-row" *ngFor="let s of cartModalItems(); let i = index">
-                  <div class="compact-item-left">
-                    <span class="item-dot">{{ i + 1 }}</span>
-                    <span class="item-name" [title]="s.name">
-                      {{ s.name }}
-                      <strong *ngIf="(s.quantity || 1) > 1" class="review-qty-pill">×{{ s.quantity }}</strong>
-                    </span>
-                    <span class="item-time">({{ (s.durationMinutes || 0) * (s.quantity || 1) }}m)</span>
+              <!-- Single Itemized Services Table (Shows Index, Service Name, Exact Slot, and Price) -->
+              <div class="unified-services-deck">
+                <div *ngFor="let item of unifiedReviewItems(); let i = index" class="unified-service-row">
+                  <!-- Left: Index + Service Title & Duration + Admin Specialist -->
+                  <div class="unified-row-left">
+                    <span class="unified-row-index">{{ i + 1 }}</span>
+                    <div class="unified-row-info">
+                      <div class="unified-name-line">
+                        <strong class="unified-service-title" [title]="item.name">{{ item.name }}</strong>
+                        <span class="unified-dur-tag">({{ item.durationMinutes }}m)</span>
+                      </div>
+                      <div *ngIf="item.providerId && isAdmin()" class="unified-specialist-info">
+                        Specialist: <strong>{{ item.providerName }}</strong>
+                      </div>
+                    </div>
                   </div>
-                  <span class="item-price">₹{{ ((s.price || 0) * (s.quantity || 1)) | number }}</span>
-                </div>
-              </div>
 
-              <!-- Fallback Single Service Row -->
-              <div class="compact-items-scroll" *ngIf="cartModalItems().length === 0 && selectedService">
-                <div class="compact-item-row">
-                  <div class="compact-item-left">
-                    <span class="item-dot">1</span>
-                    <span class="item-name">{{ selectedService.name }}</span>
-                    <span class="item-time">({{ selectedService.durationMinutes }}m)</span>
+                  <!-- Middle: Exact Slot Time for this Service -->
+                  <div class="unified-row-slot">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none"
+                      stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                      <circle cx="12" cy="12" r="10" />
+                      <polyline points="12 6 12 12 16 14" />
+                    </svg>
+                    <span>{{ formatTime(item.startTime) }} – {{ formatTime(item.endTime) }}</span>
                   </div>
-                  <span class="item-price">₹{{ selectedService.price | number }}</span>
+
+                  <!-- Right: Price -->
+                  <div class="unified-row-price">
+                    <span>₹{{ item.price | number }}</span>
+                  </div>
                 </div>
               </div>
 
-              <!-- Grand Total Row -->
-              <div class="compact-total-line">
-                <span class="total-text">Total Payable</span>
-                <span class="total-figure">₹{{ totalServicesPrice() | number }}</span>
+              <!-- Grand Total Summary Row -->
+              <div class="unified-total-row">
+                <div class="unified-total-left">
+                  <span class="unified-total-label">Total Payable</span>
+                  <span class="unified-total-meta">({{ totalCartItemsCount() }} {{ totalCartItemsCount() === 1 ? 'service' : 'services' }} • {{ totalServicesDuration() }} mins)</span>
+                </div>
+                <span class="unified-total-amount">₹{{ totalServicesPrice() | number }}</span>
               </div>
             </div>
 
@@ -982,143 +1088,161 @@
       <!-- ======================================================== -->
       <div *ngIf="currentStep === 5" class="step-pane animate-fade-in step-success-pane">
 
-        <div *ngIf="confirmedAppointment() as app" class="success-pass-card" id="printable-ticket">
+        <div *ngIf="confirmedAppointments().length > 1" class="multi-pass-banner">
+          <div class="multi-pass-banner-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+            </svg>
+          </div>
+          <div class="multi-pass-banner-text">
+            <h4 class="multi-pass-title">Multi-Specialist Journey Confirmed!</h4>
+            <p class="multi-pass-desc">{{ confirmedAppointments().length }} back-to-back sessions scheduled seamlessly. Your digital passes are ready below.</p>
+          </div>
+        </div>
 
-          <!-- Glowing Top Accent Line -->
-          <div class="pass-top-accent"></div>
+        <div id="printable-ticket" class="passes-container">
+          <div *ngFor="let app of (confirmedAppointments().length > 0 ? confirmedAppointments() : (confirmedAppointment() ? [confirmedAppointment()!] : [])); let legIndex = index"
+            class="success-pass-card" [class.multi-card-item]="confirmedAppointments().length > 1">
 
-          <!-- Reference & Status Header Bar -->
-          <div class="pass-ref-bar">
-            <div class="pass-ref-left">
-              <span class="pass-ref-label">Appointment Reference</span>
-              <div class="pass-ref-row">
-                <span class="pass-ref-code">{{ app.appointmentNumber }}</span>
-                <button type="button" class="btn-copy-ref" [appCopy]="app.appointmentNumber" (copied)="copiedRef = true"
-                  title="Copy Appointment ID">
-                  <svg *ngIf="!copiedRef" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
-                    fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
-                    <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
-                  </svg>
-                  <span *ngIf="copiedRef" class="copy-success-text">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none"
-                      stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                      <polyline points="20 6 9 17 4 12" />
+            <!-- Glowing Top Accent Line -->
+            <div class="pass-top-accent"></div>
+
+            <!-- Reference & Status Header Bar -->
+            <div class="pass-ref-bar">
+              <div class="pass-ref-left">
+                <span class="pass-ref-label">
+                  <span *ngIf="confirmedAppointments().length > 1" class="session-pill-badge">Session {{ legIndex + 1 }} of {{ confirmedAppointments().length }}</span>
+                  <span>Appointment Reference</span>
+                </span>
+                <div class="pass-ref-row">
+                  <span class="pass-ref-code">{{ app.appointmentNumber }}</span>
+                  <button type="button" class="btn-copy-ref" [appCopy]="app.appointmentNumber" (copied)="copiedRef = true"
+                    title="Copy Appointment ID">
+                    <svg *ngIf="!copiedRef" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+                      fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
+                      <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
                     </svg>
-                    <span>Copied</span>
-                  </span>
-                </button>
+                    <span *ngIf="copiedRef" class="copy-success-text">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                      <span>Copied</span>
+                    </span>
+                  </button>
+                </div>
+              </div>
+
+              <div class="pass-status-pill" [class.pass-status-pending]="app.status !== AppointmentStatus.Approved">
+                <span class="status-dot-pulse" [class.pulse-amber]="app.status !== AppointmentStatus.Approved"></span>
+                <span>{{ app.status === AppointmentStatus.Approved ? 'Confirmed' : 'Pending Approval' }}</span>
               </div>
             </div>
 
-            <div class="pass-status-pill">
-              <span class="status-dot-pulse"></span>
-              <span>Confirmed</span>
+            <!-- Perforated Tear Line -->
+            <div class="pass-perforation">
+              <span class="tear-notch notch-l"></span>
+              <span class="tear-line"></span>
+              <span class="tear-notch notch-r"></span>
             </div>
+
+            <!-- Pass Details Grid -->
+            <div class="pass-body-grid">
+
+              <!-- Specialist -->
+              <div class="pass-info-block">
+                <span class="pass-block-label">Service Provider</span>
+                <div class="pass-provider-row">
+                  <div class="pass-avatar"
+                    [style.background]="app.serviceProviderProfilePictureUrl ? 'transparent' : getAvatarGradient(app.serviceProviderName || 'Specialist')">
+                    <img *ngIf="app.serviceProviderProfilePictureUrl" [src]="app.serviceProviderProfilePictureUrl" alt=""
+                      class="avatar-img" (error)="app.serviceProviderProfilePictureUrl = undefined" />
+                    <span *ngIf="!app.serviceProviderProfilePictureUrl">{{ getInitials(app.serviceProviderName || 'Specialist') }}</span>
+                  </div>
+                  <div class="pass-provider-meta">
+                    <h5 class="pass-provider-name">{{ app.serviceProviderName || 'Dedicated Specialist' }}</h5>
+                    <span class="pass-provider-type">{{ app.serviceProviderType || 'Certified Specialist' }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Schedule -->
+              <div class="pass-info-block">
+                <span class="pass-block-label">Date & Time Slot</span>
+                <div class="pass-schedule-meta">
+                  <div class="pass-date-row">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                      stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                      <rect width="18" height="18" x="3" y="4" rx="2" />
+                      <line x1="16" y1="2" x2="16" y2="6" />
+                      <line x1="8" y1="2" x2="8" y2="6" />
+                      <line x1="3" y1="10" x2="21" y2="10" />
+                    </svg>
+                    <span class="pass-date-text">{{ formatDate(app.appointmentDate) }}</span>
+                  </div>
+                  <div class="pass-time-badge">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none"
+                      stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                      <circle cx="12" cy="12" r="10" />
+                      <polyline points="12 6 12 12 16 14" />
+                    </svg>
+                    <span>{{ formatTime(app.startTime) }} – {{ formatTime(app.endTime) }}</span>
+                    <span class="pass-duration">{{ app.totalDurationMinutes || app.serviceDurationMinutes || 30 }} Mins</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Services Itemized Breakdown -->
+              <div class="pass-info-block pass-services-block"
+                *ngIf="(app.items && app.items.length > 0) || app.serviceName">
+                <span class="pass-block-label">Booked Services ({{ (app.items?.length || 1) }})</span>
+                <div class="pass-items-list" *ngIf="app.items && app.items.length > 0">
+                  <div class="pass-item-line" *ngFor="let it of app.items">
+                    <span class="pass-item-name">{{ it.serviceName }} <small class="text-muted">({{ it.durationMinutes
+                        }}m)</small></span>
+                    <span class="pass-item-price">₹{{ it.price | number }}</span>
+                  </div>
+                  <div class="pass-item-total">
+                    <span>Session Total</span>
+                    <span class="pass-item-grand-price">₹{{ (app.totalAmount || 0) | number }}</span>
+                  </div>
+                </div>
+                <div class="pass-single-service" *ngIf="(!app.items || app.items.length === 0) && app.serviceName">
+                  <span class="pass-item-name">{{ app.serviceName }}</span>
+                  <span *ngIf="app.servicePrice" class="pass-item-price">₹{{ app.servicePrice | number }}</span>
+                </div>
+              </div>
+
+              <!-- Customer -->
+              <div class="pass-info-block pass-customer-block">
+                <span class="pass-block-label">Customer Details</span>
+                <div class="pass-customer-row">
+                  <div class="customer-item">
+                    <span class="c-meta-label">Name:</span>
+                    <strong class="c-meta-val">{{ app.customerName }}</strong>
+                  </div>
+                  <div class="customer-item">
+                    <span class="c-meta-label">Phone:</span>
+                    <strong class="c-meta-val">+91 {{ app.customerPhone }}</strong>
+                  </div>
+                  <div class="customer-item">
+                    <span class="c-meta-label">Email:</span>
+                    <strong class="c-meta-val">{{ app.customerEmail }}</strong>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Purpose/Reason if provided -->
+              <div *ngIf="getCleanReason(app.reason)" class="pass-info-block pass-reason-block">
+                <span class="pass-block-label">Service Notes / Reason</span>
+                <p class="pass-reason-text">"{{ getCleanReason(app.reason) }}"</p>
+              </div>
+
+            </div>
+
           </div>
-
-          <!-- Perforated Tear Line -->
-          <div class="pass-perforation">
-            <span class="tear-notch notch-l"></span>
-            <span class="tear-line"></span>
-            <span class="tear-notch notch-r"></span>
-          </div>
-
-          <!-- Pass Details Grid -->
-          <div class="pass-body-grid">
-
-            <!-- Specialist -->
-            <div class="pass-info-block">
-              <span class="pass-block-label">Service Provider</span>
-              <div class="pass-provider-row">
-                <div class="pass-avatar"
-                  [style.background]="app.serviceProviderProfilePictureUrl ? 'transparent' : getAvatarGradient(app.serviceProviderName)">
-                  <img *ngIf="app.serviceProviderProfilePictureUrl" [src]="app.serviceProviderProfilePictureUrl" alt=""
-                    class="avatar-img" (error)="app.serviceProviderProfilePictureUrl = undefined" />
-                  <span *ngIf="!app.serviceProviderProfilePictureUrl">{{ getInitials(app.serviceProviderName) }}</span>
-                </div>
-                <div class="pass-provider-meta">
-                  <h5 class="pass-provider-name">{{ app.serviceProviderName }}</h5>
-                  <span class="pass-provider-type">{{ app.serviceProviderType }}</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- Schedule -->
-            <div class="pass-info-block">
-              <span class="pass-block-label">Date & Time Slot</span>
-              <div class="pass-schedule-meta">
-                <div class="pass-date-row">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
-                    stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                    <rect width="18" height="18" x="3" y="4" rx="2" />
-                    <line x1="16" y1="2" x2="16" y2="6" />
-                    <line x1="8" y1="2" x2="8" y2="6" />
-                    <line x1="3" y1="10" x2="21" y2="10" />
-                  </svg>
-                  <span class="pass-date-text">{{ formatDate(app.appointmentDate) }}</span>
-                </div>
-                <div class="pass-time-badge">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none"
-                    stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="12" cy="12" r="10" />
-                    <polyline points="12 6 12 12 16 14" />
-                  </svg>
-                  <span>{{ formatTime(app.startTime) }} – {{ formatTime(app.endTime) }}</span>
-                  <span class="pass-duration">{{ app.totalDurationMinutes || app.serviceDurationMinutes ||
-                    totalServicesDuration() || 30 }} Mins</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- Services Itemized Breakdown -->
-            <div class="pass-info-block pass-services-block"
-              *ngIf="(app.items && app.items.length > 0) || app.serviceName">
-              <span class="pass-block-label">Booked Services ({{ (app.items?.length || 1) }})</span>
-              <div class="pass-items-list" *ngIf="app.items && app.items.length > 0">
-                <div class="pass-item-line" *ngFor="let it of app.items">
-                  <span class="pass-item-name">{{ it.serviceName }} <small class="text-muted">({{ it.durationMinutes
-                      }}m)</small></span>
-                  <span class="pass-item-price">₹{{ it.price | number }}</span>
-                </div>
-                <div class="pass-item-total">
-                  <span>Grand Total</span>
-                  <span class="pass-item-grand-price">₹{{ (app.totalAmount || 0) | number }}</span>
-                </div>
-              </div>
-              <div class="pass-single-service" *ngIf="(!app.items || app.items.length === 0) && app.serviceName">
-                <span class="pass-item-name">{{ app.serviceName }}</span>
-                <span *ngIf="app.servicePrice" class="pass-item-price">₹{{ app.servicePrice | number }}</span>
-              </div>
-            </div>
-
-            <!-- Customer -->
-            <div class="pass-info-block pass-customer-block">
-              <span class="pass-block-label">Customer Details</span>
-              <div class="pass-customer-row">
-                <div class="customer-item">
-                  <span class="c-meta-label">Name:</span>
-                  <strong class="c-meta-val">{{ app.customerName }}</strong>
-                </div>
-                <div class="customer-item">
-                  <span class="c-meta-label">Phone:</span>
-                  <strong class="c-meta-val">+91 {{ app.customerPhone }}</strong>
-                </div>
-                <div class="customer-item">
-                  <span class="c-meta-label">Email:</span>
-                  <strong class="c-meta-val">{{ app.customerEmail }}</strong>
-                </div>
-              </div>
-            </div>
-
-            <!-- Purpose/Reason if provided -->
-            <div *ngIf="app.reason" class="pass-info-block pass-reason-block">
-              <span class="pass-block-label">Service Notes / Reason</span>
-              <p class="pass-reason-text">"{{ app.reason }}"</p>
-            </div>
-
-          </div>
-
         </div>
 
       </div>
@@ -1168,7 +1292,7 @@
 
         <!-- 4. For Admin on 'specialist': Select Date & Time -->
         <button *ngIf="isAdmin() && step1SubState() === 'specialist'" type="button" class="btn btn-primary"
-          [disabled]="!selectedProviderId" (click)="goToStep2()">
+          [disabled]="!isMultiSpecialistBooking() && !selectedProviderId" (click)="goToStep2()">
           <span>Select Date & Time</span>
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
             stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -1273,10 +1397,10 @@
     <!-- Nested Reusable Cart Slide-Over Drawer -->
     <app-cart-modal *ngIf="isCartModalOpen() && selectedServiceIds().length > 0" [items]="cartModalItems()"
       title="Booking Cart"
-      subtitle="Review and adjust service quantities. Changes dynamically update your slot duration and pricing."
+      subtitle="Review selected services"
+      [allowQuantity]="false"
       [proceedButtonText]="currentStep === 1 ? (authService.isServiceProvider() ? 'Select Date & Time' : (isAdmin() ? (step1SubState() === 'specialist' ? 'Select Date & Time' : 'Choose Specialist') : 'Select Date & Time')) : 'Done & Return'"
-      (close)="closeCartModal()" (increment)="incrementServiceSelection($event)"
-      (decrement)="decrementServiceSelection($event)" (removeItem)="removeServiceFromSelection($event)"
+      (close)="closeCartModal()" (removeItem)="removeServiceFromSelection($event)"
       (clearAll)="clearCartInBookingModal()" (proceed)="onProceedFromCartModal()">
     </app-cart-modal>
   </div>

@@ -96,7 +96,8 @@ export class ProviderModalComponent implements OnChanges {
 
   private loadActiveServices(): void {
     const tenantId = this.providerToEdit?.tenantId;
-    this.serviceCatalogService.getActiveServices(tenantId).subscribe({
+    // Allow assigning all active services including currently unassigned ones
+    this.serviceCatalogService.getActiveServices(tenantId, false).subscribe({
       next: (services) => {
         this.availableServices.set(services || []);
         this.syncSelectedServicesFromProvider();
