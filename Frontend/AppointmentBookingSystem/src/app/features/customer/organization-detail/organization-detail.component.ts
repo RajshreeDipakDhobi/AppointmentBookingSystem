@@ -6,6 +6,7 @@ import { TenantService } from '../../../core/services/tenant.service';
 import { ProviderService } from '../../../core/services/provider.service';
 import { ServiceCatalogService } from '../../../core/services/service-catalog.service';
 import { AuthService } from '../../../core/services/auth.service';
+import { CartService } from '../../../core/services/cart.service';
 import { TenantDto } from '../../../core/models/tenant.models';
 import { ServiceProviderDto } from '../../../core/models/provider.models';
 import { ServiceDto } from '../../../core/models/service.models';
@@ -42,6 +43,7 @@ export class OrganizationDetailComponent implements OnInit {
   private readonly providerService = inject(ProviderService);
   private readonly serviceCatalogService = inject(ServiceCatalogService);
   private readonly authService = inject(AuthService);
+  private readonly cartService = inject(CartService);
 
   readonly tenant = signal<TenantDto | null>(null);
   readonly services = signal<ServiceDto[]>([]);
@@ -58,31 +60,40 @@ export class OrganizationDetailComponent implements OnInit {
   readonly isBookingModalOpen = signal<boolean>(false);
   readonly selectedProviderId = signal<number | null>(null);
   readonly selectedServiceId = signal<number | null>(null);
+  readonly bookingInitialStep = signal<1 | 2 | 3 | 4 | 5>(1);
   readonly toastMessage = signal<string | null>(null);
 
-  // Multi-Service Cart State (Urban Company Style) with Multi-Quantity Stepper
-  readonly cartServices = signal<CartServiceItem[]>([]);
-  readonly isCartModalOpen = signal<boolean>(false);
-  readonly cartTotalAmount = computed<number>(() => {
-    return this.cartServices().reduce((sum, s) => sum + (s.price || 0) * (s.quantity || 1), 0);
-  });
-  readonly cartTotalDuration = computed<number>(() => {
-    return this.cartServices().reduce((sum, s) => sum + (s.durationMinutes || 0) * (s.quantity || 1), 0);
-  });
-  readonly cartTotalItemsCount = computed<number>(() => {
-    return this.cartServices().reduce((sum, s) => sum + (s.quantity || 1), 0);
-  });
-  readonly cartCount = computed<number>(() => this.cartServices().length);
-  readonly selectedCartServiceIds = computed<number[]>(() => {
-    const ids: number[] = [];
-    for (const item of this.cartServices()) {
-      const q = item.quantity && item.quantity > 0 ? item.quantity : 1;
-      for (let i = 0; i < q; i++) {
-        ids.push(item.id);
+  // Multi-Service Cart State (Urban Company Style) - Backend Persistent
+  readonly cartServices = computed<CartServiceItem[]>(() => {
+    const allServices = this.services();
+    return this.cartService.cartItems().map(item => {
+      const match = allServices.find(s => s.id === item.serviceId);
+      if (match) {
+        return {
+          ...match,
+          quantity: 1
+        };
       }
-    }
-    return ids;
+      return {
+        id: item.serviceId,
+        name: item.serviceName,
+        description: item.serviceDescription || '',
+        price: item.price,
+        durationMinutes: item.durationMinutes,
+        quantity: 1,
+        isActive: true,
+        providersCount: 1,
+        userId: 0,
+        createdAt: ''
+      };
+    });
   });
+  readonly isCartModalOpen = signal<boolean>(false);
+  readonly cartTotalAmount = computed<number>(() => this.cartService.cartTotalAmount());
+  readonly cartTotalDuration = computed<number>(() => this.cartService.cartTotalDuration());
+  readonly cartTotalItemsCount = computed<number>(() => this.cartService.cartCount());
+  readonly cartCount = computed<number>(() => this.cartService.cartCount());
+  readonly selectedCartServiceIds = computed<number[]>(() => this.cartService.cartServiceIds());
 
   readonly filteredServices = computed(() => {
     const q = this.searchQuery().trim().toLowerCase();
@@ -121,6 +132,7 @@ export class OrganizationDetailComponent implements OnInit {
     if (!this.authService.isInitialized()) {
       this.authService.checkAuth().subscribe(() => {
         this.checkResumeBooking();
+        this.cartService.loadCart(this.tenant()?.id).subscribe({ error: () => {} });
       });
     }
   }
@@ -143,6 +155,7 @@ export class OrganizationDetailComponent implements OnInit {
           this.isLoadingTenant.set(false);
           this.loadServices(found.id);
           this.loadProviders(found.id);
+          this.cartService.loadCart(found.id).subscribe({ error: () => {} });
         } else {
           this.isLoadingTenant.set(false);
           this.errorMessage.set('Organization not found or inactive.');
@@ -236,7 +249,7 @@ export class OrganizationDetailComponent implements OnInit {
   }
 
   isServiceInCart(serviceId: number): boolean {
-    return this.cartServices().some(s => s.id === serviceId);
+    return this.cartService.isInCart(serviceId);
   }
 
   getServiceQuantity(serviceId: number): number {
@@ -245,14 +258,17 @@ export class OrganizationDetailComponent implements OnInit {
 
   toggleCartService(service: ServiceDto, event?: Event): void {
     if (event) event.stopPropagation();
-    const current = this.cartServices();
-    const existing = current.find(s => s.id === service.id);
-    if (existing) {
-      this.removeFromCart(service.id);
-      this.showToast(`Removed "${service.name}" from booking cart.`);
+    if (this.isServiceInCart(service.id)) {
+      this.removeFromCart(service.id, event);
     } else {
-      this.cartServices.set([...current, { ...service, quantity: 1 }]);
-      this.showToast(`Added "${service.name}" to booking cart.`);
+      this.cartService.addToCart(service.id, this.tenant()?.id).subscribe({
+        next: () => {
+          this.showToast(`Added "${service.name}" to booking cart.`);
+        },
+        error: (err) => {
+          this.showToast(err.error?.message || 'Failed to add service to cart.');
+        }
+      });
     }
   }
 
@@ -260,7 +276,10 @@ export class OrganizationDetailComponent implements OnInit {
     if (event) event.stopPropagation();
     const match = this.services().find(s => s.id === serviceId);
     if (match && !this.isServiceInCart(serviceId)) {
-      this.cartServices.set([...this.cartServices(), { ...match, quantity: 1 }]);
+      this.cartService.addToCart(serviceId, this.tenant()?.id).subscribe({
+        next: () => this.showToast(`Added "${match.name}" to booking cart.`),
+        error: () => {}
+      });
     }
   }
 
@@ -289,23 +308,29 @@ export class OrganizationDetailComponent implements OnInit {
 
   removeFromCart(serviceId: number, event?: Event): void {
     if (event) event.stopPropagation();
-    const current = this.cartServices();
-    const item = current.find(s => s.id === serviceId);
-    const updated = current.filter(s => s.id !== serviceId);
-    this.cartServices.set(updated);
-    if (updated.length === 0) {
-      this.isCartModalOpen.set(false);
-    }
-    if (item) {
-      this.showToast(`Removed "${item.name}" from booking cart.`);
-    }
+    const item = this.cartServices().find(s => s.id === serviceId);
+    this.cartService.removeFromCart(serviceId, this.tenant()?.id).subscribe({
+      next: () => {
+        if (this.cartServices().length === 0) {
+          this.isCartModalOpen.set(false);
+        }
+        if (item) {
+          this.showToast(`Removed "${item.name}" from booking cart.`);
+        }
+      },
+      error: () => {}
+    });
   }
 
   clearCart(event?: Event): void {
     if (event) event.stopPropagation();
-    this.cartServices.set([]);
-    this.isCartModalOpen.set(false);
-    this.showToast('Cleared all items from booking cart.');
+    this.cartService.clearCart(this.tenant()?.id).subscribe({
+      next: () => {
+        this.isCartModalOpen.set(false);
+        this.showToast('Cleared all items from booking cart.');
+      },
+      error: () => {}
+    });
   }
 
   openCartBooking(): void {
@@ -313,6 +338,7 @@ export class OrganizationDetailComponent implements OnInit {
     this.closeCartModal();
     this.selectedServiceId.set(this.cartServices()[0].id);
     this.selectedProviderId.set(null);
+    this.bookingInitialStep.set(2);
     this.isBookingModalOpen.set(true);
   }
 
@@ -320,10 +346,22 @@ export class OrganizationDetailComponent implements OnInit {
     if (!this.route.snapshot.queryParamMap.has('resumeBooking')) {
       sessionStorage.removeItem('pending_booking_draft');
     }
+    this.bookingInitialStep.set(1);
     if (serviceId) {
-      const match = this.services().find(s => s.id === serviceId);
-      if (match && !this.isServiceInCart(serviceId)) {
-        this.cartServices.set([...this.cartServices(), { ...match, quantity: 1 }]);
+      if (!this.isServiceInCart(serviceId)) {
+        this.cartService.addToCart(serviceId, this.tenant()?.id).subscribe({
+          next: () => {
+            this.selectedServiceId.set(serviceId);
+            this.selectedProviderId.set(null);
+            this.isBookingModalOpen.set(true);
+          },
+          error: () => {
+            this.selectedServiceId.set(serviceId);
+            this.selectedProviderId.set(null);
+            this.isBookingModalOpen.set(true);
+          }
+        });
+        return;
       }
       this.selectedServiceId.set(serviceId);
     } else if (this.cartServices().length > 0) {
@@ -338,12 +376,13 @@ export class OrganizationDetailComponent implements OnInit {
   closeBookingModal(): void {
     this.selectedServiceId.set(null);
     this.selectedProviderId.set(null);
+    this.bookingInitialStep.set(1);
     this.isBookingModalOpen.set(false);
   }
 
   onAppointmentBooked(_appointment: AppointmentDto): void {
     this.closeBookingModal();
-    this.cartServices.set([]);
+    this.cartService.clearCart(this.tenant()?.id).subscribe({ error: () => {} });
     sessionStorage.removeItem('pending_booking_draft');
     this.router.navigate(['/my-appointments']);
   }

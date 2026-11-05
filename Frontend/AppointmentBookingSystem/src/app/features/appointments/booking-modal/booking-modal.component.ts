@@ -24,6 +24,7 @@ import { OnlyDigitsDirective, CopyToClipboardDirective } from '../../../shared/d
 import { isValidEmail, isValidPhone, filter10Digits } from '../../../core/constants/app.constants';
 import { ConfirmService } from '../../../shared/components/confirmation-modal/confirm.service';
 import { CartModalComponent, CartModalItem } from '../../../shared/components/cart-modal/cart-modal.component';
+import { CartService } from '../../../core/services/cart.service';
 
 export interface CalendarDay {
   date: Date;
@@ -86,6 +87,7 @@ export class BookingModalComponent implements OnInit {
   private readonly providerService = inject(ProviderService);
   private readonly serviceCatalogService = inject(ServiceCatalogService);
   readonly authService = inject(AuthService);
+  private readonly cartService = inject(CartService);
   private readonly router = inject(Router);
   private readonly confirmService = inject(ConfirmService);
   private readonly cdr = inject(ChangeDetectorRef);
@@ -96,6 +98,7 @@ export class BookingModalComponent implements OnInit {
   @Input() initialServiceIds: number[] = [];
   @Input() initialDate?: string;
   @Input() tenantId?: number;
+  @Input() initialStep?: 1 | 2 | 3 | 4 | 5;
   @Output() close = new EventEmitter<void>();
   @Output() booked = new EventEmitter<AppointmentDto>();
 
@@ -106,7 +109,7 @@ export class BookingModalComponent implements OnInit {
   readonly selectedServiceIds = signal<number[]>([]);
 
   readonly selectedServices = computed<ServiceDto[]>(() => {
-    const ids = this.selectedServiceIds();
+    const ids = Array.from(new Set([...this.selectedServiceIds(), ...this.cartService.cartServiceIds()]));
     const catalog = this.catalogServices();
     const list: ServiceDto[] = [];
     for (const id of ids) {
@@ -121,8 +124,9 @@ export class BookingModalComponent implements OnInit {
   });
 
   readonly cartModalItems = computed<CartModalItem[]>(() => {
-    const ids = Array.from(new Set(this.selectedServiceIds()));
+    const ids = Array.from(new Set([...this.selectedServiceIds(), ...this.cartService.cartServiceIds()]));
     const catalog = this.catalogServices();
+    const cartItems = this.cartService.cartItems();
     const items: CartModalItem[] = [];
     for (const id of ids) {
       const match = catalog.find(s => s.id === id) || (this.selectedService?.id === id ? this.selectedService : null);
@@ -135,6 +139,18 @@ export class BookingModalComponent implements OnInit {
           description: match.description,
           quantity: 1
         });
+      } else {
+        const cItem = cartItems.find(ci => ci.serviceId === id);
+        if (cItem) {
+          items.push({
+            id: cItem.serviceId,
+            name: cItem.serviceName,
+            price: cItem.price,
+            durationMinutes: cItem.durationMinutes,
+            description: cItem.serviceDescription,
+            quantity: 1
+          });
+        }
       }
     }
     return items;
@@ -731,43 +747,55 @@ export class BookingModalComponent implements OnInit {
   }
 
   isServiceSelected(serviceId: number): boolean {
-    return this.selectedServiceIds().includes(serviceId);
+    return this.selectedServiceIds().includes(serviceId) || this.cartService.isInCart(serviceId);
   }
 
   getServiceCount(serviceId: number): number {
-    return this.selectedServiceIds().includes(serviceId) ? 1 : 0;
+    return this.isServiceSelected(serviceId) ? 1 : 0;
   }
 
   incrementServiceSelection(serviceId: number, event?: Event): void {
     if (event) event.stopPropagation();
-    if (!this.selectedServiceIds().includes(serviceId)) {
-      this.selectedServiceIds.set([...this.selectedServiceIds(), serviceId]);
-    }
-    if (!this.selectedServiceId) {
-      this.selectedServiceId = serviceId;
-      this.selectedService = this.catalogServices().find(s => s.id === serviceId) || null;
-    }
-    this.selectedSlot = null;
-    if (this.currentStep === 2) {
-      this.fetchSlots();
+    const service = this.catalogServices().find(s => s.id === serviceId);
+    if (service) {
+      this.toggleServiceSelection(service, event);
     }
   }
 
   decrementServiceSelection(serviceId: number, event?: Event): void {
     if (event) event.stopPropagation();
-    this.removeServiceFromSelection(serviceId);
+    this.removeServiceFromSelection(serviceId, event);
   }
 
   toggleServiceSelection(service: ServiceDto, event?: Event): void {
     if (event) event.stopPropagation();
-    const current = this.selectedServiceIds();
+    const effectiveTenantId = service.tenantId || this.tenantId;
+    const isCurrentlySelected = this.isServiceSelected(service.id);
     let updated: number[];
-    if (current.includes(service.id)) {
-      updated = current.filter(id => id !== service.id);
+
+    if (isCurrentlySelected) {
+      updated = this.selectedServiceIds().filter(id => id !== service.id);
+      this.selectedServiceIds.set(updated);
+      this.cartService.removeFromCart(service.id, effectiveTenantId).subscribe({
+        next: (c) => {
+          if (c?.items) {
+            this.selectedServiceIds.set(c.items.map(i => i.serviceId));
+          }
+        },
+        error: () => {}
+      });
     } else {
-      updated = [...current, service.id];
+      updated = Array.from(new Set([...this.selectedServiceIds(), service.id]));
+      this.selectedServiceIds.set(updated);
+      this.cartService.addToCart(service.id, effectiveTenantId).subscribe({
+        next: (c) => {
+          if (c?.items) {
+            this.selectedServiceIds.set(c.items.map(i => i.serviceId));
+          }
+        },
+        error: () => {}
+      });
     }
-    this.selectedServiceIds.set(updated);
 
     // Sync legacy fields
     if (updated.length > 0) {
@@ -789,6 +817,16 @@ export class BookingModalComponent implements OnInit {
 
   removeServiceFromSelection(serviceId: number, event?: Event): void {
     if (event) event.stopPropagation();
+    const match = this.catalogServices().find(s => s.id === serviceId);
+    const effectiveTenantId = match?.tenantId || this.tenantId;
+    this.cartService.removeFromCart(serviceId, effectiveTenantId).subscribe({
+      next: (c) => {
+        if (c?.items) {
+          this.selectedServiceIds.set(c.items.map(i => i.serviceId));
+        }
+      },
+      error: () => {}
+    });
     const updated = this.selectedServiceIds().filter(id => id !== serviceId);
     this.selectedServiceIds.set(updated);
 
@@ -833,6 +871,7 @@ export class BookingModalComponent implements OnInit {
 
   clearCartInBookingModal(): void {
     sessionStorage.removeItem('pending_booking_draft');
+    this.cartService.clearCart(this.tenantId).subscribe({ error: () => {} });
     this.selectedServiceIds.set([]);
     this.selectedServiceId = null;
     this.selectedService = null;
@@ -1026,7 +1065,7 @@ export class BookingModalComponent implements OnInit {
         this.currentStep = 1;
       } else {
         this.bookingMode = 'broadcast';
-        this.currentStep = 2;
+        this.currentStep = this.initialStep ?? 1;
       }
       return;
     }
@@ -1039,7 +1078,7 @@ export class BookingModalComponent implements OnInit {
         this.currentStep = 1;
       } else {
         this.bookingMode = 'broadcast';
-        this.currentStep = 2;
+        this.currentStep = this.initialStep ?? 1;
       }
       return;
     }
@@ -1078,10 +1117,17 @@ export class BookingModalComponent implements OnInit {
       // Customer: Broadcast flow (requires specialist acceptance)
       this.bookingMode = 'broadcast';
       this.step1SubState.set('services');
-      this.currentStep = 1;
-      this.selectedServiceIds.set([]);
-      this.selectedServiceId = null;
-      this.selectedService = null;
+      this.currentStep = this.initialStep ?? 1;
+      const cartIds = this.cartService.cartServiceIds();
+      if (cartIds && cartIds.length > 0) {
+        this.selectedServiceIds.set([...cartIds]);
+        this.selectedServiceId = cartIds[0];
+        this.selectedService = this.catalogServices().find(s => s.id === cartIds[0]) || null;
+      } else {
+        this.selectedServiceIds.set([]);
+        this.selectedServiceId = null;
+        this.selectedService = null;
+      }
       this.selectedProviderId = null;
       this.selectedProvider = null;
     }
@@ -1124,6 +1170,15 @@ export class BookingModalComponent implements OnInit {
 
     this.initRoleBookingFlow();
 
+    // Auto-sync from CartService if available
+    const initialCartIds = this.cartService.cartServiceIds();
+    if (initialCartIds.length > 0 && this.selectedServiceIds().length === 0) {
+      this.selectedServiceIds.set([...initialCartIds]);
+      if (!this.selectedServiceId) {
+        this.selectedServiceId = initialCartIds[0];
+      }
+    }
+
     if (!this.authService.isInitialized()) {
       this.authService.checkAuth().subscribe(() => {
         this.resolveTenantId();
@@ -1159,6 +1214,12 @@ export class BookingModalComponent implements OnInit {
           : list;
         this.catalogServices.set(filtered);
         this.isLoadingServices.set(false);
+
+        // Sync from cartService if selectedServiceIds is still empty
+        const cartIds = this.cartService.cartServiceIds();
+        if (this.selectedServiceIds().length === 0 && cartIds.length > 0) {
+          this.selectedServiceIds.set([...cartIds]);
+        }
 
         const currentIds = this.selectedServiceIds();
         if (currentIds.length > 0) {
@@ -1901,6 +1962,7 @@ export class BookingModalComponent implements OnInit {
       this.appointmentService.bookMultiAppointment(multiReq, this.tenantId).subscribe({
         next: (resList: AppointmentDto[]) => {
           sessionStorage.removeItem('pending_booking_draft');
+          this.cartService.clearCart(this.tenantId).subscribe({ error: () => {} });
           this.isSubmitting.set(false);
           this.confirmedAppointments.set(resList);
           if (resList.length > 0) {
@@ -1958,6 +2020,7 @@ export class BookingModalComponent implements OnInit {
     this.appointmentService.bookAppointment(req, this.tenantId).subscribe({
       next: (res: AppointmentDto) => {
         sessionStorage.removeItem('pending_booking_draft');
+        this.cartService.clearCart(this.tenantId).subscribe({ error: () => {} });
         this.isSubmitting.set(false);
         this.confirmedAppointment.set(res);
         this.confirmedAppointments.set([res]);

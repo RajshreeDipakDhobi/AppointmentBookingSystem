@@ -26,6 +26,10 @@ public class BookingDbContext : DbContext
     public DbSet<Appointment> Appointments => Set<Appointment>();
     public DbSet<AppointmentItem> AppointmentItems => Set<AppointmentItem>();
 
+    // Cart Tables (Persistent Multi-Tenant Cart System)
+    public DbSet<Cart> Carts => Set<Cart>();
+    public DbSet<CartItem> CartItems => Set<CartItem>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -273,6 +277,50 @@ public class BookingDbContext : DbContext
                   .WithMany()
                   .HasForeignKey(ai => ai.ServiceId)
                   .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // 10. Cart Configuration
+        modelBuilder.Entity<Cart>(entity =>
+        {
+            entity.ToTable("Carts");
+            entity.HasKey(c => c.Id);
+            entity.Property(c => c.GuestToken).HasMaxLength(100);
+
+            entity.HasOne(c => c.User)
+                  .WithMany()
+                  .HasForeignKey(c => c.UserId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(c => c.Tenant)
+                  .WithMany()
+                  .HasForeignKey(c => c.TenantId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasIndex(c => c.UserId);
+            entity.HasIndex(c => c.GuestToken);
+        });
+
+        // 11. CartItem Configuration
+        modelBuilder.Entity<CartItem>(entity =>
+        {
+            entity.ToTable("CartItems");
+            entity.HasKey(ci => ci.Id);
+            entity.Property(ci => ci.Quantity).HasDefaultValue(1);
+
+            entity.HasOne(ci => ci.Cart)
+                  .WithMany(c => c.Items)
+                  .HasForeignKey(ci => ci.CartId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(ci => ci.Service)
+                  .WithMany()
+                  .HasForeignKey(ci => ci.ServiceId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            // Strictly 1 active item per service in a cart
+            entity.HasIndex(ci => new { ci.CartId, ci.ServiceId })
+                  .IsUnique()
+                  .HasFilter("[IsDeleted] = 0");
         });
     }
 

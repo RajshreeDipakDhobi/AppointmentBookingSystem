@@ -164,8 +164,8 @@
               <!-- Top Cart Pill (Beside Search Box) -->
               <button *ngIf="cartServices().length > 0" type="button" class="btn-top-cart-pill animate-fade-in"
                 (click)="openCartDrawer()" title="View Booking Cart Drawer">
-                <svg class="top-cart-icon" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
-                  stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <svg class="top-cart-icon" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+                  fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" />
                   <path d="M3 6h18" />
                   <path d="M16 10a4 4 0 0 1-8 0" />
@@ -263,12 +263,17 @@
               <div class="service-footer-row">
                 <div class="service-actions-deck">
                   <button type="button" class="btn-toggle-cart" [class.added]="isServiceInCart(s.id)"
-                    (click)="toggleCartService(s, $event)" [title]="isServiceInCart(s.id) ? 'Remove from cart' : 'Add to booking cart'">
-                    <svg *ngIf="!isServiceInCart(s.id)" xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    (click)="toggleCartService(s, $event)"
+                    [title]="isServiceInCart(s.id) ? 'Remove from cart' : 'Add to booking cart'">
+                    <svg *ngIf="!isServiceInCart(s.id)" xmlns="http://www.w3.org/2000/svg" width="13" height="13"
+                      viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                      stroke-linejoin="round">
                       <line x1="12" y1="5" x2="12" y2="19"></line>
                       <line x1="5" y1="12" x2="19" y2="12"></line>
                     </svg>
-                    <svg *ngIf="isServiceInCart(s.id)" xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <svg *ngIf="isServiceInCart(s.id)" xmlns="http://www.w3.org/2000/svg" width="13" height="13"
+                      viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                      stroke-linejoin="round">
                       <polyline points="20 6 9 17 4 12" />
                     </svg>
                     <span>{{ isServiceInCart(s.id) ? 'Added' : 'Add' }}</span>
@@ -295,21 +300,16 @@
   </main>
 
   <!-- Reusable Cart Modal / Slide-Over Drawer Component -->
-  <app-cart-modal *ngIf="isCartModalOpen() && cartServices().length > 0"
-    [items]="cartServices()"
-    title="Booking Cart"
-    subtitle="Review selected services"
-    [allowQuantity]="false"
-    proceedButtonText="Proceed to Schedule Slot"
-    (close)="closeCartModal()"
-    (removeItem)="removeFromCart($event)"
-    (clearAll)="clearCart()"
+  <app-cart-modal *ngIf="isCartModalOpen() && cartServices().length > 0" [items]="cartServices()" title="Booking Cart"
+    subtitle="Review selected services" [allowQuantity]="false" proceedButtonText="Proceed to Schedule Slot"
+    (close)="closeCartModal()" (removeItem)="removeFromCart($event)" (clearAll)="clearCart()"
     (proceed)="openCartBooking()">
   </app-cart-modal>
 
   <!-- Reusable Booking Modal -->
   <app-booking-modal *ngIf="isBookingModalOpen()" [tenantId]="tenant()?.id" [initialProviderId]="selectedProviderId()"
-    [initialServiceId]="selectedServiceId()" [initialServiceIds]="selectedCartServiceIds()" (close)="closeBookingModal()" (booked)="onAppointmentBooked($event)">
+    [initialServiceId]="selectedServiceId()" [initialServiceIds]="selectedCartServiceIds()"
+    [initialStep]="bookingInitialStep()" (close)="closeBookingModal()" (booked)="onAppointmentBooked($event)">
   </app-booking-modal>
 
   <!-- Notification Toast -->

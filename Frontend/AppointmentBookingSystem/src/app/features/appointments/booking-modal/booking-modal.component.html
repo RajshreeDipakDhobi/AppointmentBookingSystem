@@ -99,7 +99,7 @@
             </div>
 
             <!-- View Cart Pill Beside Search Box -->
-            <button *ngIf="selectedServiceIds().length > 0" type="button" class="btn-top-cart-pill animate-fade-in"
+            <button *ngIf="cartModalItems().length > 0" type="button" class="btn-top-cart-pill animate-fade-in"
               (click)="openCartModal()" title="View Booking Cart">
               <svg class="top-cart-icon" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
                 fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
@@ -1395,7 +1395,7 @@
     </div>
 
     <!-- Nested Reusable Cart Slide-Over Drawer -->
-    <app-cart-modal *ngIf="isCartModalOpen() && selectedServiceIds().length > 0" [items]="cartModalItems()"
+    <app-cart-modal *ngIf="isCartModalOpen() && cartModalItems().length > 0" [items]="cartModalItems()"
       title="Booking Cart"
       subtitle="Review selected services"
       [allowQuantity]="false"

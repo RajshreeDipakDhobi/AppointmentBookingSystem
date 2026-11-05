@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
+import { CartService } from '../../../core/services/cart.service';
 import { UserRole } from '../../../core/models/auth.models';
 
 import { OnlyDigitsDirective } from '../../../shared/directives';
@@ -18,6 +19,7 @@ import { EMAIL_REGEX, PHONE_10_DIGIT_REGEX } from '../../../core/constants/app.c
 export class LoginComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly authService = inject(AuthService);
+  private readonly cartService = inject(CartService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
 
@@ -128,6 +130,9 @@ export class LoginComponent implements OnInit {
   }
 
   private redirectAfterAuth(): void {
+    // Merge any anonymous cart items into the authenticated user's persistent backend cart
+    this.cartService.mergeCartOnLogin().subscribe({ error: () => {} });
+
     if (this.isDrawer) {
       this.authenticated.emit();
       return;
