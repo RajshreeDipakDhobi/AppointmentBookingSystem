@@ -1,4 +1,4 @@
-import { Component, EventEmitter, HostListener, Input, Output, inject, signal } from '@angular/core';
+import { Component, EventEmitter, HostListener, Input, Output, inject, signal, computed, ChangeDetectorRef, NgZone, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AppointmentDto, AppointmentStatus } from '../../../core/models/appointment.models';
 import { AuthService } from '../../../core/services/auth.service';
@@ -26,18 +26,38 @@ import { CopyToClipboardDirective } from '../../../shared/directives';
   templateUrl: './appointment-detail-drawer.component.html',
   styleUrls: ['./appointment-detail-drawer.component.css']
 })
-export class AppointmentDetailDrawerComponent {
+export class AppointmentDetailDrawerComponent implements OnChanges {
   private readonly authService = inject(AuthService);
+  private readonly cdr = inject(ChangeDetectorRef);
+  private readonly ngZone = inject(NgZone);
 
-  @Input({ required: true }) appointment: AppointmentDto | null = null;
+  private _appointment = signal<AppointmentDto | null>(null);
+
+  @Input({ required: true })
+  get appointment(): AppointmentDto | null {
+    return this._appointment();
+  }
+  set appointment(val: AppointmentDto | null) {
+    this._appointment.set(val);
+    this.cdr.markForCheck();
+  }
+
   @Input() canManage: boolean = false;
   @Input() showActions: boolean = true;
+
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['appointment'] && changes['appointment'].currentValue) {
+      this._appointment.set(changes['appointment'].currentValue);
+      this.cdr.markForCheck();
+    }
+  }
 
   @Output() close = new EventEmitter<void>();
   @Output() reschedule = new EventEmitter<AppointmentDto>();
   @Output() cancel = new EventEmitter<AppointmentDto>();
   @Output() approve = new EventEmitter<AppointmentDto>();
   @Output() complete = new EventEmitter<AppointmentDto>();
+  @Output() sessionSwitch = new EventEmitter<AppointmentDto>();
 
   readonly copied = signal<boolean>(false);
   readonly AppointmentStatus = AppointmentStatus;
@@ -59,7 +79,7 @@ export class AppointmentDetailDrawerComponent {
   }
 
   get isPending(): boolean {
-    return this.appointment?.status === AppointmentStatus.Booked;
+    return this.appointment?.status === AppointmentStatus.Pending;
   }
 
   get isConfirmed(): boolean {
@@ -98,30 +118,50 @@ export class AppointmentDetailDrawerComponent {
     return m > 0 ? `${h}h ${m}m` : `${h}h`;
   }
 
+  get validJourneyParts(): AppointmentDto[] {
+    if (!this.appointment?.journeyParts) return [];
+    return this.appointment.journeyParts.filter(p => !this.isSessionUnavailable(p));
+  }
+
   get isMultiSession(): boolean {
-    return (this.appointment?.journeyParts?.length || 0) > 1;
+    return this.isAdmin && this.validJourneyParts.length > 1;
   }
 
   get currentSessionNumber(): number {
-    if (!this.appointment?.journeyParts || this.appointment.journeyParts.length <= 1) return 1;
-    const idx = this.appointment.journeyParts.findIndex(p => p.id === this.appointment?.id);
+    if (!this.isMultiSession) return 1;
+    const idx = this.validJourneyParts.findIndex(p => Number(p.id) === Number(this.appointment?.id));
     return idx >= 0 ? idx + 1 : 1;
   }
 
   get totalSessionsCount(): number {
-    return this.appointment?.journeyParts?.length || 1;
+    return this.validJourneyParts.length || 1;
   }
 
   get multiPartBadgeText(): string | null {
-    if (!this.isMultiSession) return null;
+    if (!this.isAdmin || !this.isMultiSession) return null;
     return `Session ${this.currentSessionNumber} of ${this.totalSessionsCount}`;
   }
 
-  get otherSessions(): { sessionNum: number; part: AppointmentDto }[] {
-    if (!this.appointment?.journeyParts || this.appointment.journeyParts.length <= 1) return [];
-    return this.appointment.journeyParts
+  readonly otherSessionsSignal = computed(() => {
+    const apt = this._appointment();
+    if (!this.isAdmin || !apt?.journeyParts || apt.journeyParts.length <= 1) return [];
+    const validParts = apt.journeyParts.filter(p => !this.isSessionUnavailable(p));
+    if (validParts.length <= 1) return [];
+    return validParts
       .map((part, index) => ({ sessionNum: index + 1, part }))
-      .filter(item => item.part.id !== this.appointment?.id);
+      .filter(item => Number(item.part.id) !== Number(apt.id));
+  });
+
+  get otherSessions(): { sessionNum: number; part: AppointmentDto }[] {
+    return this.otherSessionsSignal();
+  }
+
+  trackBySessionId(_index: number, item: { sessionNum: number; part: AppointmentDto }): number {
+    return item.part.id;
+  }
+
+  trackByJourneyPartId(_index: number, part: AppointmentDto): number {
+    return part.id;
   }
 
   get currentSessionSubtotal(): number {
@@ -133,8 +173,8 @@ export class AppointmentDetailDrawerComponent {
   }
 
   get totalVisitAmount(): number {
-    if (this.appointment?.journeyParts && this.appointment.journeyParts.length > 1) {
-      return this.appointment.journeyParts.reduce((sum, p) => {
+    if (this.isMultiSession && this.validJourneyParts.length > 1) {
+      return this.validJourneyParts.reduce((sum, p) => {
         if (p.items && p.items.length > 0) {
           return sum + p.items.reduce((s, it) => s + (it.price || 0), 0);
         }
@@ -159,27 +199,75 @@ export class AppointmentDetailDrawerComponent {
     return part.serviceName || 'Service';
   }
 
-  switchSession(part: AppointmentDto): void {
-    if (!this.appointment || part.id === this.appointment.id) return;
-    const existingJourneyParts = this.appointment.journeyParts;
-    this.appointment = {
+  isSessionUnavailable(part?: AppointmentDto | null): boolean {
+    if (!part) return true;
+    const reason = ((part as any).cancellationReason || (part as any).cancelReason || '').toLowerCase();
+    if (reason.includes('no specialist') || reason.includes('specialist unavailable')) return true;
+    if (this.getSessionStatusLabel(part) === 'Specialist Unavailable') return true;
+    const isCancelled = part.status === AppointmentStatus.Cancelled
+      || (part.status as any) === 3
+      || String(part.status).toLowerCase() === 'cancelled'
+      || part.statusText?.toLowerCase().includes('unavailable');
+    if (!part.serviceProviderId && isCancelled) {
+      return true;
+    }
+    return false;
+  }
+
+  switchSession(part: AppointmentDto, event?: Event): void {
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    if (!this.appointment || !this.isAdmin) return;
+    if (Number(part.id) === Number(this.appointment.id)) return;
+
+    const existingJourneyParts = (this.appointment.journeyParts || []).filter(p => !this.isSessionUnavailable(p));
+    const switched: AppointmentDto = {
       ...part,
       journeyParts: existingJourneyParts
     };
+    this.ngZone.run(() => {
+      this._appointment.set(switched);
+      this.cdr.markForCheck();
+      this.cdr.detectChanges();
+      this.sessionSwitch.emit(switched);
+    });
   }
 
   getSessionStatusLabel(part: AppointmentDto): string {
-    if (!part.serviceProviderId && part.status === AppointmentStatus.Cancelled) {
+    const isCancelled = part.status === AppointmentStatus.Cancelled
+      || (part.status as any) === 3
+      || String(part.status).toLowerCase() === 'cancelled';
+    if (!part.serviceProviderId && isCancelled) {
       return 'Specialist Unavailable';
     }
     if (!part.serviceProviderId) {
       return 'Awaiting Specialist';
     }
+
+    const isPending = (part.status as any) === AppointmentStatus.Booked
+      || (part.status as any) === 1
+      || String(part.status).toLowerCase() === 'pending'
+      || String(part.status).toLowerCase() === 'booked';
+
+    if (isPending) {
+      if (this.isServiceProvider) {
+        const currentProviderId = this.authService.currentUser()?.serviceProviderId;
+        const isMine = currentProviderId && Number(part.serviceProviderId) === Number(currentProviderId);
+        return isMine ? 'Awaiting your approval' : 'Awaiting approval';
+      }
+      return 'Awaiting approval';
+    }
+
     return this.getStatusLabel(part.status);
   }
 
   getSessionStatusClass(part: AppointmentDto): string {
-    if (!part.serviceProviderId && part.status === AppointmentStatus.Cancelled) {
+    const isCancelled = part.status === AppointmentStatus.Cancelled
+      || (part.status as any) === 3
+      || String(part.status).toLowerCase() === 'cancelled';
+    if (!part.serviceProviderId && isCancelled) {
       return 'badge-cancelled';
     }
     if (!part.serviceProviderId) {
@@ -211,8 +299,30 @@ export class AppointmentDetailDrawerComponent {
   }
 
   getStatusLabel(status?: AppointmentStatus): string {
-    if (status === undefined || status === null) return 'Booked';
-    return APPOINTMENT_STATUS_MAP[status]?.label || 'Booked';
+    const isPending = (status as any) === AppointmentStatus.Booked
+      || (status as any) === 1
+      || String(status).toLowerCase() === 'pending'
+      || String(status).toLowerCase() === 'booked';
+
+    if (isPending) {
+      if (this.isServiceProvider) {
+        const currentProviderId = this.authService.currentUser()?.serviceProviderId;
+        const isMine = !this.appointment?.serviceProviderId
+          || (currentProviderId && Number(this.appointment.serviceProviderId) === Number(currentProviderId))
+          || (this.appointment?.canManage ?? true);
+
+        return isMine ? 'Awaiting your approval' : 'Awaiting approval';
+      }
+      return 'Awaiting approval';
+    }
+
+    if (status === undefined || status === null) return 'Awaiting approval';
+    return APPOINTMENT_STATUS_MAP[status]?.label || 'Awaiting approval';
+  }
+
+  getCleanCancellationReason(reason?: string | null): string | null {
+    if (!reason) return null;
+    return reason.replace(/\(Cancelled by [^)]+\)/gi, '').trim() || null;
   }
 
   getCleanReason(reason?: string | null): string | null {

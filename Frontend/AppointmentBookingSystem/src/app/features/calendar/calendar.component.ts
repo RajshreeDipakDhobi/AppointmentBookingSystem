@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, inject, signal, computed, Output, EventEmitter, ViewChild, ElementRef, HostListener } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, signal, computed, Output, EventEmitter, ViewChild, ElementRef, HostListener, NgZone, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { FullCalendarModule, FullCalendarComponent } from '@fullcalendar/angular';
@@ -96,6 +96,8 @@ export class CalendarComponent implements OnInit, OnDestroy {
   private readonly calendarService = inject(CalendarService);
   private readonly authService = inject(AuthService);
   private readonly confirmService = inject(ConfirmService);
+  private readonly ngZone = inject(NgZone);
+  private readonly cdr = inject(ChangeDetectorRef);
 
   readonly getAvatarGradient = getAvatarGradient;
   readonly getInitials = getInitials;
@@ -315,6 +317,36 @@ export class CalendarComponent implements OnInit, OnDestroy {
   // Real-time formatted IST time label for live marker pill
   readonly currentLiveTimeDisplay = signal<string>('');
 
+  // Week View Cluster Overflow Dropdown Popover (For 3+ Appointments, matching Month View)
+  readonly openWeekClusterPopover = signal<{
+    dateStr: string;
+    timeRange: string;
+    appointments: AppointmentDto[];
+    top: number;
+    left: number;
+  } | null>(null);
+
+  readonly weekClusters = signal<AppointmentDto[][]>([]);
+
+  closeWeekClusterPopover(): void {
+    this.openWeekClusterPopover.set(null);
+  }
+
+  onWeekPopoverItemClick(apt: AppointmentDto): void {
+    this.closeWeekClusterPopover();
+    this.viewAppointment(apt);
+  }
+
+  formatDateDisplay(dateStr: string): string {
+    if (!dateStr) return '';
+    const parts = dateStr.split('T')[0].split('-').map(Number);
+    if (parts.length === 3) {
+      const d = new Date(parts[0], parts[1] - 1, parts[2]);
+      return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+    }
+    return dateStr;
+  }
+
   // Data Signals
   readonly allAppointments = signal<AppointmentDto[]>([]);
   readonly providers = signal<ServiceProviderDto[]>([]);
@@ -495,6 +527,10 @@ export class CalendarComponent implements OnInit, OnDestroy {
     return user.role === 3 || (user.role as unknown) === '3' || user.roleName === 'ServiceProvider';
   }
 
+  get isAdmin(): boolean {
+    return this.authService.isAdmin();
+  }
+
   // New Booking Modal
   readonly isBookingModalOpen = signal<boolean>(false);
   bookingPrefillProviderId: number | null = null;
@@ -619,8 +655,20 @@ export class CalendarComponent implements OnInit, OnDestroy {
     weekends: true,
     dayMaxEvents: 3,
     allDaySlot: false,
+    slotEventOverlap: false,
+    views: {
+      timeGrid: {
+        slotEventOverlap: false
+      },
+      timeGridWeek: {
+        slotEventOverlap: false
+      },
+      timeGridDay: {
+        slotEventOverlap: false
+      }
+    },
     slotMinTime: '10:00:00',
-    slotMaxTime: '17:00:00',
+    slotMaxTime: '20:00:00',
     slotDuration: '00:30:00',
     slotLabelInterval: '00:30:00',
     slotLabelFormat: {
@@ -644,136 +692,140 @@ export class CalendarComponent implements OnInit, OnDestroy {
     showNonCurrentDates: false,
     events: [],
     datesSet: (dateInfo: DatesSetArg) => {
-      // In day view, ignore datesSet from background FullCalendar instance
-      if (this.activeView() === 'day') return;
-      const parts = this.selectedDate().split('-').map(Number);
-      if (parts.length === 3) {
-        const cur = new Date(parts[0], parts[1] - 1, parts[2]);
-        if (cur < dateInfo.start || cur >= dateInfo.end) {
-          const mid = new Date((dateInfo.start.getTime() + dateInfo.end.getTime()) / 2);
-          const newDateStr = this.formatDateToString(mid);
-          this.selectedDate.set(newDateStr);
-          this.fetchAppointments();
+      this.ngZone.run(() => {
+        // In day view, ignore datesSet from background FullCalendar instance
+        if (this.activeView() === 'day') return;
+        const parts = this.selectedDate().split('-').map(Number);
+        if (parts.length === 3) {
+          const cur = new Date(parts[0], parts[1] - 1, parts[2]);
+          if (cur < dateInfo.start || cur >= dateInfo.end) {
+            const mid = new Date((dateInfo.start.getTime() + dateInfo.end.getTime()) / 2);
+            const newDateStr = this.formatDateToString(mid);
+            this.selectedDate.set(newDateStr);
+            this.fetchAppointments();
+          }
         }
-      }
+      });
     },
     dateClick: (arg: DateClickArg) => {
-      this.selectedDate.set(arg.dateStr.split('T')[0]);
-      this.activeView.set('day');
-      this.fetchAppointments();
+      this.ngZone.run(() => {
+        this.closeAllPopovers();
+        this.selectedDate.set(arg.dateStr.split('T')[0]);
+        this.activeView.set('day');
+        this.fetchAppointments();
+      });
     },
     eventClick: (arg: EventClickArg) => {
-      const target = arg.jsEvent?.target as HTMLElement | undefined;
-      // If user clicked the "+X more" button or drawer close button, do not open detail sheet
-      if (target?.closest('.fc-week-more-btn') || target?.closest('.fc-overflow-drawer-close')) {
-        return;
-      }
+      this.ngZone.run(() => {
+        const target = arg.jsEvent?.target as HTMLElement | undefined;
+        // If user clicked the "+X more" button or drawer close button, do not open detail sheet
+        if (target?.closest('.fc-week-more-btn') || target?.closest('.fc-overflow-drawer-close')) {
+          return;
+        }
+        this.closeAllPopovers();
 
-      const aptCard = target?.closest ? (target.closest('[data-apt-id]') as HTMLElement) : null;
-      if (aptCard) {
-        const aptId = Number(aptCard.getAttribute('data-apt-id'));
-        const found = this.allAppointments().find(a => a.id === aptId);
-        if (found) {
-          if (found.isBroadcastRequest || found.isBroadcast) {
-            this.openDispatchModal(found);
+        const aptCard = target?.closest ? (target.closest('[data-apt-id]') as HTMLElement) : null;
+        if (aptCard) {
+          const aptId = Number(aptCard.getAttribute('data-apt-id'));
+          const found = this.allAppointments().find(a => a.id === aptId);
+          if (found) {
+            if (found.isBroadcastRequest || found.isBroadcast) {
+              this.openDispatchModal(found);
+            } else {
+              this.viewAppointment(found);
+            }
+            return;
+          }
+        }
+
+        const cluster = arg.event.extendedProps['cluster'] as AppointmentDto[];
+        if (cluster && cluster.length > 0) {
+          const first = cluster[0];
+          if (first.isBroadcastRequest || first.isBroadcast) {
+            this.openDispatchModal(first);
           } else {
-            this.viewAppointment(found);
+            this.viewAppointment(first);
           }
           return;
         }
-      }
 
-      const cluster = arg.event.extendedProps['cluster'] as AppointmentDto[];
-      if (cluster && cluster.length > 0) {
-        const first = cluster[0];
-        if (first.isBroadcastRequest || first.isBroadcast) {
-          this.openDispatchModal(first);
-        } else {
-          this.viewAppointment(first);
+        const apt = arg.event.extendedProps['appointment'] as AppointmentDto;
+        if (apt) {
+          if (apt.isBroadcastRequest || apt.isBroadcast) {
+            this.openDispatchModal(apt);
+          } else {
+            this.viewAppointment(apt);
+          }
         }
-        return;
-      }
-
-      const apt = arg.event.extendedProps['appointment'] as AppointmentDto;
-      if (apt) {
-        if (apt.isBroadcastRequest || apt.isBroadcast) {
-          this.openDispatchModal(apt);
-        } else {
-          this.viewAppointment(apt);
-        }
-      }
+      });
     },
     eventContent: (arg) => {
       if (arg.view.type === 'dayGridMonth') {
         const apt = arg.event.extendedProps['appointment'] as AppointmentDto;
         if (!apt) return { html: '' };
 
-        const themeDot = arg.event.extendedProps['themeDot'] || '#6366f1';
+        const themeDot = arg.event.extendedProps['themeDot'] || '#1e5142';
         const customer = apt.customerName || arg.event.title || 'Client';
         const providerName = apt.serviceProviderName || 'Specialist';
-        const providerAvatar = this.getProviderAvatarHtml(apt, 16);
-        return {
-          html: `
-            <div class="fc-custom-month-event" data-apt-id="${apt.id}" style="border-left: 3px solid ${themeDot}; cursor: pointer;" title="${customer} • Specialist: ${providerName}">
-              <div class="fc-cust-icon-badge fc-month-cust-icon">
-                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                  <circle cx="12" cy="7" r="4"></circle>
-                </svg>
-              </div>
-              <span class="fc-month-customer">${customer}</span>
-              <div class="fc-month-provider-box" title="Specialist: ${providerName}">
-                ${providerAvatar}
-              </div>
-            </div>
-          `
-        };
-      }
-
-      // Week view: check if cluster of multiple appointments (stacked ek ke niche ek)
-      const cluster = arg.event.extendedProps['cluster'] as AppointmentDto[];
-      if (cluster && cluster.length > 1) {
-        const total = cluster.length;
-        // User directive: 1-2 appointments show vertically stacked. If 3rd arrives -> show top 2 + "+X more" like month view!
-        const maxVisible = 2;
-        const visibleItems = total <= maxVisible ? cluster : cluster.slice(0, maxVisible);
-        const hiddenCount = total - maxVisible;
-
-        const cardsHtml = visibleItems.map(item => this.renderWeekCardHtml(item, true)).join('');
-        const timeSlotLabel = visibleItems[0]?.timeSlotText || this.formatTimeTo12Hour(visibleItems[0]?.startTime) || '';
+        const service = apt.serviceName || apt.reason || apt.serviceProviderType || 'Consultation';
+        const statusLabel = this.getAppointmentStatusLabel(apt);
+        const startTimeFormatted = this.formatTimeTo12Hour(apt.startTime);
+        const endTimeFormatted = this.formatTimeTo12Hour(apt.endTime);
+        const timeDisplay = (startTimeFormatted && endTimeFormatted)
+          ? `${startTimeFormatted} – ${endTimeFormatted}`
+          : `${apt.startTime || ''} – ${apt.endTime || ''}`;
+        const providerAvatar = this.getProviderAvatarHtml(apt, 18);
 
         return {
           html: `
-            <div class="fc-week-stack-container ${hiddenCount > 0 ? 'has-overflow' : ''}">
-              ${cardsHtml}
-              ${hiddenCount > 0 ? `
-                <div class="fc-week-more-btn" title="Click to view all ${total} appointments">
-                  <span class="fc-week-more-text">+${hiddenCount} more</span>
-                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                    <polyline points="6 9 12 15 18 9"></polyline>
+            <div class="fc-custom-month-event" data-apt-id="${apt.id}" style="border-left: 3.5px solid ${themeDot}; cursor: pointer;"
+              title="${customer} • Specialist: ${providerName} • ${service} • ${timeDisplay} • ${statusLabel}">
+              
+              <!-- Row 1: Customer Name + Specialist Avatar + Status Pill -->
+              <div class="fc-month-row-top">
+                <div class="fc-cust-icon-badge fc-month-cust-icon">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="12" cy="7" r="4"></circle>
                   </svg>
                 </div>
-                <div class="fc-week-overflow-drawer">
-                  <div class="fc-overflow-drawer-header">
-                    <span>${total} Appointments${timeSlotLabel ? ` • ${timeSlotLabel}` : ''}</span>
-                    <span class="fc-overflow-drawer-close" title="Close">✕</span>
-                  </div>
-                  <div class="fc-overflow-drawer-body">
-                    ${cluster.map(item => this.renderWeekCardHtml(item, true)).join('')}
-                  </div>
+                <span class="fc-month-customer">${customer}</span>
+                <div class="fc-month-provider-box" title="Specialist: ${providerName}">
+                  ${providerAvatar}
                 </div>
-              ` : ''}
+                <span class="fc-popover-status-pill" style="background: ${themeDot}18; color: ${themeDot}; border: 1px solid ${themeDot}40;">
+                  ${statusLabel}
+                </span>
+              </div>
+
+              <!-- Row 2: Service Name + Slot Time (shown in '+X more' Popover!) -->
+              <div class="fc-month-row-details">
+                <span class="fc-month-service-name" title="${service}">• ${service}</span>
+                <span class="fc-month-time-tag">
+                  <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <polyline points="12 6 12 12 16 14"></polyline>
+                  </svg>
+                  ${timeDisplay}
+                </span>
+              </div>
             </div>
           `
         };
       }
 
-      // Single appointment card in Week view
-      const singleApt = (arg.event.extendedProps['appointment'] as AppointmentDto)
-        || (cluster && cluster.length === 1 ? cluster[0] : null);
-      if (singleApt) {
+      // Week view: Individual appointment card plotted at its exact start and finish times
+      const apt = (arg.event.extendedProps['appointment'] as AppointmentDto);
+      if (apt) {
         return {
-          html: this.renderWeekCardHtml(singleApt, false)
+          html: this.renderCandleCardHtml(apt)
+        };
+      }
+
+      const cluster = arg.event.extendedProps['cluster'] as AppointmentDto[];
+      if (cluster && cluster.length > 0) {
+        return {
+          html: this.renderCandleCardHtml(cluster[0])
         };
       }
 
@@ -906,25 +958,25 @@ export class CalendarComponent implements OnInit, OnDestroy {
         for (const p of (res.providers || [])) {
           const overviewDays = (p.days && p.days.length > 0)
             ? p.days.map(d => ({
-                dayOfWeek: d.dayOfWeek,
-                dayName: d.dayName,
-                isAvailable: d.isAvailable,
-                startTime: d.startTime,
-                endTime: d.endTime,
-                breakStartTime: d.breakStartTime,
-                breakEndTime: d.breakEndTime,
-                slotDurationMinutes: d.slotDurationMinutes || 30
-              }))
+              dayOfWeek: d.dayOfWeek,
+              dayName: d.dayName,
+              isAvailable: d.isAvailable,
+              startTime: d.startTime,
+              endTime: d.endTime,
+              breakStartTime: d.breakStartTime,
+              breakEndTime: d.breakEndTime,
+              slotDurationMinutes: d.slotDurationMinutes || 30
+            }))
             : [{
-                dayOfWeek: curDayOfWeek,
-                dayName: this.getSelectedDayName(),
-                isAvailable: p.isAvailableToday,
-                startTime: p.startTime,
-                endTime: p.endTime,
-                breakStartTime: p.breakStartTime,
-                breakEndTime: p.breakEndTime,
-                slotDurationMinutes: 30
-              }];
+              dayOfWeek: curDayOfWeek,
+              dayName: this.getSelectedDayName(),
+              isAvailable: p.isAvailableToday,
+              startTime: p.startTime,
+              endTime: p.endTime,
+              breakStartTime: p.breakStartTime,
+              breakEndTime: p.breakEndTime,
+              slotDurationMinutes: 30
+            }];
 
           const overviewItem = {
             providerId: p.providerId,
@@ -964,7 +1016,17 @@ export class CalendarComponent implements OnInit, OnDestroy {
           totalAmount: a.price,
           canManage: a.canManage,
           isBroadcast: a.isBroadcastRequest,
-          isBroadcastRequest: a.isBroadcastRequest
+          isBroadcastRequest: a.isBroadcastRequest,
+          cancellationReason: (a as any).cancellationReason,
+          cancelledAt: (a as any).cancelledAt,
+          cancelledByName: (a as any).cancelledByName,
+          createdBy: (a as any).createdBy,
+          createdAt: (a as any).createdAt,
+          proposedDate: (a as any).proposedDate,
+          proposedStartTime: (a as any).proposedStartTime,
+          proposedEndTime: (a as any).proposedEndTime,
+          rescheduleNotes: (a as any).rescheduleNotes,
+          rescheduledFromAppointmentId: (a as any).rescheduledFromAppointmentId
         } as unknown as AppointmentDto));
 
         this.allAppointments.set(aptDtos);
@@ -1017,7 +1079,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
                 }
               }
             },
-            error: () => {}
+            error: () => { }
           });
         }
       },
@@ -1087,6 +1149,107 @@ export class CalendarComponent implements OnInit, OnDestroy {
     `;
   }
 
+  formatCandleSlotTimeParts(startTime?: string | null, endTime?: string | null): { startPart: string; endPart: string } {
+    const s12 = this.formatTimeTo12Hour(startTime).trim();
+    const e12 = this.formatTimeTo12Hour(endTime).trim();
+    if (!s12 || !e12) {
+      return { startPart: startTime || '', endPart: endTime || '' };
+    }
+    const [sTime, sMer] = s12.split(' ');
+    const [eTime, eMer] = e12.split(' ');
+    if (sMer === eMer) {
+      return { startPart: sTime, endPart: `${eTime} ${eMer}` };
+    }
+    return { startPart: s12, endPart: e12 };
+  }
+
+  formatCandleTimeSlot(startTime?: string | null, endTime?: string | null): string {
+    const { startPart, endPart } = this.formatCandleSlotTimeParts(startTime, endTime);
+    return `${startPart} – ${endPart}`;
+  }
+
+  renderCandleCardHtml(apt: AppointmentDto): string {
+    const theme = this.getAppointmentTheme(apt);
+    const themeDot = theme.dot || '#1e5142';
+    const cardBg = theme.cardBg || '#ffffff';
+    const cardBorder = theme.cardBorder || '#dce8e1';
+    const customer = apt.customerName || 'Client';
+    const providerName = apt.serviceProviderName || 'Specialist';
+    const service = apt.serviceName || apt.reason || apt.serviceProviderType || 'Consultation';
+    const { startPart, endPart } = this.formatCandleSlotTimeParts(apt.startTime, apt.endTime);
+    const timeDisplay = `${startPart} – ${endPart}`;
+    const statusLabel = this.getAppointmentStatusLabel(apt);
+    const providerAvatar = this.getProviderAvatarHtml(apt, 20);
+
+    return `
+      <div class="fc-candle-card" data-apt-id="${apt.id}"
+        style="background: ${cardBg}; border-color: ${cardBorder}; border-top: 3.5px solid ${themeDot};"
+        title="Specialist: ${providerName} • Customer: ${customer} • ${service} • ${timeDisplay} • ${statusLabel}">
+        
+        <!-- Specialist Hero Row: Avatar + Provider Name + Status Indicator -->
+        <div class="fc-candle-specialist-row">
+          <div class="fc-candle-avatar-wrap">
+            ${providerAvatar}
+          </div>
+          <span class="fc-candle-provider-name" title="Specialist: ${providerName}">${providerName}</span>
+          <span class="fc-card-status-dot" style="background: ${themeDot};" title="${statusLabel}"></span>
+        </div>
+
+        <!-- Customer Line -->
+        <div class="fc-candle-customer-row">
+          <svg class="fc-cust-svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+            <circle cx="12" cy="7" r="4"></circle>
+          </svg>
+          <span class="fc-candle-customer-name" title="Customer: ${customer}">${customer}</span>
+        </div>
+
+        <!-- Slot Timing Badge -->
+        <div class="fc-candle-time-pill" style="color: ${themeDot}; background: ${themeDot}16; border: 1px solid ${themeDot}35;">
+          <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <polyline points="12 6 12 12 16 14"></polyline>
+          </svg>
+          <span class="slot-text">${timeDisplay}</span>
+        </div>
+
+        <!-- Dynamic Service Pill -->
+        <div class="fc-candle-service-pill" title="${service}" style="background: ${themeDot}12; color: ${themeDot}; border: 1px solid ${themeDot}30;">
+          ${service}
+        </div>
+      </div>
+    `;
+  }
+
+  renderDrawerItemHtml(apt: AppointmentDto): string {
+    const theme = this.getAppointmentTheme(apt);
+    const themeDot = theme.dot || '#1e5142';
+    const customer = apt.customerName || 'Client';
+    const providerName = apt.serviceProviderName || 'Specialist';
+    const service = apt.serviceName || apt.reason || apt.serviceProviderType || 'Consultation';
+    const timeDisplay = this.formatCandleTimeSlot(apt.startTime, apt.endTime);
+    const statusLabel = this.getAppointmentStatusLabel(apt);
+    const providerAvatar = this.getProviderAvatarHtml(apt, 28);
+
+    return `
+      <div class="fc-overflow-item" data-apt-id="${apt.id}" title="Click to view details">
+        <div class="fc-overflow-item-left">
+          ${providerAvatar}
+          <div class="fc-overflow-item-info">
+            <div class="fc-overflow-item-provider">${providerName}</div>
+            <div class="fc-overflow-item-cust">👤 ${customer} • <span class="fc-overflow-service">${service}</span></div>
+            <div class="fc-overflow-item-time">🕒 ${timeDisplay}</div>
+          </div>
+        </div>
+        <div class="fc-overflow-item-right">
+          <span class="fc-status-pill" style="background: ${themeDot}18; color: ${themeDot}; border: 1px solid ${themeDot}40;">
+            ${statusLabel}
+          </span>
+        </div>
+      </div>
+    `;
+  }
+
   renderWeekCardHtml(apt: AppointmentDto, isStacked: boolean = false): string {
     const theme = this.getAppointmentTheme(apt);
     const themeDot = theme.dot || '#1e5142';
@@ -1102,13 +1265,21 @@ export class CalendarComponent implements OnInit, OnDestroy {
       ? `${startTimeFormatted} – ${endTimeFormatted}`
       : `${apt.startTime || ''} – ${apt.endTime || ''}`;
 
-    const providerAvatar = this.getProviderAvatarHtml(apt, 16);
+    const providerAvatar = this.getProviderAvatarHtml(apt, 20);
 
     return `
       <div class="fc-week-clean-card ${isStacked ? 'is-stacked-card' : ''}" data-apt-id="${apt.id}"
         style="background: ${cardBg}; border-color: ${cardBorder}; border-left: 3.5px solid ${themeDot};"
-        title="${customer} • Specialist: ${providerName} • ${service} • ${timeDisplay} • ${statusLabel}">
-        <!-- Line 1: Customer Name with Customer Icon -->
+        title="Specialist: ${providerName} • Customer: ${customer} • ${service} • ${timeDisplay} • ${statusLabel}">
+        
+        <!-- Line 1: Specialist Provider (Hero for Admin View) + Status Dot -->
+        <div class="fc-clean-row fc-provider-hero-row">
+          ${providerAvatar}
+          <span class="fc-clean-provider-name" title="Specialist: ${providerName}">${providerName}</span>
+          <span class="fc-card-status-dot" style="background: ${themeDot};" title="${statusLabel}"></span>
+        </div>
+
+        <!-- Line 2: Customer Name with Icon + Dynamic Service -->
         <div class="fc-clean-row fc-customer-row">
           <div class="fc-cust-icon-badge">
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
@@ -1116,14 +1287,19 @@ export class CalendarComponent implements OnInit, OnDestroy {
               <circle cx="12" cy="7" r="4"></circle>
             </svg>
           </div>
-          <span class="fc-clean-customer-name" title="${customer}">${customer}</span>
+          <span class="fc-clean-customer-name" title="Customer: ${customer}">${customer}</span>
+          <span class="fc-clean-service-tag" title="${service}">• ${service}</span>
         </div>
 
-        <!-- Line 2: Service Provider with Avatar + Service Title -->
-        <div class="fc-clean-row fc-provider-row">
-          ${providerAvatar}
-          <span class="fc-clean-provider-name" title="${providerName}">${providerName}</span>
-          <span class="fc-clean-service-tag" title="${service}">• ${service}</span>
+        <!-- Line 3: Exact Time Slot Badge (Complete, never truncated!) -->
+        <div class="fc-clean-row fc-time-row">
+          <span class="fc-clean-time-tag">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+            ${timeDisplay}
+          </span>
         </div>
       </div>
     `;
@@ -1171,10 +1347,12 @@ export class CalendarComponent implements OnInit, OnDestroy {
 
   private mapAppointmentsToCalendar(items: AppointmentDto[]): void {
     // Only map appointments for active service providers
+    // Filter out appointments where specialist was unavailable (unfulfilled / cancelled attempts)
+    const validItems = items.filter(a => !this.isSpecialistUnavailableAppointment(a));
     const activeIds = new Set(this.displayedProviders().map(p => p.id));
     const activeItems = activeIds.size > 0
-      ? items.filter(a => a.serviceProviderId != null && activeIds.has(a.serviceProviderId))
-      : items;
+      ? validItems.filter(a => a.serviceProviderId != null && activeIds.has(a.serviceProviderId))
+      : validItems;
 
     // Month view: individual events so each displays on its line in day cell (only for the active month)
     if (this.activeView() === 'month') {
@@ -1211,48 +1389,33 @@ export class CalendarComponent implements OnInit, OnDestroy {
       return;
     }
 
-    // Week view: group overlapping/same-slot appointments so they stack vertically (ek ke niche ek)
-    const clusters = this.groupAppointmentsForWeek(activeItems);
-    const events: EventInput[] = clusters.map(cluster => {
-      const first = cluster[0];
-      const theme = this.getProviderTheme(first.serviceProviderId ?? 0);
-      const startIso = this.formatIsoDateTime(first.appointmentDate, first.startTime);
-      let endIso = this.formatIsoDateTime(first.appointmentDate, first.endTime);
+    // Week view: Every appointment is plotted at its EXACT startTime and EXACT endTime!
+    // If an appointment finishes at 11:00 AM, its box finishes exactly at the 11:00 line.
+    // If an appointment finishes at 11:30 AM, its box finishes exactly at the 11:30 line.
+    // Overlapping appointments in the same slot automatically split side-by-side with slotEventOverlap: false.
+    const events: EventInput[] = activeItems.map(apt => {
+      const theme = this.getProviderTheme(apt.serviceProviderId ?? 0);
+      const startIso = this.formatIsoDateTime(apt.appointmentDate, apt.startTime);
+      let endIso = this.formatIsoDateTime(apt.appointmentDate, apt.endTime);
 
       const startDate = new Date(startIso);
       let endDate = new Date(endIso);
       if (isNaN(endDate.getTime()) || endDate.getTime() <= startDate.getTime()) {
-        endDate = new Date(startDate.getTime() + 30 * 60 * 1000);
+        const durationMins = apt.totalDurationMinutes || apt.serviceDurationMinutes || 30;
+        endDate = new Date(startDate.getTime() + durationMins * 60 * 1000);
         endIso = endDate.toISOString();
       }
 
-      if (cluster.length === 1) {
-        return {
-          id: first.id.toString(),
-          title: first.customerName,
-          start: startIso,
-          end: endIso,
-          backgroundColor: 'transparent',
-          borderColor: 'transparent',
-          textColor: '#ffffff',
-          extendedProps: {
-            appointment: first,
-            themeDot: theme.dot
-          }
-        };
-      }
-
-      // Multiple appointments clustered together -> takes 100% column width, cards stack vertically
       return {
-        id: `cluster_${first.id}_${cluster.length}`,
-        title: `${cluster.length} Appointments`,
+        id: apt.id.toString(),
+        title: apt.serviceProviderName || apt.customerName,
         start: startIso,
         end: endIso,
         backgroundColor: 'transparent',
         borderColor: 'transparent',
         textColor: '#ffffff',
         extendedProps: {
-          cluster: cluster,
+          appointment: apt,
           themeDot: theme.dot
         }
       };
@@ -1880,6 +2043,9 @@ export class CalendarComponent implements OnInit, OnDestroy {
   private handlePopoverDismiss = (event: MouseEvent): void => {
     const target = event.target as HTMLElement | null;
     if (!target) return;
+    if (target.closest('app-appointment-detail-drawer') || target.closest('.drawer-panel') || target.closest('.drawer-backdrop')) {
+      return;
+    }
 
     // --- Week View: Clicked "+X more" button ---
     const moreBtn = target.closest('.fc-week-more-btn');
@@ -2098,13 +2264,36 @@ export class CalendarComponent implements OnInit, OnDestroy {
     this.appointmentChanged.emit();
   }
 
+  isSpecialistUnavailableAppointment(apt: AppointmentDto): boolean {
+    if (!apt) return true;
+    const reason = ((apt as any).cancellationReason || (apt as any).cancelReason || '').toLowerCase();
+    if (reason.includes('no specialist') || reason.includes('specialist unavailable')) return true;
+    const isCancelled = apt.status === AppointmentStatus.Cancelled
+      || (apt.status as any) === 3
+      || String(apt.status).toLowerCase() === 'cancelled'
+      || apt.statusText?.toLowerCase().includes('unavailable');
+    if (!apt.serviceProviderId && isCancelled) {
+      return true;
+    }
+    return false;
+  }
+
   // --- Appointment Detail & Action Modals ---
   getLinkedGroupAppointments(apt: AppointmentDto): AppointmentDto[] {
     if (!apt) return [];
+    if (!this.isAdmin) return [apt];
+    if (apt.journeyParts && apt.journeyParts.length > 1) {
+      return apt.journeyParts.filter(p => !this.isSpecialistUnavailableAppointment(p));
+    }
     if (apt.bookingGroupId) {
-      const groupSiblings = this.allAppointments().filter(other => other.bookingGroupId === apt.bookingGroupId);
+      const groupSiblings = this.allAppointments()
+        .filter(other => other.bookingGroupId === apt.bookingGroupId && !this.isSpecialistUnavailableAppointment(other));
       if (groupSiblings.length > 1) {
-        return groupSiblings.sort((a, b) => (a.startTime || '').localeCompare(b.startTime || ''));
+        return groupSiblings.sort((a, b) => {
+          const dateCmp = (a.appointmentDate || '').localeCompare(b.appointmentDate || '');
+          if (dateCmp !== 0) return dateCmp;
+          return (a.startTime || '').localeCompare(b.startTime || '');
+        });
       }
     }
     return [apt];
@@ -2125,11 +2314,19 @@ export class CalendarComponent implements OnInit, OnDestroy {
     }
   }
 
+  closeAllPopovers(): void {
+    document.querySelectorAll('.fc-popover').forEach(el => el.remove());
+
+    const openDrawers = document.querySelectorAll('.fc-week-stack-container.drawer-open');
+    openDrawers.forEach(d => d.classList.remove('drawer-open'));
+  }
+
   openDispatchModal(req?: AppointmentDto, event?: MouseEvent): void {
     if (event) {
       event.preventDefault();
       event.stopPropagation();
     }
+    this.closeAllPopovers();
     const targetReq = req || null;
     this.selectedDispatchRequest.set(targetReq);
     if (targetReq && !this.incomingRequests().some(r => r.id === targetReq.id)) {
@@ -2157,16 +2354,40 @@ export class CalendarComponent implements OnInit, OnDestroy {
       event.preventDefault();
       event.stopPropagation();
     }
-    const siblings = this.getLinkedGroupAppointments(apt);
-    const detailApt: AppointmentDto = siblings.length > 1 ? {
-      ...apt,
-      journeyParts: siblings
-    } : apt;
-    this.selectedAppointmentForDetail.set(detailApt);
+    this.ngZone.run(() => {
+      this.closeAllPopovers();
+      const siblings = this.getLinkedGroupAppointments(apt);
+      const detailApt: AppointmentDto = siblings.length > 1 ? {
+        ...apt,
+        journeyParts: siblings
+      } : apt;
+      this.selectedAppointmentForDetail.set({ ...detailApt });
+      this.cdr.markForCheck();
+      this.cdr.detectChanges();
+    });
+  }
+
+  onDrawerSessionSwitch(switchedApt: AppointmentDto): void {
+    if (!switchedApt) return;
+    this.ngZone.run(() => {
+      const full = this.allAppointments().find(a => Number(a.id) === Number(switchedApt.id));
+      const toSet: AppointmentDto = full ? {
+        ...full,
+        ...switchedApt,
+        journeyParts: switchedApt.journeyParts
+      } : switchedApt;
+      this.selectedAppointmentForDetail.set({ ...toSet });
+      this.cdr.markForCheck();
+      this.cdr.detectChanges();
+    });
   }
 
   closeDetails(): void {
-    this.selectedAppointmentForDetail.set(null);
+    this.ngZone.run(() => {
+      this.selectedAppointmentForDetail.set(null);
+      this.cdr.markForCheck();
+      this.cdr.detectChanges();
+    });
   }
 
   openRescheduleModal(apt: AppointmentDto): void {
@@ -2217,18 +2438,28 @@ export class CalendarComponent implements OnInit, OnDestroy {
   }
 
   getStatusLabel(status: AppointmentStatus): string {
-    return APPOINTMENT_STATUS_MAP[status]?.label || 'Booked';
+    if (status === AppointmentStatus.Booked || (status as any) === 1) {
+      return this.isServiceProvider ? 'Awaiting your approval' : 'Awaiting approval';
+    }
+    return APPOINTMENT_STATUS_MAP[status]?.label || 'Awaiting approval';
   }
 
   getAppointmentStatusLabel(apt: AppointmentDto): string {
+    const isPending = this.isStatusPending(apt.status) || this.isStatusBooked(apt.status) || (apt.status as any) === 1;
+    if (isPending) {
+      const currentProviderId = this.authService.currentUser()?.serviceProviderId;
+      if (this.isServiceProvider && currentProviderId && Number(apt.serviceProviderId) === Number(currentProviderId)) {
+        return 'Awaiting your approval';
+      }
+      return 'Awaiting approval';
+    }
     if (apt.statusText) {
       const lower = apt.statusText.toLowerCase();
       if (lower === 'approved' || lower === 'completed') return 'Confirmed';
       return apt.statusText;
     }
     if (this.isStatusConfirmed(apt.status)) return 'Confirmed';
-    if (this.isStatusPending(apt.status)) return 'Pending';
-    return 'Booked';
+    return 'Awaiting approval';
   }
 
   getStatusBadgeClass(status: AppointmentStatus): string {

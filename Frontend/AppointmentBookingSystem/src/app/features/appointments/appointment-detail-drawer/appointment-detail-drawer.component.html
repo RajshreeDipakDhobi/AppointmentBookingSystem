@@ -27,8 +27,8 @@
             {{ getStatusLabel(appointment.status) }}
           </span>
 
-          <!-- Linked Multi-Part Session Badge (Vector SVG Only) -->
-          <span *ngIf="multiPartBadgeText" class="linked-session-badge"
+          <!-- Linked Multi-Part Session Badge (Vector SVG Only) - Admin Only -->
+          <span *ngIf="isAdmin && multiPartBadgeText" class="linked-session-badge"
             title="Customer has multiple services booked together in this visit">
             <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none"
               stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
@@ -196,8 +196,8 @@
         </div>
       </div>
 
-      <!-- Section C: Other Sessions in this Visit (Only shown if multi-session) -->
-      <div *ngIf="isMultiSession && otherSessions.length > 0" class="sibling-sessions-section">
+      <!-- Section C: Other Sessions in this Visit (Strictly ONLY for Admin) -->
+      <div *ngIf="isAdmin && isMultiSession && otherSessions.length > 0" class="sibling-sessions-section">
         <div class="section-sub-header">
           <div class="sub-header-left">
             <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none"
@@ -211,7 +211,12 @@
         </div>
 
         <div class="sibling-cards-list">
-          <div *ngFor="let s of otherSessions" class="sibling-session-card" (click)="switchSession(s.part)">
+          <div *ngFor="let s of otherSessions; trackBy: trackBySessionId"
+               class="sibling-session-card"
+               role="button"
+               tabindex="0"
+               (click)="switchSession(s.part, $event)"
+               (keyup.enter)="switchSession(s.part, $event)">
             <!-- Top Row: Session Tag, Service(s) Name, and Price -->
             <div class="sib-row-top">
               <div class="sib-title-group">
@@ -251,7 +256,7 @@
               </span>
             </div>
 
-            <!-- Sibling Card Action Bar -->
+            <!-- Sibling Card Action Bar: Always clickable for Admin to view session details -->
             <div class="sib-action-bar">
               <span class="sib-action-link">
                 <span>View Session {{ s.sessionNum }} Details</span>
@@ -265,16 +270,17 @@
         </div>
       </div>
 
-      <!-- Section D: Total Visit Billing Summary (When Multi-Session) -->
-      <div *ngIf="isMultiSession" class="compact-card visit-summary-card">
+      <!-- Section D: Total Visit Billing Summary (When Multi-Session - Admin Only) -->
+      <div *ngIf="isAdmin && isMultiSession" class="compact-card visit-summary-card">
         <div class="summary-header">
           <span class="summary-title">Total Visit Summary</span>
           <span class="summary-pill">{{ totalSessionsCount }} Sessions</span>
         </div>
 
         <div class="summary-breakdown">
-          <div *ngFor="let p of appointment.journeyParts; let idx = index" class="breakdown-item"
-            [class.is-current]="p.id === appointment.id" (click)="switchSession(p)">
+          <div *ngFor="let p of validJourneyParts; let idx = index; trackBy: trackByJourneyPartId" class="breakdown-item"
+            [class.is-current]="p.id === appointment.id"
+            (click)="switchSession(p, $event)">
             <div class="item-left">
               <span class="item-session-num">Session {{ idx + 1 }}:</span>
               <span class="item-service-short">{{ getSessionServiceTitle(p) }}</span>
@@ -302,7 +308,7 @@
       </div>
 
       <!-- Section D: Reschedule Proposed -->
-      <div *ngIf="isRescheduleProposed && appointment.proposedDate" class="inline-alert alert-amber">
+      <div *ngIf="isRescheduleProposed || appointment.proposedDate" class="inline-alert alert-amber">
         <div class="alert-top">
           <strong>Proposed Reschedule:</strong>
           <span>{{ appointment.proposedDate | appDate }} ({{ appointment.proposedStartTime | appTime }} – {{
@@ -317,10 +323,11 @@
       <div *ngIf="isCancelled || appointment.cancellationReason" class="inline-alert alert-rose">
         <div class="alert-top">
           <span class="rose-bold">Cancelled:</span>
-          <span>{{ appointment.cleanCancellationReason || appointment.cancellationReason || 'No notes' }}</span>
+          <span>{{ getCleanCancellationReason(appointment.cancellationReason) || appointment.cancellationReason || 'Cancelled' }}</span>
         </div>
-        <div *ngIf="appointment.cancelledByName || appointment.cancelledAt" class="alert-sub">
+        <div *ngIf="appointment.cancelledByName || appointment.createdBy || appointment.cancelledAt" class="alert-sub">
           <span *ngIf="appointment.cancelledByName">By {{ appointment.cancelledByName }}</span>
+          <span *ngIf="!appointment.cancelledByName && appointment.createdBy">By {{ appointment.createdBy }}</span>
           <span *ngIf="appointment.cancelledAt">• {{ appointment.cancelledAt | appDate }}</span>
         </div>
       </div>

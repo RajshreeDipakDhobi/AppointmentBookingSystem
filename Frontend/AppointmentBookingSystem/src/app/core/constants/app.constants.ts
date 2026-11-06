@@ -8,7 +8,7 @@ export interface StatusConfig {
 
 export const APPOINTMENT_STATUS_MAP: Record<AppointmentStatus, StatusConfig> = {
   [AppointmentStatus.Booked]: {
-    label: 'Booked',
+    label: 'Awaiting approval',
     badgeClass: 'badge-booked',
     dotColor: '#818cf8'
   },

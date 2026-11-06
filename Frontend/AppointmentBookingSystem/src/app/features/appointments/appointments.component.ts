@@ -569,6 +569,16 @@ export class AppointmentsComponent implements OnInit, OnDestroy {
     this.selectedAppointmentForDetail = detailApt;
   }
 
+  onDrawerSessionSwitch(switchedApt: AppointmentDto): void {
+    if (!switchedApt) return;
+    const full = this.appointments().find(a => a.id === switchedApt.id);
+    const toSet: AppointmentDto = full ? {
+      ...full,
+      journeyParts: switchedApt.journeyParts
+    } : switchedApt;
+    this.selectedAppointmentForDetail = toSet;
+  }
+
   closeDetails(): void {
     this.selectedAppointmentForDetail = null;
   }

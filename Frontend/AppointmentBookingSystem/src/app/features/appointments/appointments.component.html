@@ -630,6 +630,7 @@
     *ngIf="selectedAppointmentForDetail"
     [appointment]="selectedAppointmentForDetail"
     [canManage]="isServiceProvider"
+    (sessionSwitch)="onDrawerSessionSwitch($event)"
     (close)="closeDetails()"
     (reschedule)="openRescheduleModal($event)"
     (cancel)="openCancelModal($event)"

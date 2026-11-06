@@ -537,9 +537,10 @@
 <!-- APPOINTMENT DETAILS SIDE DRAWER (STANDALONE REUSABLE COMPONENT)           -->
 <!-- ========================================================================= -->
 <app-appointment-detail-drawer
-  *ngIf="selectedAppointmentForDetail() as apt"
-  [appointment]="apt"
-  [canManage]="calendarPermissions().canManageAppointments && (apt.canManage ?? true)"
+  *ngIf="selectedAppointmentForDetail()"
+  [appointment]="selectedAppointmentForDetail()!"
+  [canManage]="calendarPermissions().canManageAppointments && (selectedAppointmentForDetail()?.canManage ?? true)"
+  (sessionSwitch)="onDrawerSessionSwitch($event)"
   (close)="closeDetails()"
   (reschedule)="openRescheduleModal($event)"
   (cancel)="openCancelModal($event)"

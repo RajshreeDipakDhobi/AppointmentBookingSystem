@@ -148,7 +148,9 @@ public class CalendarService : ICalendarService
                 .ThenInclude(p => p.User)
             .Include(a => a.Customer)
             .Where(a => a.TenantId == tenantId && !a.IsDeleted &&
-                        a.AppointmentDate.Date >= rangeStart && a.AppointmentDate.Date <= rangeEnd);
+                        a.AppointmentDate.Date >= rangeStart && a.AppointmentDate.Date <= rangeEnd &&
+                        !(a.ServiceProviderId == null && a.Status == AppointmentStatus.Cancelled) &&
+                        !(a.Status == AppointmentStatus.Cancelled && a.CancellationReason != null && a.CancellationReason.Contains("No specialist was available")));
 
         // Security & Scope Enforcement: Service Provider only gets their own appointments
         if (isServiceProvider && currentProviderId.HasValue)
@@ -181,6 +183,39 @@ public class CalendarService : ICalendarService
             .ThenBy(a => a.StartTime)
             .ToListAsync(cancellationToken);
 
+        // Sibling appointments for multi-session booking groups are strictly ONLY for Admin.
+        // Service Providers must NOT see other specialists' sessions!
+        if (isAdminOrSuperAdmin)
+        {
+            var bookingGroupIds = dbAppointments
+                .Where(a => !string.IsNullOrEmpty(a.BookingGroupId))
+                .Select(a => a.BookingGroupId!)
+                .Distinct()
+                .ToList();
+
+            if (bookingGroupIds.Count > 0)
+            {
+                var existingIds = dbAppointments.Select(a => a.Id).ToHashSet();
+                var siblingAppointments = await _unitOfWork.Repository<Appointment>().Query()
+                    .AsNoTracking()
+                    .Include(a => a.Customer)
+                    .Include(a => a.ServiceProvider)
+                        .ThenInclude(p => p.User)
+                    .Include(a => a.Service)
+                    .Include(a => a.Items)
+                        .ThenInclude(i => i.Service)
+                    .Where(a => a.TenantId == tenantId && !a.IsDeleted &&
+                                a.BookingGroupId != null &&
+                                bookingGroupIds.Contains(a.BookingGroupId) &&
+                                !existingIds.Contains(a.Id) &&
+                                !(a.ServiceProviderId == null && a.Status == AppointmentStatus.Cancelled) &&
+                                !(a.Status == AppointmentStatus.Cancelled && a.CancellationReason != null && a.CancellationReason.Contains("No specialist was available")))
+                    .ToListAsync(cancellationToken);
+
+                dbAppointments.AddRange(siblingAppointments);
+            }
+        }
+
         // 6. Map Appointments to Clean DTOs
         var allAppointmentDtos = new List<CalendarAppointmentItemDto>();
 
@@ -208,7 +243,7 @@ public class CalendarService : ICalendarService
                 Id = a.Id,
                 AppointmentNumber = a.AppointmentNumber ?? string.Empty,
                 BookingGroupId = a.BookingGroupId,
-                ServiceProviderId = a.ServiceProviderId ?? 0,
+                ServiceProviderId = a.ServiceProviderId,
                 ServiceProviderName = providerName,
                 ServiceProviderProfilePictureUrl = a.ServiceProvider?.User?.ProfilePictureUrl,
                 CustomerId = a.CustomerId,
@@ -237,7 +272,17 @@ public class CalendarService : ICalendarService
                 StatusText = a.Status.ToString(),
                 Reason = a.Reason,
                 IsMultiService = serviceNames.Count > 1,
-                CanManage = canManageThisApt
+                CanManage = canManageThisApt,
+                CancellationReason = a.CancellationReason,
+                CancelledAt = a.CancelledAt,
+                CancelledByName = ExtractCancelledByName(a.CancellationReason),
+                CreatedBy = a.CreatedBy,
+                CreatedAt = a.CreatedAt,
+                ProposedDate = a.ProposedDate,
+                ProposedStartTime = a.ProposedStartTime.HasValue ? FormatTimeSpan(a.ProposedStartTime.Value) : null,
+                ProposedEndTime = a.ProposedEndTime.HasValue ? FormatTimeSpan(a.ProposedEndTime.Value) : null,
+                RescheduleNotes = a.RescheduleNotes,
+                RescheduledFromAppointmentId = a.RescheduledFromAppointmentId
             };
 
             allAppointmentDtos.Add(aptDto);
@@ -343,7 +388,17 @@ public class CalendarService : ICalendarService
                     Reason = b.Reason,
                     IsMultiService = bServiceNames.Count > 1,
                     CanManage = true,
-                    IsBroadcastRequest = true
+                    IsBroadcastRequest = true,
+                    CancellationReason = b.CancellationReason,
+                    CancelledAt = b.CancelledAt,
+                    CancelledByName = ExtractCancelledByName(b.CancellationReason),
+                    CreatedBy = b.CreatedBy,
+                    CreatedAt = b.CreatedAt,
+                    ProposedDate = b.ProposedDate,
+                    ProposedStartTime = b.ProposedStartTime.HasValue ? FormatTimeSpan(b.ProposedStartTime.Value) : null,
+                    ProposedEndTime = b.ProposedEndTime.HasValue ? FormatTimeSpan(b.ProposedEndTime.Value) : null,
+                    RescheduleNotes = b.RescheduleNotes,
+                    RescheduledFromAppointmentId = b.RescheduledFromAppointmentId
                 };
 
                 allAppointmentDtos.Add(bDto);
@@ -352,7 +407,8 @@ public class CalendarService : ICalendarService
 
         // Group appointments by provider ID
         var appointmentsByProvider = allAppointmentDtos
-            .GroupBy(a => a.ServiceProviderId)
+            .Where(a => a.ServiceProviderId.HasValue)
+            .GroupBy(a => a.ServiceProviderId!.Value)
             .ToDictionary(g => g.Key, g => g.ToList());
 
         // 7. Calculate Dynamic Grid Bounds based purely on Provider Operating Hours
@@ -537,5 +593,21 @@ public class CalendarService : ICalendarService
         int h12 = h24 % 12;
         if (h12 == 0) h12 = 12;
         return $"{h12:D2}:{m:D2} {period}";
+    }
+
+    private static string? ExtractCancelledByName(string? cancellationReason)
+    {
+        if (string.IsNullOrWhiteSpace(cancellationReason)) return null;
+        const string marker = "(Cancelled by ";
+        var idx = cancellationReason.LastIndexOf(marker, StringComparison.OrdinalIgnoreCase);
+        if (idx >= 0)
+        {
+            var end = cancellationReason.IndexOf(')', idx);
+            if (end > idx)
+            {
+                return cancellationReason.Substring(idx + marker.Length, end - (idx + marker.Length)).Trim();
+            }
+        }
+        return null;
     }
 }
