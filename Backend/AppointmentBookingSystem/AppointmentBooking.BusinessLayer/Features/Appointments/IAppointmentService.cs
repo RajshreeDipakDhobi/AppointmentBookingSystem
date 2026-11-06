@@ -16,6 +16,7 @@ public interface IAppointmentService
     Task<ProviderDailyAvailabilityResponseDto?> GetAvailableSlotsByServiceAsync(int serviceId, DateTime date, int? tenantId, List<int>? serviceIds = null, string? assignedSpecialistIds = null, CancellationToken cancellationToken = default);
 
     // Urban Company Style: First-to-Accept Broadcast Dispatch
+    Task<int?> GetProviderIdByUserIdAsync(int userId, CancellationToken cancellationToken = default);
     Task<List<AppointmentDto>> GetIncomingBroadcastRequestsAsync(int? providerId, int? tenantId, CancellationToken cancellationToken = default);
     Task<ApiResponse<AppointmentDto>> AcceptBroadcastAppointmentAsync(int appointmentId, int providerId, CancellationToken cancellationToken = default);
 

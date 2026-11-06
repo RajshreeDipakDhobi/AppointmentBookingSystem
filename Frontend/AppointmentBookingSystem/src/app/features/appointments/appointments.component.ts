@@ -15,10 +15,10 @@ import { BookingModalComponent } from './booking-modal/booking-modal.component';
 import { RescheduleModalComponent } from './reschedule-modal/reschedule-modal.component';
 import { CancelModalComponent } from './cancel-modal/cancel-modal.component';
 import { ServiceDispatchModalComponent } from './service-dispatch-modal/service-dispatch-modal.component';
+import { AppointmentDetailDrawerComponent } from './appointment-detail-drawer/appointment-detail-drawer.component';
 import { PaginationComponent } from '../../shared/components/pagination/pagination.component';
 import { AppDatePipe, AppTimePipe, AppStatusBadgePipe, AppInitialsPipe, AppPhonePipe } from '../../shared/pipes';
-import { CopyToClipboardDirective } from '../../shared/directives';
-import { getAvatarGradient, getInitials, isAppointmentPast, canModifyAppointment, canCancelAppointment, parseServerUtcDate } from '../../core/constants/app.constants';
+import { getAvatarGradient, getInitials, isAppointmentPast, canModifyAppointment, canCancelAppointment, canCompleteAppointment, parseServerUtcDate } from '../../core/constants/app.constants';
 import { ConfirmService } from '../../shared/components/confirmation-modal/confirm.service';
 import { AuthService } from '../../core/services/auth.service';
 
@@ -32,13 +32,13 @@ import { AuthService } from '../../core/services/auth.service';
     RescheduleModalComponent,
     CancelModalComponent,
     ServiceDispatchModalComponent,
+    AppointmentDetailDrawerComponent,
     PaginationComponent,
     AppDatePipe,
     AppTimePipe,
     AppStatusBadgePipe,
     AppInitialsPipe,
-    AppPhonePipe,
-    CopyToClipboardDirective
+    AppPhonePipe
   ],
   templateUrl: './appointments.component.html',
   styleUrls: ['./appointments.component.css']
@@ -337,8 +337,7 @@ export class AppointmentsComponent implements OnInit, OnDestroy {
     this.appointmentService.getIncomingBroadcastRequests().subscribe({
       next: (requests) => {
         const activeRequests = (requests || []).filter(r => !this.isExpired(r));
-        const unified = this.groupMultiPartRequests(activeRequests);
-        this.incomingRequests.set(unified);
+        this.incomingRequests.set(activeRequests);
       },
       error: (err) => console.error('Failed to load incoming broadcast requests', err)
     });
@@ -549,9 +548,25 @@ export class AppointmentsComponent implements OnInit, OnDestroy {
     });
   }
 
+  getLinkedGroupAppointments(apt: AppointmentDto): AppointmentDto[] {
+    if (!apt) return [];
+    if (apt.bookingGroupId) {
+      const groupSiblings = this.appointments().filter(other => other.bookingGroupId === apt.bookingGroupId);
+      if (groupSiblings.length > 1) {
+        return groupSiblings.sort((a, b) => (a.startTime || '').localeCompare(b.startTime || ''));
+      }
+    }
+    return [apt];
+  }
+
   viewDetails(apt: AppointmentDto): void {
     this.closeActionDropdown();
-    this.selectedAppointmentForDetail = apt;
+    const siblings = this.getLinkedGroupAppointments(apt);
+    const detailApt: AppointmentDto = siblings.length > 1 ? {
+      ...apt,
+      journeyParts: siblings
+    } : apt;
+    this.selectedAppointmentForDetail = detailApt;
   }
 
   closeDetails(): void {
@@ -575,7 +590,7 @@ export class AppointmentsComponent implements OnInit, OnDestroy {
 
   canComplete(apt: AppointmentDto): boolean {
     if (!apt || !this.isServiceProvider || !apt.serviceProviderId) return false;
-    return apt.status === AppointmentStatus.Approved;
+    return canCompleteAppointment(apt);
   }
 
   hasManageableActions(apt: AppointmentDto): boolean {

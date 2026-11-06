@@ -204,6 +204,9 @@ public class BookingDbContext : DbContext
             entity.Property(a => a.AppointmentNumber).IsRequired().HasMaxLength(50);
             entity.HasIndex(a => a.AppointmentNumber).IsUnique();
 
+            entity.Property(a => a.BookingGroupId).HasMaxLength(100);
+            entity.HasIndex(a => a.BookingGroupId);
+
             // High-performance Composite Query Indexes (Dashboard & Filter queries)
             entity.HasIndex(a => new { a.ServiceProviderId, a.AppointmentDate, a.Status });
             entity.HasIndex(a => new { a.TenantId, a.AppointmentDate });

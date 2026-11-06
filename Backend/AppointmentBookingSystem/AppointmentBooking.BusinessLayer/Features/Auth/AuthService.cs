@@ -241,7 +241,9 @@ public class AuthService : IAuthService
             var storedToken = await _unitOfWork.Repository<RefreshToken>()
                 .Query()
                 .Include(r => r.User)
-                .ThenInclude(u => u!.Tenant)
+                    .ThenInclude(u => u!.Tenant)
+                .Include(r => r.User)
+                    .ThenInclude(u => u!.ServiceProvider)
                 .FirstOrDefaultAsync(r => r.TokenHash == tokenHash, cancellationToken);
 
             if (storedToken == null || !storedToken.IsActive)

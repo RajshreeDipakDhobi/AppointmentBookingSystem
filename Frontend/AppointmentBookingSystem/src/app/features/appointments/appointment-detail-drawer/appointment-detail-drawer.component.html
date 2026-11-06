@@ -1,0 +1,391 @@
+<div *ngIf="appointment" class="drawer-backdrop" (click)="onBackdropClick($event)">
+  <div class="drawer-panel" (click)="$event.stopPropagation()">
+    <!-- Top Sleek Accent Line -->
+    <div class="drawer-top-accent"></div>
+
+    <!-- 1. Ultra-Clean Compact Header -->
+    <div class="drawer-header">
+      <div class="header-main-left">
+        <div class="header-id-group">
+          <!-- Copyable ID Pill -->
+          <button type="button" class="apt-id-pill" [appCopy]="appointment.appointmentNumber" (copied)="onIdCopied()"
+            title="Click to copy Appointment ID">
+            <span class="id-hash">#</span>
+            <span class="id-code">{{ appointment.appointmentNumber }}</span>
+            <svg *ngIf="!copied()" class="id-copy-icon" xmlns="http://www.w3.org/2000/svg" width="12" height="12"
+              viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"
+              stroke-linejoin="round">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+            </svg>
+            <span *ngIf="copied()" class="copy-success-badge">Copied!</span>
+          </button>
+
+          <!-- Compact Status Badge Inline -->
+          <span class="status-badge" [class]="getStatusBadgeClass(appointment.status)">
+            <span class="status-pulse-dot"></span>
+            {{ getStatusLabel(appointment.status) }}
+          </span>
+
+          <!-- Linked Multi-Part Session Badge (Vector SVG Only) -->
+          <span *ngIf="multiPartBadgeText" class="linked-session-badge"
+            title="Customer has multiple services booked together in this visit">
+            <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+              <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+            </svg>
+            <span>{{ multiPartBadgeText }}</span>
+          </span>
+        </div>
+      </div>
+
+      <button type="button" class="btn-drawer-close" (click)="closeDrawer()" aria-label="Close drawer"
+        title="Close (Esc)">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18" />
+          <line x1="6" y1="6" x2="18" y2="18" />
+        </svg>
+      </button>
+    </div>
+
+    <!-- 2. Slim Schedule & Time Strip -->
+    <div class="drawer-schedule-strip">
+      <div class="schedule-item">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect width="18" height="18" x="3" y="4" rx="2" ry="2" />
+          <line x1="16" y1="2" x2="16" y2="6" />
+          <line x1="8" y1="2" x2="8" y2="6" />
+          <line x1="3" y1="10" x2="21" y2="10" />
+        </svg>
+        <span class="schedule-date">{{ appointment.appointmentDate | appDate }}</span>
+      </div>
+
+      <span class="strip-sep">•</span>
+
+      <div class="schedule-item">
+        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10" />
+          <polyline points="12 6 12 12 16 14" />
+        </svg>
+        <span class="schedule-time">{{ appointment.startTime | appTime }} – {{ appointment.endTime | appTime }}</span>
+      </div>
+
+      <span *ngIf="durationText" class="schedule-duration-pill">{{ durationText }}</span>
+    </div>
+
+    <!-- 3. High-Density Scrollable Body -->
+    <div class="drawer-body">
+
+      <!-- Section A: People & Roles (Customer & Specialist in 1 unified block) -->
+      <div class="compact-card">
+        <!-- Customer Row -->
+        <div class="prop-row">
+          <span class="prop-label">Customer</span>
+          <div class="prop-value-col">
+            <div class="person-line">
+              <div class="compact-avatar" [style.background]="getAvatarGradient(appointment.customerName)">
+                {{ getInitials(appointment.customerName) }}
+              </div>
+              <span class="person-name">{{ appointment.customerName }}</span>
+            </div>
+
+            <!-- Inline Clickable Contact Chips -->
+            <div class="contacts-inline-row">
+              <a *ngIf="appointment.customerPhone && appointment.customerPhone !== '-'"
+                [href]="'tel:' + appointment.customerPhone" class="contact-pill" title="Call">
+                <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <path
+                    d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+                </svg>
+                <span>{{ appointment.customerPhone | appPhone }}</span>
+              </a>
+
+              <a *ngIf="appointment.customerEmail" [href]="'mailto:' + appointment.customerEmail" class="contact-pill"
+                [title]="appointment.customerEmail">
+                <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect width="20" height="16" x="2" y="4" rx="2" />
+                  <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+                </svg>
+                <span class="truncate-txt">{{ appointment.customerEmail }}</span>
+              </a>
+            </div>
+
+            <div *ngIf="appointment.customerAddress" class="address-text">
+              <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                <circle cx="12" cy="10" r="3" />
+              </svg>
+              <span>{{ appointment.customerAddress }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="prop-divider"></div>
+
+        <!-- Specialist Row -->
+        <div class="prop-row">
+          <span class="prop-label">Specialist</span>
+          <div class="prop-value-col">
+            <div class="person-line">
+              <div class="compact-avatar"
+                [style.background]="appointment.serviceProviderProfilePictureUrl ? 'transparent' : getAvatarGradient(appointment.serviceProviderName)">
+                <img *ngIf="appointment.serviceProviderProfilePictureUrl"
+                  [src]="appointment.serviceProviderProfilePictureUrl" [alt]="appointment.serviceProviderName"
+                  class="avatar-img" (error)="appointment.serviceProviderProfilePictureUrl = undefined" />
+                <span *ngIf="!appointment.serviceProviderProfilePictureUrl">{{
+                  getInitials(appointment.serviceProviderName) }}</span>
+              </div>
+              <span class="person-name">{{ appointment.serviceProviderName || 'Awaiting Specialist' }}</span>
+              <span *ngIf="appointment.serviceProviderType" class="specialty-badge">
+                {{ appointment.serviceProviderType }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section B: Current Session Services & Subtotal -->
+      <div *ngIf="(appointment.items && appointment.items.length > 0) || appointment.serviceName"
+        class="compact-card current-session-card">
+        <div class="card-section-title">
+          <div class="card-title-left">
+            <span *ngIf="isMultiSession" class="current-session-pill">Session {{ currentSessionNumber }}</span>
+            <span>Booked Services ({{ appointment.items?.length || 1 }})</span>
+          </div>
+          <span *ngIf="durationText" class="duration-label">
+            Total {{ durationText }}
+          </span>
+        </div>
+
+        <!-- Itemized List (Shows services inside current active appointment) -->
+        <div *ngIf="appointment.items && appointment.items.length > 0" class="service-items-list">
+          <div *ngFor="let item of appointment.items" class="service-item-row">
+            <div class="s-info">
+              <span class="s-dot"></span>
+              <span class="s-name">{{ item.serviceName }}</span>
+              <span class="s-duration">({{ item.durationMinutes }}m)</span>
+            </div>
+            <span class="s-price">₹{{ item.price | number }}</span>
+          </div>
+        </div>
+
+        <!-- Single Service Fallback (Only if items array is empty) -->
+        <div *ngIf="(!appointment.items || appointment.items.length === 0) && appointment.serviceName"
+          class="service-items-list">
+          <div class="service-item-row">
+            <div class="s-info">
+              <span class="s-dot"></span>
+              <span class="s-name">{{ appointment.serviceName }}</span>
+              <span *ngIf="appointment.serviceDurationMinutes" class="s-duration">({{ appointment.serviceDurationMinutes }}m)</span>
+            </div>
+            <span *ngIf="appointment.servicePrice" class="s-price">₹{{ appointment.servicePrice | number }}</span>
+          </div>
+        </div>
+
+        <!-- Current Session Subtotal Row -->
+        <div class="session-subtotal-row">
+          <span class="subtotal-label">{{ isMultiSession ? ('Session ' + currentSessionNumber + ' Subtotal') : 'Total Amount' }}</span>
+          <span class="subtotal-amount">₹{{ currentSessionSubtotal | number }}</span>
+        </div>
+      </div>
+
+      <!-- Section C: Other Sessions in this Visit (Only shown if multi-session) -->
+      <div *ngIf="isMultiSession && otherSessions.length > 0" class="sibling-sessions-section">
+        <div class="section-sub-header">
+          <div class="sub-header-left">
+            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+              <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+            </svg>
+            <span class="sub-header-title">Other Sessions in this Visit ({{ otherSessions.length }})</span>
+          </div>
+          <span class="sub-header-hint">Click to switch view</span>
+        </div>
+
+        <div class="sibling-cards-list">
+          <div *ngFor="let s of otherSessions" class="sibling-session-card" (click)="switchSession(s.part)">
+            <!-- Top Row: Session Tag, Service(s) Name, and Price -->
+            <div class="sib-row-top">
+              <div class="sib-title-group">
+                <span class="sib-session-badge">Session {{ s.sessionNum }}</span>
+                <span class="sib-service-name" [title]="getSessionServiceTitle(s.part)">
+                  {{ getSessionServiceTitle(s.part) }}
+                </span>
+              </div>
+              <span class="sib-price">₹{{ (s.part.totalAmount || s.part.servicePrice || 0) | number }}</span>
+            </div>
+
+            <!-- Middle Row: Specialist, Time, and Status Badge -->
+            <div class="sib-row-details">
+              <div class="sib-meta-item specialist-meta">
+                <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                  <circle cx="12" cy="7" r="4" />
+                </svg>
+                <span class="meta-provider-name" [class.unassigned]="!s.part.serviceProviderName">
+                  {{ s.part.serviceProviderName || 'Awaiting Specialist' }}
+                </span>
+              </div>
+
+              <div class="sib-meta-item time-meta">
+                <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10" />
+                  <polyline points="12 6 12 12 16 14" />
+                </svg>
+                <span>{{ s.part.startTime | appTime }} – {{ s.part.endTime | appTime }}</span>
+              </div>
+
+              <span class="sib-status-badge" [class]="getSessionStatusClass(s.part)">
+                <span class="status-pulse-dot"></span>
+                <span>{{ getSessionStatusLabel(s.part) }}</span>
+              </span>
+            </div>
+
+            <!-- Sibling Card Action Bar -->
+            <div class="sib-action-bar">
+              <span class="sib-action-link">
+                <span>View Session {{ s.sessionNum }} Details</span>
+                <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="9 18 15 12 9 6" />
+                </svg>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section D: Total Visit Billing Summary (When Multi-Session) -->
+      <div *ngIf="isMultiSession" class="compact-card visit-summary-card">
+        <div class="summary-header">
+          <span class="summary-title">Total Visit Summary</span>
+          <span class="summary-pill">{{ totalSessionsCount }} Sessions</span>
+        </div>
+
+        <div class="summary-breakdown">
+          <div *ngFor="let p of appointment.journeyParts; let idx = index" class="breakdown-item"
+            [class.is-current]="p.id === appointment.id" (click)="switchSession(p)">
+            <div class="item-left">
+              <span class="item-session-num">Session {{ idx + 1 }}:</span>
+              <span class="item-service-short">{{ getSessionServiceTitle(p) }}</span>
+            </div>
+            <span class="item-amount">₹{{ (p.totalAmount || p.servicePrice || 0) | number }}</span>
+          </div>
+        </div>
+
+        <div class="summary-divider"></div>
+
+        <div class="summary-total-row">
+          <span class="grand-label">Total Visit Amount</span>
+          <span class="grand-amount">₹{{ totalVisitAmount | number }}</span>
+        </div>
+      </div>
+
+      <!-- Section C: Rescheduled Origin -->
+      <div *ngIf="appointment.rescheduledFromAppointmentId" class="inline-alert alert-info">
+        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="23 4 23 10 17 10" />
+          <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+        </svg>
+        <span>Rescheduled from #{{ appointment.rescheduledFromAppointmentId }}</span>
+      </div>
+
+      <!-- Section D: Reschedule Proposed -->
+      <div *ngIf="isRescheduleProposed && appointment.proposedDate" class="inline-alert alert-amber">
+        <div class="alert-top">
+          <strong>Proposed Reschedule:</strong>
+          <span>{{ appointment.proposedDate | appDate }} ({{ appointment.proposedStartTime | appTime }} – {{
+            appointment.proposedEndTime | appTime }})</span>
+        </div>
+        <div *ngIf="appointment.rescheduleNotes" class="alert-note">
+          "{{ appointment.rescheduleNotes }}"
+        </div>
+      </div>
+
+      <!-- Section E: Cancellation Reason -->
+      <div *ngIf="isCancelled || appointment.cancellationReason" class="inline-alert alert-rose">
+        <div class="alert-top">
+          <span class="rose-bold">Cancelled:</span>
+          <span>{{ appointment.cleanCancellationReason || appointment.cancellationReason || 'No notes' }}</span>
+        </div>
+        <div *ngIf="appointment.cancelledByName || appointment.cancelledAt" class="alert-sub">
+          <span *ngIf="appointment.cancelledByName">By {{ appointment.cancelledByName }}</span>
+          <span *ngIf="appointment.cancelledAt">• {{ appointment.cancelledAt | appDate }}</span>
+        </div>
+      </div>
+
+      <!-- Section F: Booking Notes -->
+      <div *ngIf="getCleanReason(appointment.reason)" class="compact-card notes-strip">
+        <span class="notes-label">Notes:</span>
+        <span class="notes-val">{{ getCleanReason(appointment.reason) }}</span>
+      </div>
+
+    </div>
+
+    <!-- 4. Slim Compact Action Footer -->
+    <div *ngIf="showActions" class="drawer-footer">
+      <button type="button" class="btn-compact btn-ghost" (click)="closeDrawer()">
+        Close
+      </button>
+
+      <div class="footer-actions-group">
+        <ng-container *ngIf="effectiveCanManage">
+          <!-- Approve Button (when pending) -->
+          <button *ngIf="isPending && !isPast" type="button" class="btn-compact btn-approve" (click)="triggerApprove()"
+            title="Approve">
+            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+            <span>Approve</span>
+          </button>
+
+          <!-- Complete Button (when confirmed & within 30m of service end time) -->
+          <button *ngIf="canComplete" type="button" class="btn-compact btn-complete" (click)="triggerComplete()"
+            title="Mark Completed">
+            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+              <polyline points="22 4 12 14.01 9 11.01" />
+            </svg>
+            <span>Complete</span>
+          </button>
+
+          <!-- Reschedule Button -->
+          <button *ngIf="canModify" type="button" class="btn-compact btn-outline-primary" (click)="triggerReschedule()"
+            title="Reschedule Slot">
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67" />
+            </svg>
+            <span>Reschedule</span>
+          </button>
+
+          <!-- Cancel Button -->
+          <button *ngIf="canCancel" type="button" class="btn-compact btn-outline-danger" (click)="triggerCancel()"
+            title="Cancel Booking">
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="15" y1="9" x2="9" y2="15" />
+              <line x1="9" y1="9" x2="15" y2="15" />
+            </svg>
+            <span>Cancel</span>
+          </button>
+        </ng-container>
+      </div>
+    </div>
+
+  </div>
+</div>

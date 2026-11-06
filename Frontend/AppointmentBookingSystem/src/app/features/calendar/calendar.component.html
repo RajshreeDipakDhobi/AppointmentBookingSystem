@@ -91,8 +91,8 @@
 
     <!-- Right Controls: Service Providers Dropdown & New Booking -->
     <div class="header-right-controls">
-      <!-- Custom Glassmorphism Provider Dropdown Filter (Multi-Select) -->
-      <div class="custom-select-anchor provider-select-anchor" [class.menu-open]="isProviderDropdownOpen"
+      <!-- Custom Glassmorphism Provider Dropdown Filter (Multi-Select, shown only for Admin who can view all providers) -->
+      <div *ngIf="calendarPermissions().canViewAllProviders" class="custom-select-anchor provider-select-anchor" [class.menu-open]="isProviderDropdownOpen"
         [class.has-selection]="hasProviderFilter()">
         <button type="button" class="custom-select-trigger" (click)="toggleProviderDropdown($event)"
           [title]="'Filter by specialist: ' + selectedProvidersLabel()" aria-haspopup="listbox"
@@ -245,9 +245,30 @@
 
 
 
+      <!-- Service Provider Dispatch Shortcut (Only visible to Specialist when requests available) -->
+      <button *ngIf="isServiceProvider && incomingRequests().length > 0" type="button"
+        class="btn-dispatch-round animate-fade-in" (click)="openDispatchModal()"
+        [title]="incomingRequests().length + ' incoming service request(s) available'">
+        <span class="dispatch-count">{{ incomingRequests().length }}</span>
+      </button>
+
+      <!-- Book Appointment Button (Icon Only - Clean Vector SVG) -->
+      <button *ngIf="calendarPermissions().canBook" type="button" class="btn-icon-book" (click)="openNewBooking()"
+        title="Book Appointment" aria-label="Book Appointment">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M8 2v4" />
+          <path d="M16 2v4" />
+          <rect width="18" height="18" x="3" y="4" rx="2" />
+          <path d="M3 10h18" />
+          <path d="M10 16h4" />
+          <path d="M12 14v4" />
+        </svg>
+      </button>
+
       <!-- Live Sync / Refresh Button -->
       <button type="button" class="btn-icon-sync" (click)="fetchAppointments()" [disabled]="isLoading()"
-        title="Sync Schedule">
+        title="Sync Schedule" aria-label="Sync Schedule">
         <svg [class.spin]="isLoading()" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
           fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
           <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2" />
@@ -256,8 +277,8 @@
     </div>
   </header>
 
-  <!-- Mobile Quick Provider Tabs (visible on mobile only) -->
-  <div class="mobile-specialist-bar" *ngIf="providers().length > 0">
+  <!-- Mobile Quick Provider Tabs (visible on mobile only when multiple providers are viewable) -->
+  <div class="mobile-specialist-bar" *ngIf="calendarPermissions().canViewAllProviders && providers().length > 1">
     <div class="specialist-chips-row">
       <button *ngFor="let p of displayedProviders()" type="button" class="specialist-chip"
         [class.active]="currentMobileProvider()?.id === p.id" (click)="setMobileProvider(p.id)">
@@ -387,7 +408,7 @@
               <!-- Day Off Centered Indicator if Provider is not available today (matches screenshot) -->
               <div *ngIf="!isProviderAvailableToday(provider.id)" class="provider-day-off-container"
                 (click)="onDayOffClick(provider, $event)"
-                [title]="provider.name + ' is on Day Off today (' + getSelectedDayName() + ') - Booking unavailable'">
+                [title]="getDayOffTooltip(provider)">
                 <div class="day-off-center-card">
                   <div class="day-off-icon-circle">
                     <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none"
@@ -418,45 +439,63 @@
                 </div>
               </div>
 
-              <!-- Live Positioned Appointment Cards (Matches Screenshot with 3-Row Layout) -->
+              <!-- Live Positioned Appointment Cards (Matches Screenshot with 3-Row Layout + Dispatch Acceptance Support) -->
               <div *ngFor="let item of getAppointmentsForProvider(provider.id); trackBy: trackByAppointmentId"
-                class="schedule-appointment-card animate-scale-in" [style.top.px]="item.top"
+                class="schedule-appointment-card animate-scale-in"
+                [class.card-broadcast-request]="item.appointment.isBroadcastRequest"
+                [style.top.px]="item.top"
                 [style.height.px]="item.height" [style.left]="'calc(' + item.leftPercent + '% + 5px)'"
                 [style.width]="'calc(' + item.widthPercent + '% - 10px)'" [style.z-index]="item.zIndex"
-                [style.background]="item.theme.cardBg" [style.border-color]="item.theme.cardBorder"
-                [style.border-left-color]="item.theme.dot" [style.color]="item.theme.textColor"
-                (click)="viewAppointment(item.appointment, $event)">
+                [style.background]="item.appointment.isBroadcastRequest ? '#fffbeb' : item.theme.cardBg"
+                [style.border-color]="item.appointment.isBroadcastRequest ? '#f59e0b' : item.theme.cardBorder"
+                [style.border-left-color]="item.appointment.isBroadcastRequest ? '#d97706' : item.theme.dot"
+                [style.color]="item.theme.textColor"
+                (click)="onCardClick(item.appointment, $event)">
 
                 <div class="card-top-layout">
-                  <!-- User Avatar Icon Circle -->
-                  <div class="card-user-circle" [style.color]="item.theme.serviceColor">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none"
+                  <!-- User Avatar Icon Circle / Zap Icon for broadcast -->
+                  <div class="card-user-circle" [style.color]="item.appointment.isBroadcastRequest ? '#d97706' : item.theme.serviceColor"
+                    [style.background]="item.appointment.isBroadcastRequest ? '#fef3c7' : ''">
+                    <svg *ngIf="!item.appointment.isBroadcastRequest" xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none"
                       stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
                       <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
                       <circle cx="12" cy="7" r="4"></circle>
+                    </svg>
+                    <!-- Zap Icon for incoming broadcast request -->
+                    <svg *ngIf="item.appointment.isBroadcastRequest" xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none"
+                      stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                      <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
                     </svg>
                   </div>
 
                   <!-- Details stack: Name, Service, Time -->
                   <div class="card-details-stack">
-                    <span class="card-client-name" [title]="item.appointment.customerName">{{
-                      item.appointment.customerName }}</span>
-                    <span class="card-service-name" [style.color]="item.theme.serviceColor"
+                    <div class="card-name-row">
+                      <span class="card-client-name" [title]="item.appointment.customerName">{{ item.appointment.customerName }}</span>
+                      <span *ngIf="item.appointment.isBroadcastRequest" class="badge-request-pill">Request</span>
+                    </div>
+                    <span class="card-service-name" [style.color]="item.appointment.isBroadcastRequest ? '#b45309' : item.theme.serviceColor"
                       [title]="(item.appointment.serviceNames && item.appointment.serviceNames.length > 1) ? item.appointment.serviceNames.join(' + ') : (item.appointment.reason || item.appointment.serviceName || item.appointment.serviceProviderType)">
                       {{ (item.appointment.serviceNames && item.appointment.serviceNames.length > 1) ? item.appointment.serviceNames.join(' + ') : (item.appointment.reason || item.appointment.serviceName || item.appointment.serviceProviderType || 'Consultation') }}
                     </span>
-                    <span class="card-time-range" [style.color]="item.theme.timeTagText">
+                    <span class="card-time-range" [style.color]="item.appointment.isBroadcastRequest ? '#b45309' : item.theme.timeTagText">
                       {{ formatAppointmentTimeRange(item.appointment.startTime, item.appointment.endTime) }}
                     </span>
                   </div>
                 </div>
 
-                <!-- Status Badge (Bottom-Right matching screenshot) -->
-                <span class="card-status-badge" [class.status-confirmed]="isStatusConfirmed(item.appointment.status)"
+                <!-- Status Badge for normal appointment -->
+                <span *ngIf="!item.appointment.isBroadcastRequest" class="card-status-badge" [class.status-confirmed]="isStatusConfirmed(item.appointment.status)"
                   [class.status-booked]="isStatusBooked(item.appointment.status)"
                   [class.status-pending]="isStatusPending(item.appointment.status)"
                   [class.status-cancelled]="isStatusCancelled(item.appointment.status)">
                   {{ getAppointmentStatusLabel(item.appointment) }}
+                </span>
+
+                <!-- Action Badge for Acceptance Request -->
+                <span *ngIf="item.appointment.isBroadcastRequest" class="card-status-badge status-accept-request">
+                  <span class="pulse-beacon"></span>
+                  <span>Review & Accept</span>
                 </span>
 
               </div>
@@ -495,137 +534,17 @@
 </div>
 
 <!-- ========================================================================= -->
-<!-- SCREEN-CENTERED MODALS & DETAILS DRAWER (OUTSIDE schedule-app-container)  -->
+<!-- APPOINTMENT DETAILS SIDE DRAWER (STANDALONE REUSABLE COMPONENT)           -->
 <!-- ========================================================================= -->
-<div *ngIf="selectedAppointmentForDetail() as apt" class="modal-backdrop screen-centered-backdrop animate-fade-in">
-  <div class="appointment-detail-sheet animate-scale-up">
-    <!-- Decorative Luxury Top Gradient Shimmer -->
-    <div class="sheet-top-accent"></div>
-
-    <div class="sheet-header">
-      <div class="sheet-header-title">
-        <span class="sheet-apt-num">#{{ apt.appointmentNumber }}</span>
-        <h3>Appointment Details</h3>
-      </div>
-      <button type="button" class="btn-close-sheet" (click)="closeDetails()" title="Close details">
-        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
-          stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="18" y1="6" x2="6" y2="18" />
-          <line x1="6" y1="6" x2="18" y2="18" />
-        </svg>
-      </button>
-    </div>
-
-    <div class="sheet-body">
-      <!-- Status & Time Badge Row -->
-      <div class="sheet-meta-strip">
-        <span class="status-badge" [class]="getStatusBadgeClass(apt.status)">
-          <span class="status-dot-pulse"></span>
-          {{ getStatusLabel(apt.status) }}
-        </span>
-        <div class="meta-time-chip">
-          <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none"
-            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-            <line x1="16" y1="2" x2="16" y2="6"></line>
-            <line x1="8" y1="2" x2="8" y2="6"></line>
-            <line x1="3" y1="10" x2="21" y2="10"></line>
-          </svg>
-          <span class="meta-date">{{ apt.appointmentDate | appDate }}</span>
-          <span class="meta-sep">•</span>
-          <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none"
-            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="10"></circle>
-            <polyline points="12 6 12 12 16 14"></polyline>
-          </svg>
-          <span class="meta-time">{{ apt.startTime | appTime }} – {{ apt.endTime | appTime }}</span>
-        </div>
-      </div>
-
-      <!-- Customer Card -->
-      <div class="detail-card client-detail-card">
-        <div class="avatar-ring" [style.background]="getAvatarGradient(apt.customerName)">
-          {{ getInitials(apt.customerName) }}
-        </div>
-        <div class="client-info">
-          <span class="client-label-sub">Client / Customer</span>
-          <h4 class="client-name-lg">{{ apt.customerName }}</h4>
-          <div class="client-contacts">
-            <a *ngIf="apt.customerPhone" [href]="'tel:' + apt.customerPhone" class="contact-item contact-chip"
-              title="Call Client">
-              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none"
-                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path
-                  d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
-              </svg>
-              <span>{{ apt.customerPhone | appPhone }}</span>
-            </a>
-            <a *ngIf="apt.customerEmail" [href]="'mailto:' + apt.customerEmail" class="contact-item contact-chip"
-              title="Email Client">
-              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none"
-                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
-                <polyline points="22,6 12,13 2,6" />
-              </svg>
-              <span>{{ apt.customerEmail }}</span>
-            </a>
-          </div>
-        </div>
-      </div>
-
-      <!-- Appointment Info Grid -->
-      <div class="sheet-info-grid">
-        <div class="info-cell">
-          <div class="info-cell-header">
-            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none"
-              stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="cell-icon">
-              <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
-            </svg>
-            <span class="info-label">Service / Treatment</span>
-          </div>
-          <span class="info-val font-semibold">{{ (apt.serviceNames && apt.serviceNames.length > 1) ? apt.serviceNames.join(' + ') : (apt.serviceName || apt.serviceProviderType || 'General Consultation') }}</span>
-        </div>
-
-        <div class="info-cell">
-          <div class="info-cell-header">
-            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none"
-              stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="cell-icon">
-              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-              <circle cx="12" cy="7" r="4" />
-            </svg>
-            <span class="info-label">Assigned Specialist</span>
-          </div>
-          <div class="specialist-inline-val">
-            <span class="sheet-avatar-circle"
-              [style.background]="apt.serviceProviderProfilePictureUrl ? 'transparent' : getAvatarGradient(apt.serviceProviderName)">
-              <img *ngIf="apt.serviceProviderProfilePictureUrl" [src]="apt.serviceProviderProfilePictureUrl"
-                [alt]="apt.serviceProviderName" class="sheet-avatar-img"
-                (error)="apt.serviceProviderProfilePictureUrl = undefined" />
-              <span *ngIf="!apt.serviceProviderProfilePictureUrl">{{ getInitials(apt.serviceProviderName) }}</span>
-            </span>
-            <span class="info-val font-semibold">{{ apt.serviceProviderName }}</span>
-          </div>
-        </div>
-
-        <div class="info-cell full-width" *ngIf="apt.reason">
-          <div class="info-cell-header">
-            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none"
-              stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="cell-icon">
-              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-            </svg>
-            <span class="info-label">Notes & Reason</span>
-          </div>
-          <span class="info-val info-reason-text">{{ apt.reason }}</span>
-        </div>
-      </div>
-
-      <!-- Action Buttons Footer (Admin Dashboard: Read-only monitoring view - Service Provider manages lifecycle/approvals) -->
-      <div class="sheet-actions-row">
-        <button type="button" class="btn-action btn-outline" (click)="closeDetails()">Close</button>
-      </div>
-    </div>
-  </div>
-</div>
+<app-appointment-detail-drawer
+  *ngIf="selectedAppointmentForDetail() as apt"
+  [appointment]="apt"
+  [canManage]="calendarPermissions().canManageAppointments && (apt.canManage ?? true)"
+  (close)="closeDetails()"
+  (reschedule)="openRescheduleModal($event)"
+  (cancel)="openCancelModal($event)"
+  (approve)="approveAppointment($event)">
+</app-appointment-detail-drawer>
 
 <!-- Reschedule Modal -->
 <app-reschedule-modal *ngIf="selectedAppointmentForReschedule() as reschApt" [appointment]="reschApt"
@@ -641,3 +560,12 @@
 <app-booking-modal *ngIf="isBookingModalOpen()" [initialProviderId]="bookingPrefillProviderId"
   [initialDate]="bookingPrefillDate" (close)="onBookingClosed()" (booked)="onAppointmentBooked($event)">
 </app-booking-modal>
+
+<!-- Service Dispatch Opportunities Modal (Specialist Acceptance Modal) -->
+<app-service-dispatch-modal
+  *ngIf="isServiceProvider && showDispatchModal()"
+  [requests]="incomingRequests()"
+  [selectedRequest]="selectedDispatchRequest()"
+  (close)="closeDispatchModal()"
+  (accepted)="onDispatchAccepted($event)">
+</app-service-dispatch-modal>

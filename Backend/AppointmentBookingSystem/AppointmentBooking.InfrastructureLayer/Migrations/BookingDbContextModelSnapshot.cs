@@ -41,6 +41,10 @@ namespace AppointmentBooking.InfrastructureLayer.Migrations
                     b.Property<DateTime?>("ApprovedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("BookingGroupId")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
                     b.Property<string>("CancellationReason")
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
@@ -136,6 +140,8 @@ namespace AppointmentBooking.InfrastructureLayer.Migrations
 
                     b.HasIndex("AppointmentNumber")
                         .IsUnique();
+
+                    b.HasIndex("BookingGroupId");
 
                     b.HasIndex("RescheduledFromAppointmentId");
 

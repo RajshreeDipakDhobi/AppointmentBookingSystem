@@ -273,6 +273,44 @@ export function canCancelAppointment(apt: AppointmentDto | null | undefined): bo
 }
 
 /**
+ * Completion Policy: Service Providers can only mark an appointment as Complete
+ * starting 30 minutes before the scheduled service End Time, or anytime after.
+ */
+export function canCompleteAppointment(apt: AppointmentDto | null | undefined): boolean {
+  if (!apt) return false;
+  if (apt.status !== AppointmentStatus.Approved) return false;
+
+  const rawDate: any = apt.appointmentDate;
+  let year = 0, month = 0, day = 0;
+
+  if (typeof rawDate === 'string') {
+    const parts = rawDate.split('T')[0].split('-').map(Number);
+    year = parts[0];
+    month = parts[1];
+    day = parts[2];
+  } else if (rawDate instanceof Date) {
+    year = rawDate.getFullYear();
+    month = rawDate.getMonth() + 1;
+    day = rawDate.getDate();
+  }
+  if (!year || !month || !day) return false;
+
+  let endHour = 0, endMinute = 0;
+  if (apt.endTime) {
+    const timeParts = apt.endTime.split(':').map(Number);
+    endHour = timeParts[0] ?? 0;
+    endMinute = timeParts[1] ?? 0;
+  }
+
+  const appointmentEnd = new Date(year, month - 1, day, endHour, endMinute, 0);
+  const now = new Date();
+
+  // Threshold: 30 minutes before the scheduled service End Time
+  const thirtyMinutesBeforeEnd = new Date(appointmentEnd.getTime() - 30 * 60 * 1000);
+  return now.getTime() >= thirtyMinutesBeforeEnd.getTime();
+}
+
+/**
  * Standard Service & Slot Duration Options across the application
  */
 export interface DurationOption {

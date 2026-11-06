@@ -1233,11 +1233,7 @@ export class BookingModalComponent implements OnInit {
           return;
         }
 
-        // Auto-select provider's services only if a provider was pre-loaded from outside and user is not service provider
-        if (!this.authService.isServiceProvider() && this.selectedProvider && this.selectedServiceIds().length === 0) {
-          this.autoSelectProviderServices(this.selectedProvider);
-        }
-
+        // Do NOT auto-select provider services arbitrarily if user hasn't added them to cart
         if (this.selectedServiceIds().length > 0) {
           const firstId = this.selectedServiceIds()[0];
           const match = list.find(s => s.id === Number(firstId));
@@ -1533,9 +1529,6 @@ export class BookingModalComponent implements OnInit {
           if (match) {
             this.selectedProviderId = match.id;
             this.selectedProvider = match;
-            if (!this.authService.isServiceProvider()) {
-              this.autoSelectProviderServices(match);
-            }
             if (this.currentStep === 2) {
               this.fetchSlots();
             }

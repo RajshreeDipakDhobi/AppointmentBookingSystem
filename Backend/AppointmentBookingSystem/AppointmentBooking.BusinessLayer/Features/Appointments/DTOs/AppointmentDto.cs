@@ -7,6 +7,7 @@ public class AppointmentDto
     public int Id { get; set; }
     public int TenantId { get; set; }
     public string AppointmentNumber { get; set; } = string.Empty;
+    public string? BookingGroupId { get; set; }
 
     public int? ServiceProviderId { get; set; }
     public string ServiceProviderName { get; set; } = string.Empty;

@@ -1170,6 +1170,9 @@ public class AppointmentService : IAppointmentService
         {
             int legIndex = 0;
             int totalLegs = request.Legs.Count;
+            var sharedBookingGroupId = totalLegs > 1 
+                ? $"GRP-{DateTime.UtcNow:yyyyMMdd}-{Guid.NewGuid().ToString("N")[..8].ToUpper()}" 
+                : null;
 
             foreach (var leg in request.Legs)
             {
@@ -1245,6 +1248,7 @@ public class AppointmentService : IAppointmentService
                 {
                     TenantId = resolvedTenantId,
                     AppointmentNumber = appointmentNumber,
+                    BookingGroupId = sharedBookingGroupId,
                     ServiceProviderId = isDirect ? leg.ServiceProviderId : null,
                     ServiceId = primaryLegService.Id,
                     CustomerId = customerId.Value,
@@ -2043,6 +2047,16 @@ public class AppointmentService : IAppointmentService
                 return ApiResponse<AppointmentDto>.Fail("A completed appointment cannot be reopened.");
             }
 
+            if (request.Status == AppointmentStatus.Completed && !isAdmin)
+            {
+                var now = _dateTimeProvider.GetCurrentLocalTime();
+                var appointmentEndDateTime = appointment.AppointmentDate.Date.Add(appointment.EndTime);
+                if (now < appointmentEndDateTime.AddMinutes(-30))
+                {
+                    return ApiResponse<AppointmentDto>.Fail("Appointments can only be marked as completed within 30 minutes of the service end time or after completion.");
+                }
+            }
+
             if (request.Status == AppointmentStatus.Cancelled || request.Status == AppointmentStatus.RescheduleProposed)
             {
                 var now = _dateTimeProvider.GetCurrentLocalTime();
@@ -2281,6 +2295,14 @@ public class AppointmentService : IAppointmentService
         }
     }
 
+    public async Task<int?> GetProviderIdByUserIdAsync(int userId, CancellationToken cancellationToken = default)
+    {
+        var provider = await _unitOfWork.Repository<ServiceProvider>().Query()
+            .AsNoTracking()
+            .FirstOrDefaultAsync(p => p.UserId == userId && !p.IsDeleted, cancellationToken);
+        return provider?.Id;
+    }
+
     public async Task<List<AppointmentDto>> GetIncomingBroadcastRequestsAsync(
         int? providerId, 
         int? tenantId, 
@@ -2329,13 +2351,15 @@ public class AppointmentService : IAppointmentService
                 assignedServiceIds.Add(provider.ServiceId.Value);
             }
 
-            if (assignedServiceIds.Count > 0)
+            if (assignedServiceIds.Count == 0)
             {
-                query = query.Where(a => 
-                    (a.Items.Any() && a.Items.Any(i => assignedServiceIds.Contains(i.ServiceId)))
-                    || (!a.Items.Any() && a.ServiceId.HasValue && assignedServiceIds.Contains(a.ServiceId.Value))
-                );
+                return new List<AppointmentDto>();
             }
+
+            query = query.Where(a => 
+                (a.Items.Any() && a.Items.All(i => assignedServiceIds.Contains(i.ServiceId)))
+                || (!a.Items.Any() && a.ServiceId.HasValue && assignedServiceIds.Contains(a.ServiceId.Value))
+            );
 
             // Fetch provider's active bookings to avoid showing conflicting slots
             var providerBookings = await _unitOfWork.Repository<Appointment>().Query()
@@ -2351,9 +2375,22 @@ public class AppointmentService : IAppointmentService
                 .ThenBy(a => a.StartTime)
                 .ToListAsync(cancellationToken);
 
-            // Filter out past slots for today and any slots where provider is already busy
+            // Filter out requests whose services this provider cannot perform,
+            // filter out past slots for today, and any slots where provider is already busy
             var validRequests = openRequests.Where(a =>
             {
+                var reqSvcIds = a.Items?.Select(i => i.ServiceId).Where(id => id > 0).Distinct().ToList() ?? new List<int>();
+                if (reqSvcIds.Count == 0 && a.ServiceId.HasValue && a.ServiceId.Value > 0)
+                {
+                    reqSvcIds.Add(a.ServiceId.Value);
+                }
+
+                // Provider MUST be able to perform ALL services in this request
+                if (reqSvcIds.Count == 0 || !reqSvcIds.All(id => assignedServiceIds.Contains(id)))
+                {
+                    return false;
+                }
+
                 if (a.AppointmentDate.Date == today && a.StartTime <= nowTime)
                     return false;
 
@@ -2451,12 +2488,10 @@ public class AppointmentService : IAppointmentService
             if (appointment.Items != null && appointment.Items.Count > 0)
             {
                 bool isQualifiedForAll = appointment.Items.All(item => assignedServiceIds.Contains(item.ServiceId));
-                bool isQualifiedForAny = appointment.Items.Any(item => assignedServiceIds.Contains(item.ServiceId));
-                bool isSameTenant = provider.TenantId == appointment.TenantId;
-                if (!isQualifiedForAll && !isQualifiedForAny && !isSameTenant)
+                if (!isQualifiedForAll)
                 {
                     await _unitOfWork.RollbackTransactionAsync();
-                    return ApiResponse<AppointmentDto>.Fail("You are not certified to perform services requested in this appointment.");
+                    return ApiResponse<AppointmentDto>.Fail("You are not certified to perform all services requested in this appointment.");
                 }
             }
             else if (appointment.ServiceId.HasValue)
@@ -2464,7 +2499,7 @@ public class AppointmentService : IAppointmentService
                 if (!assignedServiceIds.Contains(appointment.ServiceId.Value))
                 {
                     await _unitOfWork.RollbackTransactionAsync();
-                    return ApiResponse<AppointmentDto>.Fail("You are not assigned to perform this service category.");
+                    return ApiResponse<AppointmentDto>.Fail("You are not certified to perform the service requested in this appointment.");
                 }
             }
 

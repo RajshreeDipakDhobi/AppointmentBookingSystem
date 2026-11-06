@@ -158,10 +158,12 @@
                 <span class="date-text">{{ tenant.createdAt | date:'MMM d, y' }}</span>
               </td>
               <td class="text-right">
-                <button type="button" class="btn-action btn-view" (click)="openViewModal(tenant)" title="View Organization Profile">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
-                    <circle cx="12" cy="12" r="3"/>
+                <button type="button" class="btn-action btn-view" (click)="openViewModal(tenant)"
+                  title="View Organization Profile">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+                    <circle cx="12" cy="12" r="3" />
                   </svg>
                   <span>View</span>
                 </button>
@@ -183,10 +185,10 @@
     </div>
   </ng-container>
 
-  <!-- Tenant Admin Operational Dashboard: Microsoft Teams-Style Full-Screen Calendar Hub with Full Summary -->
-  <ng-container *ngIf="isTenantAdmin">
+  <!-- Operational Dashboard (Admin & Service Provider): Full-Screen Calendar Hub with Summary Strip -->
+  <ng-container *ngIf="isTenantAdmin || isServiceProvider">
     <!-- Compact Operational Metrics Summary Strip -->
-    <div class="admin-summary-strip">
+    <div class="admin-summary-strip" *ngIf="!isServiceProvider">
       <!-- 1. Total Appointments -->
       <div class="admin-summary-card card-total">
         <div class="summary-icon-mini icon-emerald">
@@ -270,9 +272,7 @@
     (saved)="onTenantSaved($event)"></app-tenant-modal>
 
   <!-- View Tenant Profile Modal -->
-  <app-tenant-profile-modal 
-    [isOpen]="isProfileModalOpen()" 
-    [tenant]="selectedTenantForView()" 
+  <app-tenant-profile-modal [isOpen]="isProfileModalOpen()" [tenant]="selectedTenantForView()"
     (close)="onProfileModalClose()">
   </app-tenant-profile-modal>
 </div>

@@ -42,6 +42,7 @@ export interface AppointmentDto {
   id: number;
   tenantId: number;
   appointmentNumber: string;
+  bookingGroupId?: string;
   serviceProviderId: number | null;
   serviceProviderName: string;
   serviceProviderType: string;
@@ -55,6 +56,7 @@ export interface AppointmentDto {
   serviceNames?: string[];
   items?: AppointmentItemDto[];
   isBroadcast?: boolean;
+  isBroadcastRequest?: boolean;
   isExpired?: boolean;
   isAcceptanceWindowActive?: boolean;
   remainingSeconds?: number;
@@ -71,6 +73,7 @@ export interface AppointmentDto {
   timeSlotText: string;
   status: AppointmentStatus;
   statusText: string;
+  canManage?: boolean;
   approvedAt?: string;
   rejectedAt?: string;
   rejectionReason?: string;

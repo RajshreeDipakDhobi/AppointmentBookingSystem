@@ -10,6 +10,7 @@ import interactionPlugin, { DateClickArg } from '@fullcalendar/interaction';
 import { AppointmentService, AppointmentFilterParams } from '../../core/services/appointment.service';
 import { ProviderService } from '../../core/services/provider.service';
 import { AvailabilityService } from '../../core/services/availability.service';
+import { CalendarService } from '../../core/services/calendar.service';
 import { AuthService } from '../../core/services/auth.service';
 import { ConfirmService } from '../../shared/components/confirmation-modal/confirm.service';
 
@@ -19,13 +20,15 @@ import {
 } from '../../core/models/appointment.models';
 import { ServiceProviderDto, ProviderStatus } from '../../core/models/provider.models';
 import { ProviderScheduleOverviewItemDto, DayScheduleSummaryDto } from '../../core/models/availability.models';
+import { CalendarFilterParams, CalendarPermissions } from '../../core/models/calendar.models';
 
 import { RescheduleModalComponent } from '../appointments/reschedule-modal/reschedule-modal.component';
 import { CancelModalComponent } from '../appointments/cancel-modal/cancel-modal.component';
 import { BookingModalComponent } from '../appointments/booking-modal/booking-modal.component';
+import { AppointmentDetailDrawerComponent } from '../appointments/appointment-detail-drawer/appointment-detail-drawer.component';
+import { ServiceDispatchModalComponent } from '../appointments/service-dispatch-modal/service-dispatch-modal.component';
 
-import { AppDatePipe, AppTimePipe, AppPhonePipe } from '../../shared/pipes';
-import { getAvatarGradient, getInitials, isAppointmentPast, canModifyAppointment, canCancelAppointment, APPOINTMENT_STATUS_MAP } from '../../core/constants/app.constants';
+import { getAvatarGradient, getInitials, isAppointmentPast, canModifyAppointment, canCancelAppointment, APPOINTMENT_STATUS_MAP, parseServerUtcDate } from '../../core/constants/app.constants';
 import { MatDatepickerModule, MatDatepickerInputEvent } from '@angular/material/datepicker';
 import { provideNativeDateAdapter } from '@angular/material/core';
 
@@ -71,9 +74,8 @@ export interface PositionedAppointment {
     RescheduleModalComponent,
     CancelModalComponent,
     BookingModalComponent,
-    AppDatePipe,
-    AppTimePipe,
-    AppPhonePipe
+    AppointmentDetailDrawerComponent,
+    ServiceDispatchModalComponent
   ],
   providers: [
     provideNativeDateAdapter()
@@ -91,6 +93,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
   private readonly appointmentService = inject(AppointmentService);
   private readonly providerService = inject(ProviderService);
   private readonly availabilityService = inject(AvailabilityService);
+  private readonly calendarService = inject(CalendarService);
   private readonly authService = inject(AuthService);
   private readonly confirmService = inject(ConfirmService);
 
@@ -100,6 +103,14 @@ export class CalendarComponent implements OnInit, OnDestroy {
   readonly canModify = canModifyAppointment;
   readonly canCancel = canCancelAppointment;
   readonly AppointmentStatus = AppointmentStatus;
+
+  // Dedicated Calendar Permissions
+  readonly calendarPermissions = signal<CalendarPermissions>({
+    canViewAllProviders: true,
+    canBook: true,
+    canManageAppointments: false,
+    canEditAvailability: false
+  });
 
   // View Mode: 'day' (Resource Grid) | 'week' | 'month' (FullCalendar)
   readonly activeView = signal<'day' | 'week' | 'month'>('day');
@@ -473,14 +484,25 @@ export class CalendarComponent implements OnInit, OnDestroy {
   readonly selectedAppointmentForReschedule = signal<AppointmentDto | null>(null);
   readonly selectedAppointmentForCancel = signal<AppointmentDto | null>(null);
 
+  // Service Dispatch Acceptance Modal (Specialist Only)
+  readonly showDispatchModal = signal<boolean>(false);
+  readonly selectedDispatchRequest = signal<AppointmentDto | null>(null);
+  readonly incomingRequests = signal<AppointmentDto[]>([]);
+
+  get isServiceProvider(): boolean {
+    const user = this.authService.currentUser();
+    if (!user) return false;
+    return user.role === 3 || (user.role as unknown) === '3' || user.roleName === 'ServiceProvider';
+  }
+
   // New Booking Modal
   readonly isBookingModalOpen = signal<boolean>(false);
   bookingPrefillProviderId: number | null = null;
   bookingPrefillDate: string = '';
 
-  // Time Axis Config (Strictly 10:00 AM to 05:00 PM matching clinic availability)
+  // Time Axis Config (Strictly matching active provider availability)
   readonly startHour = signal<number>(10);
-  readonly endHour = signal<number>(18);
+  readonly endHour = signal<number>(17);
   readonly slotHeight = 78;
 
   // Computed Dynamic Slots List based on startHour & endHour
@@ -598,7 +620,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
     dayMaxEvents: 3,
     allDaySlot: false,
     slotMinTime: '10:00:00',
-    slotMaxTime: '18:00:00',
+    slotMaxTime: '17:00:00',
     slotDuration: '00:30:00',
     slotLabelInterval: '00:30:00',
     slotLabelFormat: {
@@ -638,6 +660,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
     dateClick: (arg: DateClickArg) => {
       this.selectedDate.set(arg.dateStr.split('T')[0]);
       this.activeView.set('day');
+      this.fetchAppointments();
     },
     eventClick: (arg: EventClickArg) => {
       const target = arg.jsEvent?.target as HTMLElement | undefined;
@@ -651,20 +674,33 @@ export class CalendarComponent implements OnInit, OnDestroy {
         const aptId = Number(aptCard.getAttribute('data-apt-id'));
         const found = this.allAppointments().find(a => a.id === aptId);
         if (found) {
-          this.selectedAppointmentForDetail.set(found);
+          if (found.isBroadcastRequest || found.isBroadcast) {
+            this.openDispatchModal(found);
+          } else {
+            this.viewAppointment(found);
+          }
           return;
         }
       }
 
       const cluster = arg.event.extendedProps['cluster'] as AppointmentDto[];
       if (cluster && cluster.length > 0) {
-        this.selectedAppointmentForDetail.set(cluster[0]);
+        const first = cluster[0];
+        if (first.isBroadcastRequest || first.isBroadcast) {
+          this.openDispatchModal(first);
+        } else {
+          this.viewAppointment(first);
+        }
         return;
       }
 
       const apt = arg.event.extendedProps['appointment'] as AppointmentDto;
       if (apt) {
-        this.selectedAppointmentForDetail.set(apt);
+        if (apt.isBroadcastRequest || apt.isBroadcast) {
+          this.openDispatchModal(apt);
+        } else {
+          this.viewAppointment(apt);
+        }
       }
     },
     eventContent: (arg) => {
@@ -789,9 +825,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
   });
 
   ngOnInit(): void {
-    this.loadProviders();
-    this.loadAvailabilityOverview();
-    this.fetchAppointments();
+    this.loadCalendarSchedule();
     this.updateCurrentTimeIndicator();
 
     // Attach listener for week view drawer toggle & outside clicks
@@ -810,98 +844,182 @@ export class CalendarComponent implements OnInit, OnDestroy {
     }
   }
 
-  // --- Backend Data Loading ---
-  loadProviders(): void {
-    this.providerService.getActiveProviders().subscribe({
-      next: (res) => {
-        // Enforce only Active service providers are loaded
-        const activeList = (res || []).filter(p => p.status === ProviderStatus.Active || (p.status as any) === 1);
-        this.providers.set(activeList);
-        if (activeList.length > 0 && !this.selectedMobileProviderId()) {
-          this.selectedMobileProviderId.set(activeList[0].id);
-        }
-      },
-      error: () => this.providers.set([])
-    });
-  }
-
-  loadAvailabilityOverview(): void {
-    this.availabilityService.getAvailabilityOverview().subscribe({
-      next: (res) => {
-        if (!res || !res.providers) return;
-
-        const scheduleMap = new Map<number, ProviderScheduleOverviewItemDto>();
-        let minStartMins = 10 * 60;  // 10:00 AM
-        let maxEndMins = 17 * 60;   // 05:00 PM
-
-        for (const prov of res.providers) {
-          scheduleMap.set(prov.providerId, prov);
-
-          for (const day of prov.days) {
-            if (day.isAvailable && day.startTime && day.endTime) {
-              const sMins = this.parseTimeToMinutes(day.startTime);
-              const eMins = this.parseTimeToMinutes(day.endTime);
-
-              if (sMins < minStartMins && sMins >= 6 * 60) {
-                minStartMins = Math.floor(sMins / 60) * 60;
-              }
-              if (eMins > maxEndMins && eMins <= 23 * 60) {
-                maxEndMins = Math.ceil(eMins / 60) * 60;
-              }
-            }
-          }
-        }
-
-        this.providerSchedules.set(scheduleMap);
-        this.startHour.set(10);
-        this.endHour.set(18);
-
-        // Update FullCalendar slot bounds to match backend range
-        this.calendarOptions = {
-          ...this.calendarOptions,
-          slotMinTime: '10:00:00',
-          slotMaxTime: '18:00:00'
-        };
-
-        this.updateCurrentTimeIndicator();
-      },
-      error: (err) => {
-        console.warn('Availability overview not loaded, using fallback timetable.', err);
-      }
-    });
-  }
-
-  fetchAppointments(): void {
+  // --- Dedicated Independent Calendar Backend Data Loading ---
+  loadCalendarSchedule(): void {
     if (this.isLoading()) return;
     this.isLoading.set(true);
 
-    const curDate = new Date(this.selectedDate());
-    const start = new Date(curDate);
-    start.setDate(start.getDate() - 7);
-    const end = new Date(curDate);
-    end.setDate(end.getDate() + 14);
-
-    const filters: AppointmentFilterParams = {
-      pageNumber: 1,
-      pageSize: 150,
-      startDate: this.formatDateToString(start),
-      endDate: this.formatDateToString(end)
+    const filter: CalendarFilterParams = {
+      view: this.activeView(),
+      date: this.selectedDate(),
+      status: this.selectedStatus !== null ? this.selectedStatus : undefined,
+      searchQuery: this.searchQuery.trim() || undefined,
+      providerIds: this.selectedProviderIds().length > 0 ? this.selectedProviderIds().join(',') : undefined
     };
 
-    if (this.selectedStatus !== null) {
-      filters.status = this.selectedStatus;
-    }
-
-    if (this.searchQuery.trim()) {
-      filters.search = this.searchQuery.trim();
-    }
-
-    this.appointmentService.getAppointments(filters).subscribe({
+    this.calendarService.getCalendarSchedule(filter).subscribe({
       next: (res) => {
-        const items = res?.items || [];
-        this.allAppointments.set(items);
-        this.mapAppointmentsToCalendar(items);
+        if (!res) {
+          this.isLoading.set(false);
+          return;
+        }
+
+        // 1. Update Permissions
+        if (res.permissions) {
+          this.calendarPermissions.set(res.permissions);
+        }
+
+        // 2. Update Grid Bounds
+        if (res.gridStartHour && res.gridEndHour) {
+          this.startHour.set(res.gridStartHour);
+          this.endHour.set(res.gridEndHour);
+          this.calendarOptions = {
+            ...this.calendarOptions,
+            slotMinTime: `${String(res.gridStartHour).padStart(2, '0')}:00:00`,
+            slotMaxTime: `${String(res.gridEndHour).padStart(2, '0')}:00:00`
+          };
+        }
+
+        // 3. Map Providers for Columns & Dropdowns
+        const provList = (res.providers || []).map(p => ({
+          id: p.providerId,
+          userId: p.userId,
+          name: p.name,
+          email: p.email,
+          phoneNumber: p.phoneNumber,
+          profilePictureUrl: p.profilePictureUrl,
+          serviceType: p.specialistType,
+          status: p.status as ProviderStatus,
+          serviceId: (p as any).serviceId,
+          serviceIds: (p as any).serviceIds,
+          tenantId: res.tenantId
+        })) as unknown as ServiceProviderDto[];
+        this.providers.set(provList);
+        if (provList.length > 0 && !this.selectedMobileProviderId()) {
+          this.selectedMobileProviderId.set(provList[0].id);
+        }
+
+        // 4. Map Provider Schedules (Day Off, Working Hours, Lunch Breaks)
+        const scheduleMap = new Map<number, ProviderScheduleOverviewItemDto>();
+        const curDayOfWeek = this.getSelectedDayOfWeek();
+
+        for (const p of (res.providers || [])) {
+          const overviewDays = (p.days && p.days.length > 0)
+            ? p.days.map(d => ({
+                dayOfWeek: d.dayOfWeek,
+                dayName: d.dayName,
+                isAvailable: d.isAvailable,
+                startTime: d.startTime,
+                endTime: d.endTime,
+                breakStartTime: d.breakStartTime,
+                breakEndTime: d.breakEndTime,
+                slotDurationMinutes: d.slotDurationMinutes || 30
+              }))
+            : [{
+                dayOfWeek: curDayOfWeek,
+                dayName: this.getSelectedDayName(),
+                isAvailable: p.isAvailableToday,
+                startTime: p.startTime,
+                endTime: p.endTime,
+                breakStartTime: p.breakStartTime,
+                breakEndTime: p.breakEndTime,
+                slotDurationMinutes: 30
+              }];
+
+          const overviewItem = {
+            providerId: p.providerId,
+            providerName: p.name,
+            serviceName: p.specialistType || 'Specialist',
+            days: overviewDays
+          } as unknown as ProviderScheduleOverviewItemDto;
+          scheduleMap.set(p.providerId, overviewItem);
+        }
+        this.providerSchedules.set(scheduleMap);
+
+        // 5. Map Appointments
+        const aptDtos: AppointmentDto[] = (res.allAppointments || []).map(a => ({
+          id: a.id,
+          appointmentNumber: a.appointmentNumber,
+          bookingGroupId: a.bookingGroupId,
+          tenantId: res.tenantId,
+          serviceProviderId: a.serviceProviderId,
+          serviceProviderName: a.serviceProviderName,
+          serviceProviderProfilePictureUrl: a.serviceProviderProfilePictureUrl,
+          customerId: a.customerId ?? 0,
+          customerName: a.customerName,
+          customerPhone: a.customerPhone,
+          customerEmail: a.customerEmail,
+          serviceId: a.serviceId,
+          serviceName: a.serviceName,
+          serviceNames: a.serviceNames,
+          items: a.items || [],
+          totalDurationMinutes: a.durationMinutes,
+          appointmentDate: a.appointmentDate,
+          startTime: a.startTime,
+          endTime: a.endTime,
+          status: a.status as AppointmentStatus,
+          statusText: a.statusText,
+          reason: a.reason,
+          price: a.price,
+          totalAmount: a.price,
+          canManage: a.canManage,
+          isBroadcast: a.isBroadcastRequest,
+          isBroadcastRequest: a.isBroadcastRequest
+        } as unknown as AppointmentDto));
+
+        this.allAppointments.set(aptDtos);
+        this.mapAppointmentsToCalendar(aptDtos);
+        this.updateCurrentTimeIndicator();
         this.isLoading.set(false);
+
+        // Fetch live incoming broadcast requests for specialist acceptance
+        if (this.isServiceProvider) {
+          this.appointmentService.getIncomingBroadcastRequests().subscribe({
+            next: (reqs) => {
+              const active = (reqs || []).filter(r => !this.isRequestExpired(r));
+              this.incomingRequests.set(active);
+
+              const provider = this.displayedProviders()[0];
+              const providerId = provider?.id;
+              if (providerId) {
+                const allowedServiceIds = new Set<number>();
+                if (provider.serviceId) allowedServiceIds.add(provider.serviceId);
+                if (provider.serviceIds && Array.isArray(provider.serviceIds)) {
+                  provider.serviceIds.forEach(id => allowedServiceIds.add(id));
+                }
+
+                let addedAny = false;
+                for (const r of active) {
+                  // Only show requests whose services this specialist is certified to perform
+                  if (allowedServiceIds.size > 0) {
+                    const reqSvcIds = (r.items && r.items.length > 0)
+                      ? r.items.map(i => i.serviceId)
+                      : (r.serviceId ? [r.serviceId] : []);
+                    const canDoAll = reqSvcIds.length > 0 && reqSvcIds.every(id => allowedServiceIds.has(id));
+                    if (!canDoAll) continue;
+                  }
+
+                  if (!aptDtos.some(a => a.id === r.id)) {
+                    aptDtos.push({
+                      ...r,
+                      serviceProviderId: providerId,
+                      serviceProviderName: provider.name || 'You',
+                      isBroadcastRequest: true,
+                      isBroadcast: true,
+                      canManage: true
+                    } as AppointmentDto);
+                    addedAny = true;
+                  }
+                }
+                if (addedAny) {
+                  this.allAppointments.set([...aptDtos]);
+                  this.mapAppointmentsToCalendar(this.allAppointments());
+                }
+              }
+            },
+            error: () => {}
+          });
+        }
       },
       error: (err) => {
         this.isLoading.set(false);
@@ -909,6 +1027,18 @@ export class CalendarComponent implements OnInit, OnDestroy {
         setTimeout(() => this.errorMessage.set(''), 4000);
       }
     });
+  }
+
+  fetchAppointments(): void {
+    this.loadCalendarSchedule();
+  }
+
+  loadProviders(): void {
+    // Retained for compatibility - unified into loadCalendarSchedule
+  }
+
+  loadAvailabilityOverview(): void {
+    // Retained for compatibility - unified into loadCalendarSchedule
   }
 
   formatIsoDateTime(dateStr: string, timeStr?: string | null): string {
@@ -1162,7 +1292,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
     }>();
 
     for (const [pId, prov] of schedules.entries()) {
-      const day = prov.days?.find(d => d.dayOfWeek === dayOfWeek);
+      const day = prov.days?.find(d => Number(d.dayOfWeek) === Number(dayOfWeek));
       if (!day || !day.isAvailable) {
         map.set(pId, {
           isAvailable: false,
@@ -1216,6 +1346,18 @@ export class CalendarComponent implements OnInit, OnDestroy {
     return sched ? sched.workingHoursText : '—';
   }
 
+  getDayOffMessage(providerName: string): string {
+    const isToday = this.selectedDate() === this.getIndianToday();
+    const dayLabel = isToday ? `today (${this.getSelectedDayName()})` : `on ${this.getSelectedDayName()}`;
+    return `${providerName} is on Day Off ${dayLabel}. Booking is not available.`;
+  }
+
+  getDayOffTooltip(provider: ServiceProviderDto): string {
+    const isToday = this.selectedDate() === this.getIndianToday();
+    const dayLabel = isToday ? `today (${this.getSelectedDayName()})` : `on ${this.getSelectedDayName()}`;
+    return `${provider.name} is on Day Off ${dayLabel} - Booking unavailable`;
+  }
+
   // Check if a date string is within the booking window (Today to Today + 15 days)
   isDateWithinBookingWindow(dateStr: string): boolean {
     if (!dateStr) return false;
@@ -1261,7 +1403,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
       }
     }
     if (!this.isProviderAvailableToday(provider.id)) {
-      return `${provider.name} is on Day Off today (${this.getSelectedDayName()}) - Booking unavailable`;
+      return this.getDayOffTooltip(provider);
     }
     if (this.isSlotBreakForProvider(provider.id, slot.raw)) {
       return `${slot.rangeText} – ${provider.name}'s Break / Lunch (Not bookable)`;
@@ -1661,6 +1803,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
     if (popoverClose) {
       popoverClose.click();
     }
+    const previousView = this.activeView();
     this.activeView.set(view);
     if (view === 'week' || view === 'month') {
       this.mapAppointmentsToCalendar(this.allAppointments());
@@ -1687,6 +1830,10 @@ export class CalendarComponent implements OnInit, OnDestroy {
       setTimeout(triggerCalendarSync, 20);
       setTimeout(triggerCalendarSync, 100);
       setTimeout(triggerCalendarSync, 250);
+    }
+
+    if (view !== previousView) {
+      this.fetchAppointments();
     }
   }
 
@@ -1882,7 +2029,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
 
     // 1. Guard: Provider is on Day Off / Not Available
     if (!this.isProviderAvailableToday(provider.id)) {
-      this.errorMessage.set(`${provider.name} is on Day Off today (${this.getSelectedDayName()}). Booking is not available.`);
+      this.errorMessage.set(this.getDayOffMessage(provider.name));
       setTimeout(() => this.errorMessage.set(''), 4000);
       return;
     }
@@ -1919,7 +2066,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
 
   onDayOffClick(provider: ServiceProviderDto, event: MouseEvent): void {
     event.stopPropagation();
-    this.errorMessage.set(`${provider.name} is on Day Off today (${this.getSelectedDayName()}). Booking is not available.`);
+    this.errorMessage.set(this.getDayOffMessage(provider.name));
     setTimeout(() => this.errorMessage.set(''), 4000);
   }
 
@@ -1952,12 +2099,70 @@ export class CalendarComponent implements OnInit, OnDestroy {
   }
 
   // --- Appointment Detail & Action Modals ---
+  getLinkedGroupAppointments(apt: AppointmentDto): AppointmentDto[] {
+    if (!apt) return [];
+    if (apt.bookingGroupId) {
+      const groupSiblings = this.allAppointments().filter(other => other.bookingGroupId === apt.bookingGroupId);
+      if (groupSiblings.length > 1) {
+        return groupSiblings.sort((a, b) => (a.startTime || '').localeCompare(b.startTime || ''));
+      }
+    }
+    return [apt];
+  }
+
+  isRequestExpired(req: AppointmentDto): boolean {
+    if (!req.createdAt) return false;
+    const createdTime = parseServerUtcDate(req.createdAt);
+    if (!createdTime) return false;
+    return (Date.now() - createdTime) >= 10 * 60 * 1000;
+  }
+
+  onCardClick(apt: AppointmentDto, event: MouseEvent): void {
+    if (apt.isBroadcastRequest || apt.isBroadcast) {
+      this.openDispatchModal(apt, event);
+    } else {
+      this.viewAppointment(apt, event);
+    }
+  }
+
+  openDispatchModal(req?: AppointmentDto, event?: MouseEvent): void {
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    const targetReq = req || null;
+    this.selectedDispatchRequest.set(targetReq);
+    if (targetReq && !this.incomingRequests().some(r => r.id === targetReq.id)) {
+      this.incomingRequests.set([targetReq, ...this.incomingRequests()]);
+    }
+    this.showDispatchModal.set(true);
+  }
+
+  closeDispatchModal(): void {
+    this.showDispatchModal.set(false);
+    this.selectedDispatchRequest.set(null);
+    this.fetchAppointments();
+  }
+
+  onDispatchAccepted(apt: AppointmentDto): void {
+    this.showDispatchModal.set(false);
+    this.selectedDispatchRequest.set(null);
+    this.showSuccessNotification(`Appointment #${apt.appointmentNumber} accepted! It has been added to your schedule.`);
+    this.fetchAppointments();
+    this.appointmentChanged.emit();
+  }
+
   viewAppointment(apt: AppointmentDto, event?: MouseEvent): void {
     if (event) {
       event.preventDefault();
       event.stopPropagation();
     }
-    this.selectedAppointmentForDetail.set(apt);
+    const siblings = this.getLinkedGroupAppointments(apt);
+    const detailApt: AppointmentDto = siblings.length > 1 ? {
+      ...apt,
+      journeyParts: siblings
+    } : apt;
+    this.selectedAppointmentForDetail.set(detailApt);
   }
 
   closeDetails(): void {

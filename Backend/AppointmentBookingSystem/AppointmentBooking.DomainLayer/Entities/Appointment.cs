@@ -10,6 +10,9 @@ public class Appointment : BaseEntity
     // Human-readable unique appointment ID (e.g., "APT-20261014-4821")
     public string AppointmentNumber { get; set; } = string.Empty;
 
+    // Group ID to link multi-session / multi-specialist bookings checked out together (e.g., "GRP-20261105-8942")
+    public string? BookingGroupId { get; set; }
+
     // Service Provider relation (Nullable when broadcasted to all specialists until accepted)
     public int? ServiceProviderId { get; set; }
     public virtual ServiceProvider? ServiceProvider { get; set; }

@@ -16,6 +16,7 @@ export interface UserDto {
   roleName?: string;
   tenantId?: number;
   tenantName?: string;
+  serviceProviderId?: number;
 
   // Profile & Address
   profilePictureUrl?: string;

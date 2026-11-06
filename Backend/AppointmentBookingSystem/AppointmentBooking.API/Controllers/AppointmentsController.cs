@@ -131,14 +131,25 @@ public class AppointmentsController : BaseApiController
         try
         {
             var activeTenantId = ResolveTenantId(tenantId);
-            int? providerId = null;
+            int? providerId = CurrentProviderId;
 
-            if (IsServiceProvider)
+            if (!providerId.HasValue && CurrentUserId.HasValue)
             {
-                providerId = CurrentProviderId;
+                providerId = await _appointmentService.GetProviderIdByUserIdAsync(CurrentUserId.Value, cancellationToken);
             }
 
-            var result = await _appointmentService.GetIncomingBroadcastRequestsAsync(providerId, activeTenantId, cancellationToken);
+            if (IsServiceProvider || providerId.HasValue)
+            {
+                if (!providerId.HasValue || providerId.Value <= 0)
+                {
+                    return OkResponse(new List<AppointmentDto>());
+                }
+
+                var providerRequests = await _appointmentService.GetIncomingBroadcastRequestsAsync(providerId.Value, activeTenantId, cancellationToken);
+                return OkResponse(providerRequests);
+            }
+
+            var result = await _appointmentService.GetIncomingBroadcastRequestsAsync(null, activeTenantId, cancellationToken);
             return OkResponse(result);
         }
         catch (Exception ex)
@@ -162,11 +173,20 @@ public class AppointmentsController : BaseApiController
         CancellationToken cancellationToken)
     {
         int targetProviderId = 0;
-        if (IsServiceProvider && CurrentProviderId.HasValue)
+        if (CurrentProviderId.HasValue)
         {
             targetProviderId = CurrentProviderId.Value;
         }
-        else if ((IsAdmin || IsSuperAdmin) && providerId.HasValue)
+        else if (CurrentUserId.HasValue)
+        {
+            var resolvedId = await _appointmentService.GetProviderIdByUserIdAsync(CurrentUserId.Value, cancellationToken);
+            if (resolvedId.HasValue)
+            {
+                targetProviderId = resolvedId.Value;
+            }
+        }
+
+        if (targetProviderId <= 0 && (IsAdmin || IsSuperAdmin) && providerId.HasValue)
         {
             targetProviderId = providerId.Value;
         }

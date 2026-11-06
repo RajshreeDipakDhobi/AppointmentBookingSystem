@@ -505,7 +505,7 @@ public static class DataSeeder
                             DayOfWeek = day,
                             SpecificDate = null,
                             StartTime = new TimeSpan(10, 0, 0),
-                            EndTime = new TimeSpan(17, 0, 0),
+                            EndTime = new TimeSpan(20, 0, 0),
                             BreakStartTime = new TimeSpan(13, 0, 0),
                             BreakEndTime = new TimeSpan(14, 0, 0),
                             SlotDurationMinutes = 30,

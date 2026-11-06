@@ -28,9 +28,6 @@ export const guestGuard: CanActivateFn = () => {
   const router = inject(Router);
 
   const getRedirect = (userRole?: UserRole) => {
-    if (userRole === UserRole.ServiceProvider || (userRole as unknown) === 3 || (userRole as unknown) === '3') {
-      return router.createUrlTree(['/my-services']);
-    }
     if (userRole === UserRole.Customer || (userRole as unknown) === 4 || (userRole as unknown) === '4') {
       return router.createUrlTree(['/my-appointments']);
     }
@@ -47,8 +44,8 @@ export const guestGuard: CanActivateFn = () => {
 };
 
 /**
- * Dashboard guard: Allows SuperAdmin (1), Tenant Admin (2), and Customer (4).
- * Blocks ServiceProvider (3) from Dashboard and redirects to /appointments.
+ * Dashboard guard: Allows SuperAdmin (1), Tenant Admin (2), and ServiceProvider (3).
+ * Restricts Customers (4) to /my-appointments.
  */
 export const dashboardGuard: CanActivateFn = () => {
   const authService = inject(AuthService);
@@ -56,8 +53,8 @@ export const dashboardGuard: CanActivateFn = () => {
 
   const checkDashboardAccess = (userRole?: UserRole) => {
     if (!userRole) return router.createUrlTree(['/login']);
-    if (userRole === UserRole.ServiceProvider || (userRole as unknown) === 3 || (userRole as unknown) === '3') {
-      return router.createUrlTree(['/my-services']);
+    if (userRole === UserRole.Customer || (userRole as unknown) === 4 || (userRole as unknown) === '4') {
+      return router.createUrlTree(['/my-appointments']);
     }
     return true;
   };
